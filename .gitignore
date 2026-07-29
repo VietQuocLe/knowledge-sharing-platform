@@ -38,6 +38,8 @@ instance/
 # Environment files
 .env
 .env.*
+# Allow project-specific env examples
+!backend/.env.example
 
 # Node
 node_modules/
