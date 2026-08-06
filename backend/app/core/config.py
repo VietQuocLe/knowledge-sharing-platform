@@ -19,6 +19,16 @@ class Settings(BaseSettings):
     MINIO_API_PORT: int
     MINIO_CONSOLE_PORT: int
 
+    # JWT
+    JWT_SECRET_KEY: str
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRE_MINUTES: int = 60 * 24  # 24h
+
+    # Default Admin
+    ADMIN_EMAIL: str
+    ADMIN_PASSWORD: str
+    ADMIN_FULL_NAME: str
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore",

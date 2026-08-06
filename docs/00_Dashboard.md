@@ -2,21 +2,17 @@
 
 ## Current Sprint
 
-Sprint 1.2 — Backend Foundation
+Sprint 4 — Learning Resource CRUD
 
 ---
 
 ## Current Task
 
-☐ Docker
+☐ Learning Resource CRUD
 
-☐ Health API
+☐ Public read endpoints for resources
 
-☑ Config
-
-☑ Database
-
-☑ Main
+☐ Admin-only write endpoints
 
 ---
 
@@ -24,22 +20,22 @@ Sprint 1.2 — Backend Foundation
 
 Overall
 
-15%
+35%
 
-████░░░░░░░░░░░░
+███████░░░░░░░░░
 
 Backend
 
-35%
+55%
 
 ---
 
 ## Next Task
 
-Health API
+Learning Resource CRUD
 
 ---
 
 ## Current Problem
 
-- Chưa kết nối PostgreSQL
+- Chưa có CRUD Learning Resource

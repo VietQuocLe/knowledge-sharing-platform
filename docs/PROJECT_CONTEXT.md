@@ -15,7 +15,7 @@ Knowledge Sharing Platform là hệ thống chia sẻ tài liệu học tập k�
 Mục tiêu của đồ án không phải clone Studocu mà xây dựng một nền tảng cho phép:
 
 - Chia sẻ tài liệu học tập
-- Quản lý tài liệu theo Khoa → Môn học
+- Quản lý tài liệu theo Khoa → Ngành → Môn học (kiến trúc thiết kế để có thể mở rộng nhiều Khoa/Ngành, nhưng demo sẽ scope trong 1 Ngành để tập trung đầu tư cho RAG Pipeline — chi tiết cụ thể chưa chốt hẳn, sẽ rõ hơn khi làm đến Frontend)
 - Upload PDF, DOCX,...
 - AI đọc tài liệu
 - AI trả lời câu hỏi dựa trên tài liệu
@@ -23,41 +23,32 @@ Mục tiêu của đồ án không phải clone Studocu mà xây dựng một n�
 - Personal Knowledge Base
 - Public Knowledge Hub
 
-Đây là đồ án cá nhân.
-
 ---
 
 # 2. Current Progress
 
 Current Sprint
 
-> Sprint 1.2 — Backend Foundation
+> Sprint 4 — Learning Resource CRUD
 
 Overall Progress
 
-15%
+35%
 
 Status
 
-🟢 Active Development
+🟢 Sprint 3 Completed
 
 ---
 
 # 3. Current Sprint Goal
 
-Hoàn thành nền tảng Backend trước khi phát triển các chức năng.
+Xây dựng CRUD cho Learning Resource trước khi phát triển Upload System.
 
-Mục tiêu Sprint:
+Mục tiêu Sprint 4:
 
-- Thiết kế Project Structure
-- Docker
-- PostgreSQL
-- MinIO
-- SQLAlchemy
-- FastAPI
-- Config System
-- Database Connection
-- Health API
+- Learning Resource CRUD (list, create, update, delete — Admin only)
+- Public read endpoints cho Learning Resource nếu cần theo scope Sprint 4
 
 ---
 
@@ -71,6 +62,11 @@ Mục tiêu Sprint:
 - Config Management
 - FastAPI Main
 - Health API
+- Authentication (Register, Login, Password Hashing, JWT) — Sprint 2 ✅
+- System Initialization / Default Admin Seed
+- Department CRUD — Sprint 3 ✅
+- Major CRUD — Sprint 3 ✅
+- Subject CRUD — Sprint 3 ✅
 
 ## Infrastructure
 
@@ -82,6 +78,7 @@ Mục tiêu Sprint:
 
 - User
 - Department
+- Major
 - Subject
 - LearningResource
 
@@ -89,23 +86,10 @@ Mục tiêu Sprint:
 
 # 5. Next Task
 
-Sprint 2
+Sau Learning Resource CRUD (Sprint 4) sẽ tiếp tục:
 
-Authentication
-
-Bao gồm:
-
-- Register
-- Login
-- Password Hashing
-- JWT Authentication
-
-Sau Authentication sẽ tiếp tục:
-
-- Subject CRUD
-- Learning Resource CRUD
-- Upload
-- AI Pipeline
+- Upload System (Sprint 5)
+- AI Pipeline (Sprint 6)
 
 ---
 
@@ -118,6 +102,8 @@ Sau Authentication sẽ tiếp tục:
 - PostgreSQL
 - pgvector
 - MinIO
+- pwdlib (Argon2id) — password hashing
+- PyJWT — access token
 
 ## Frontend
 
@@ -158,6 +144,59 @@ schemas/
 services/
 
 main.py
+```
+
+## Codebase Snapshot (update cuối mỗi Sprint)
+
+```text
+app/
+├── core/
+│   ├── config.py        — class Settings(BaseSettings): APP_NAME, DEBUG, POSTGRES_*, MINIO_*,
+│   │                       ADMIN_*, JWT_SECRET_KEY, JWT_ALGORITHM="HS256",
+│   │                       JWT_EXPIRE_MINUTES=1440 (24h), DATABASE_URL @property; settings = Settings()
+│   ├── database.py      — engine, SessionLocal, get_db() -> Generator[Session, None, None]
+│   └── security.py      — hash_password(), verify_password() [pwdlib Argon2id],
+│                           create_access_token(subject, role), decode_access_token(token) [PyJWT]
+├── models/
+│   ├── base.py          — class Base(DeclarativeBase)
+│   ├── enums.py         — UserRole(STUDENT, ADMIN), ResourceType, VisibilityEnum, ResourceStatus
+│   ├── user.py          — class User(id, email, full_name, password_hash, google_id, role,
+│   │                       is_active, created_at, resources)
+│   ├── department.py    — class Department(id, name, majors, subjects)
+│   ├── major.py         — class Major(id, department_id, code, name, department, subjects),
+│   │                       major_subject table
+│   ├── subject.py       — class Subject(id, department_id, code, name, department, majors, resources)
+│   ├── learning_resource.py
+│   │                    — class LearningResource(id, owner_id, subject_id, title, description,
+│   │                       file_type, visibility, status, file_path, created_at, owner, subject)
+│   └── __init__.py      — exports: Base, User, Department, Major, Subject, LearningResource
+├── schemas/
+│   ├── auth.py          — RegisterRequest, LoginRequest, UserResponse, TokenResponse
+│   ├── department.py    — DepartmentBase, DepartmentCreate, DepartmentUpdate, DepartmentResponse
+│   ├── major.py         — MajorBase, MajorCreate, MajorUpdate, MajorResponse
+│   ├── subject.py       — SubjectBase, SubjectCreate, SubjectUpdate, SubjectResponse
+│   └── __init__.py      — (hiện tại file trống)
+├── services/
+│   ├── auth_service.py  — register_user(db, data), authenticate_user(db, email, password),
+│   │                       get_user_from_token(db, token), create_user_token(user)
+│   ├── startup_service.py — initialize_system(db), ensure_admin_exists(db)
+│   ├── department_service.py — get_all/get_by_id/create/update/delete for Department
+│   ├── major_service.py  — get_all/get_by_id/create/update/delete for Major
+│   ├── subject_service.py — get_all/get_by_id/create/update/delete for Subject,
+│   │                       validates department_id and major_ids in service layer
+│   └── __init__.py      — (hiện tại file trống)
+├── api/
+│   ├── health.py        — router = APIRouter(prefix="/health"), GET /health -> health_check()
+│   ├── auth.py          — router = APIRouter(prefix="/auth"), OAuth2PasswordBearer,
+│   │                       get_current_user(), get_current_admin(), POST /auth/register,
+│   │                       POST /auth/login, GET /auth/me
+│   ├── departments.py   — public GETs, admin-only POST/PUT/DELETE
+│   ├── majors.py        — public GETs, admin-only POST/PUT/DELETE
+│   ├── subjects.py      — public GETs, admin-only POST/PUT/DELETE
+│   └── __init__.py      — api_router = APIRouter(), include_router(health/auth/departments/majors/subjects)
+└── main.py               — lifespan(app), Base.metadata.create_all(bind=engine), initialize_system(db),
+                             app = FastAPI(title=settings.APP_NAME, lifespan=lifespan),
+                             include_router(api_router)
 ```
 
 ---
@@ -283,7 +322,62 @@ api/v1
 
 ---
 
-# 11. Roadmap
+## Password Hashing
+
+pwdlib + Argon2id (PasswordHash.recommended())
+
+Không dùng passlib/bcrypt.
+
+Logic nằm trong `core/security.py`, được gọi từ `services/auth_service.py`, không nằm trong Router.
+
+---
+
+## Authentication
+
+Single Access Token (JWT, thuật toán HS256), expiry 24h.
+
+Chưa làm Refresh Token — lý do: đồ án solo 1 học kỳ, Refresh Token kéo theo storage/revoke/rotation/refresh endpoint/frontend interceptor, chưa có requirement đủ mạnh để justify complexity đó.
+
+JWT payload gồm `sub` (user id) và `role`, để check quyền Admin sau này không cần query lại DB.
+
+---
+
+## Upload / Storage
+
+React → FastAPI (Backend Proxy) → MinIO.
+
+Chưa dùng Presigned URL ở Phase đầu (chỉ định hướng PDF/DOCX, chưa có requirement file cực lớn). Sẽ chuyển sang Presigned URL nếu sau này backend trở thành bottleneck.
+
+Tách `Router → Service → StorageService → MinIO` để sau này đổi MinIO sang S3 hoặc storage khác được dễ hơn.
+
+---
+
+# 11. Non-functional Requirements & Constraints
+
+## Upload
+
+- Giới hạn dung lượng file: (chưa chốt cụ thể, cần quyết định trước Sprint 5)
+- Định dạng cho phép: PDF, DOCX
+
+## Authentication
+
+- JWT: Single Access Token, HS256, expiry 24h. Đã chốt ở Sprint 2 (xem mục 10).
+
+## API Cost Management (OpenAI API)
+
+- Cần có cơ chế giới hạn/quản lý chi phí khi gọi OpenAI API vì dùng ví cá nhân, ví dụ: giới hạn token mỗi request, cache câu trả lời cho câu hỏi lặp lại, giới hạn số lượt gọi API theo user/session.
+- Chi tiết cơ chế cụ thể sẽ quyết định khi triển khai Sprint 6 (AI Pipeline).
+
+## Known Risks / Constraints
+
+- Đồ án cá nhân, thực hiện solo trong 1 học kỳ.
+- Giới hạn tài nguyên GPU: chỉ dùng free-tier (Colab/Kaggle), không có GPU riêng.
+- Ngân sách gọi OpenAI API là cá nhân, cần cân nhắc chi phí khi thiết kế AI Pipeline.
+- Mọi đề xuất kỹ thuật cần tính đến các giới hạn trên, tránh đề xuất giải pháp vượt quá khả năng thực hiện của 1 sinh viên trong 1 học kỳ.
+
+---
+
+# 12. Roadmap
 
 Sprint 1
 
@@ -293,13 +387,13 @@ Sprint 1
 
 Sprint 2
 
-Authentication
+✅ Authentication
 
 ↓
 
 Sprint 3
 
-Department + Subject
+🟢 Department + Subject (đang làm)
 
 ↓
 
@@ -345,7 +439,7 @@ Deployment & Optimization
 
 ---
 
-# 12. AI Features (Planned)
+# 13. AI Features (Planned)
 
 Document Upload
 
@@ -391,7 +485,7 @@ Quiz Generation (Optional)
 
 ---
 
-# 13. Development Workflow
+# 14. Development Workflow
 
 Mỗi Sprint sẽ theo quy trình:
 
@@ -419,7 +513,7 @@ Push GitHub
 
 ---
 
-# 14. Git Convention
+# 15. Git Convention
 
 Commit theo Sprint hoặc Feature.
 
@@ -445,7 +539,7 @@ abc
 
 ---
 
-# 15. AI Collaboration Instructions
+# 16. AI Collaboration Instructions
 
 Nếu AI đọc file này, hãy:
 
@@ -456,38 +550,40 @@ Nếu AI đọc file này, hãy:
 - Hướng dẫn theo từng Sprint, không nhảy quá xa.
 - Khi đề xuất cấu trúc hoặc thư viện mới, giải thích lý do sử dụng.
 - Luôn ưu tiên tính ổn định và khả năng hoàn thành đồ án đúng tiến độ.
+- Đầu tư thời gian và độ kỹ lưỡng ngang nhau giữa System Core (Backend, Database, Kiến trúc) và AI Pipeline (RAG, Notebook) — không ưu tiên bên nào hơn bên nào.
+- Cân nhắc các giới hạn tài nguyên (free-tier GPU, ngân sách API cá nhân, thời gian 1 học kỳ solo) khi đề xuất giải pháp.
 
 ---
 
-# 16. Current Status
+# 17. Current Status
 
 Current Sprint
 
-Sprint 1.2
+Sprint 3
 
 Current Module
 
-Backend Foundation
+Department + Subject
 
 Next Module
 
-Authentication
+Learning Resource
 
 Current Focus
 
-Xây dựng nền tảng Backend ổn định trước khi phát triển AI Pipeline.
+Xây dựng CRUD cho Department và Subject (Admin quản lý, public read), làm nền cho Learning Resource CRUD ở Sprint 4.
 
 ---
 
-# 17. Notes
+# 18. Notes
 
 Đây là đồ án cá nhân.
 
 Mục tiêu lớn nhất không phải sử dụng thật nhiều công nghệ, mà là:
 
-- Xây dựng một hệ thống hoàn chỉnh.
-- Hiểu rõ kiến trúc của từng thành phần.
-- Có khả năng giải thích mọi quyết định thiết kế khi bảo vệ đồ án.
-- Dành phần lớn thời gian cho AI (RAG, Notebook, pgvector) thay vì sa đà vào hạ tầng không cần thiết.
+- Xây dựng một hệ thống hoàn chỉnh, cả phần System Core (Backend, Database, Kiến trúc) lẫn phần AI (RAG, Notebook, pgvector) đều được đầu tư kỹ lưỡng và ngang mức độ ưu tiên với nhau — không thiên lệch bên nào.
+- Hiểu rõ kiến trúc của từng thành phần, từ hạ tầng backend đến pipeline AI.
+- Có khả năng giải thích mọi quyết định thiết kế khi bảo vệ đồ án, cả về System Design lẫn về AI.
+- Tránh sa đà vào hạ tầng không cần thiết (over-engineering), nhưng cũng không được xem nhẹ chất lượng và độ vững chắc của System Core để dồn hết thời gian cho AI.
 
-Mọi đề xuất nên cân bằng giữa tính thực tế, độ phức tạp và thời gian hoàn thành của một sinh viên thực hiện trong một học kỳ.
+Mọi đề xuất nên cân bằng giữa tính thực tế, độ phức tạp và thời gian hoàn thành của một sinh viên thực hiện trong một học kỳ, đồng thời giữ mức đầu tư ngang nhau giữa System Core và AI Pipeline.

@@ -2,7 +2,6 @@ fastapi
 uvicorn[standard]
 
 sqlalchemy
-
 psycopg[binary]
 
 python-dotenv
@@ -11,3 +10,7 @@ pydantic-settings
 python-multipart
 
 pgvector
+
+pwdlib[argon2]
+pyjwt
+pydantic[email]

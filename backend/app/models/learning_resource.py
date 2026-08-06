@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from datetime import datetime
 
 from sqlalchemy import (
@@ -17,6 +21,10 @@ from app.models.enums import (
     ResourceType,
     VisibilityEnum,
 )
+
+if TYPE_CHECKING:
+    from app.models.user import User
+    from app.models.subject import Subject
 
 
 class LearningResource(Base):

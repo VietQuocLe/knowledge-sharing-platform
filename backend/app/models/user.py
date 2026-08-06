@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, Enum, Integer, String, func
@@ -5,6 +9,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
 from app.models.enums import UserRole
+
+if TYPE_CHECKING:
+    from app.models.learning_resource import LearningResource
 
 
 class User(Base):
