@@ -3,13 +3,14 @@ from .user import User
 from .department import Department
 from .major import Major
 from .subject import Subject
-from .learning_resource import LearningResource
+from .resource import Asset, Resource
 
 __all__ = [
-    "Base", 
-    "User", 
-    "Department", 
-    "Major", 
-    "Subject", 
-    "LearningResource"
+    "Base",
+    "User",
+    "Department",
+    "Major",
+    "Subject",
+    "Resource",
+    "Asset",
 ]

@@ -12,34 +12,40 @@ Authentication
 
 Sprint 3
 
-Resource
+Department + Major + Subject
 
 ↓
 
 Sprint 4
 
-Upload
+Resource & Asset Management
 
 ↓
 
 Sprint 5
 
-AI Pipeline
+Upload
 
 ↓
 
 Sprint 6
 
-Notebook
+AI Pipeline
 
 ↓
 
 Sprint 7
 
-RAG
+Notebook
 
 ↓
 
 Sprint 8
+
+RAG
+
+↓
+
+Sprint 9
 
 Deploy

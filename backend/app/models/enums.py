@@ -7,11 +7,11 @@ class UserRole(str, Enum):
 
 
 class ResourceType(str, Enum):
-    PDF = "PDF"
-    DOCX = "DOCX"
-    PPTX = "PPTX"
-    IMAGE = "IMAGE"
-    OTHER = "OTHER"
+    DOCUMENT = "DOCUMENT"
+    VIDEO = "VIDEO"
+    AUDIO = "AUDIO"
+    LINK = "LINK"
+    AI_ARTIFACT = "AI_ARTIFACT"
 
 
 class VisibilityEnum(str, Enum):
@@ -20,6 +20,8 @@ class VisibilityEnum(str, Enum):
 
 
 class ResourceStatus(str, Enum):
+    PUBLISHED = "PUBLISHED"
+    DELETED = "DELETED"
     PROCESSING = "PROCESSING"
     READY = "READY"
     FAILED = "FAILED"

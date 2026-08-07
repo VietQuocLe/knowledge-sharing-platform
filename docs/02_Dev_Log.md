@@ -104,4 +104,38 @@ Department + Major + Subject CRUD
 
 ## Next Sprint
 
-Learning Resource CRUD
+Resource & Asset Management
+
+---
+
+# Sprint 4
+
+## Goal
+
+Resource & Asset Management
+
+## Completed
+
+- Resource / Asset model split
+- JSONB metadata-first schema
+- ResourceType taxonomy update
+- User.resources and Subject.resources rewired to Resource
+- Resource CRUD API for admin writes
+- Public read endpoints with pagination and subject filtering
+- Soft delete via ResourceStatus.DELETED
+
+## Decisions
+
+- Resource is the metadata-first entity; Asset is the physical file layer
+- JSONB is used for extensible metadata instead of new static columns
+- Business logic remains in Service Layer; resource router now mirrors the Department/Major/Subject pattern
+
+## Learned
+
+- Model refactors should land before CRUD to reduce schema churn later
+- Relationship rewiring must be updated together with exports to avoid stale imports
+- Soft delete is the safer default for resource lifecycles because Sprint 6+ will attach embeddings and related derived data
+
+## Next Sprint
+
+Upload System & File Validation

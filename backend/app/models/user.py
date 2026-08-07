@@ -11,7 +11,7 @@ from app.models.base import Base
 from app.models.enums import UserRole
 
 if TYPE_CHECKING:
-    from app.models.learning_resource import LearningResource
+    from app.models.resource import Resource
 
 
 class User(Base):
@@ -40,7 +40,7 @@ class User(Base):
         server_default=func.now(),
     )
 
-    resources: Mapped[list["LearningResource"]] = relationship(
+    resources: Mapped[list["Resource"]] = relationship(
         back_populates="owner",
         cascade="all, delete-orphan",
     )

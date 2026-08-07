@@ -2,17 +2,21 @@
 
 ## Current Sprint
 
-Sprint 4 — Learning Resource CRUD
+Sprint 5 — Upload System & File Validation
 
 ---
 
 ## Current Task
 
-☐ Learning Resource CRUD
+☑ Resource & Asset data model refactor
 
-☐ Public read endpoints for resources
+☑ ResourceType taxonomy + JSONB metadata
 
-☐ Admin-only write endpoints
+☑ Resource CRUD
+
+☑ Public read endpoints for resources
+
+☑ Admin-only write endpoints
 
 ---
 
@@ -20,22 +24,22 @@ Sprint 4 — Learning Resource CRUD
 
 Overall
 
-35%
+70%
 
 ███████░░░░░░░░░
 
 Backend
 
-55%
+70%
 
 ---
 
 ## Next Task
 
-Learning Resource CRUD
+Upload System & File Validation
 
 ---
 
 ## Current Problem
 
-- Chưa có CRUD Learning Resource
+- Chưa có Upload System/File Validation

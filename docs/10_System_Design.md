@@ -45,24 +45,30 @@ Dự án tập trung vào **Độ sâu Kiến trúc (Architecture Depth)** và *
 
 Để giải quyết hạn chế của các đồ án cũ (chỉ lưu được file PDF/Word cố định), hệ thống áp dụng pattern **Abstraction Layer**:
 
-- Bảng cốt lõi là `LearningResource` thay vì `documents`.
-- Sử dụng cột `resource_type` (Enum: `pdf`, `audio`, `video`, `link`) kết hợp với cột **`metadata_json` (PostgreSQL `JSONB`)** để lưu trữ thuộc tính động của từng loại học liệu mà không cần đổi Database Schema khi mở rộng.
+- Bảng cốt lõi là `Resource` thay vì `documents`.
+- `Resource` giữ siêu dữ liệu học liệu và liên kết tới một hoặc nhiều `Asset` vật lý.
+- Sử dụng cột `resource_type` (Enum: `DOCUMENT`, `VIDEO`, `AUDIO`, `LINK`, `AI_ARTIFACT`) kết hợp với cột **`metadata_json` (PostgreSQL `JSONB`)** để lưu trữ thuộc tính động của từng loại học liệu mà không cần đổi Database Schema khi mở rộng.
 
 ```text
-LearningResource
-├── id, title, description, visibility
-├── resource_type (PDF | AUDIO | VIDEO | LINK)
-├── storage_url (Trỏ tới MinIO/S3 hoặc Link ngoài)
-├── metadata_json (JSONB: Lưu số trang, duration, platform...)
-├── subject_id, uploader_id
-└── status (PENDING | APPROVED | REJECTED)
+Resource
+├── id, title, description
+├── resource_type (DOCUMENT | VIDEO | AUDIO | LINK | AI_ARTIFACT)
+├── metadata_json (JSONB: ngôn ngữ, học kỳ, tác giả, source...)
+├── subject_id, owner_id
+└── assets (0..n)
+
+Asset
+├── id, resource_id
+├── file_name, file_path
+├── file_type, version, size
+└── storage target: MinIO / S3 / external link
 
 ```
 
 **Chiến lược MVP (Extensible Architecture, Focused MVP):**
 
-- **Phase 1 (MVP):** Thiết kế schema hỗ trợ đa định dạng, nhưng chỉ triển khai (implement) duy nhất loại học liệu `PDF`.
-- **Mở rộng tương lai:** Khi thêm `Audio` hay `Video`, chỉ cần bổ sung Extractor mới, không thay đổi Core DB hay API contract cũ.
+- **Phase 1 (MVP):** Thiết kế schema hỗ trợ đa định dạng, nhưng chỉ triển khai upload/chạy pipeline cho tài liệu dạng document trước.
+- **Mở rộng tương lai:** Khi thêm `Audio`, `Video` hay AI-generated artifacts, chỉ cần bổ sung extractor/producer mới, không thay đổi Core DB hay API contract cũ.
 
 ---
 
@@ -90,7 +96,7 @@ Toàn bộ luồng xử lý AI được thiết kế độc lập với nguồn 
 
 Dự án ưu tiên hoàn thiện **Core System + AI Layer (MUST HAVE & SHOULD HAVE)**. Các tính năng như **Karma (Điểm thưởng)** hay **Payment (VNPay/VIP Plan)** được xếp vào nhóm **COULD HAVE** và được thiết kế theo dạng **Loose Coupling (Ghép nối lỏng)**:
 
-- **Core Tables (`users`, `learning_resources`, `subjects`):** Đứng hoàn toàn độc lập, không chứa các cột như `is_vip` hay `karma_points`.
+- **Core Tables (`users`, `resources`, `assets`, `subjects`):** Đứng hoàn toàn độc lập, không chứa các cột như `is_vip` hay `karma_points`.
 - **Module Mở Rộng (Nếu thêm sau):** Tạo các bảng vệ tinh mới (`subscriptions`, `user_points`) kết nối qua `user_id` Foreign Key.
 - **Tích hợp Code:** Dùng Middleware / Custom Dependency (`require_vip_user`) và Event/Background Tasks trong FastAPI để cắm module mở rộng vào mà không sửa logic Core.
 

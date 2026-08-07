@@ -29,26 +29,28 @@ Mục tiêu của đồ án không phải clone Studocu mà xây dựng một n�
 
 Current Sprint
 
-> Sprint 4 — Learning Resource CRUD
+> Sprint 5 — Upload System & File Validation
 
 Overall Progress
 
-35%
+70%
 
 Status
 
-🟢 Sprint 3 Completed
+✅ Sprint 4 Completed
+🟢 Sprint 5 In Progress
 
 ---
 
 # 3. Current Sprint Goal
 
-Xây dựng CRUD cho Learning Resource trước khi phát triển Upload System.
+Xây dựng hệ thống upload và validate file trên nền tảng Resource/Asset đã refactor, chuẩn bị cho Sprint 6 AI Pipeline.
 
-Mục tiêu Sprint 4:
+Mục tiêu Sprint 5:
 
-- Learning Resource CRUD (list, create, update, delete — Admin only)
-- Public read endpoints cho Learning Resource nếu cần theo scope Sprint 4
+- [ ] Thiết kế luồng upload cho `Asset` gắn với `Resource`.
+- [ ] Validate file type, dung lượng và metadata trước khi lưu.
+- [ ] Kết nối MinIO/Asset storage cho luồng upload thật.
 
 ---
 
@@ -67,6 +69,7 @@ Mục tiêu Sprint 4:
 - Department CRUD — Sprint 3 ✅
 - Major CRUD — Sprint 3 ✅
 - Subject CRUD — Sprint 3 ✅
+- Resource CRUD & Public Read — Sprint 4 ✅
 
 ## Infrastructure
 
@@ -80,15 +83,17 @@ Mục tiêu Sprint 4:
 - Department
 - Major
 - Subject
-- LearningResource
+- Resource
+- Asset
 
 ---
 
 # 5. Next Task
 
-Sau Learning Resource CRUD (Sprint 4) sẽ tiếp tục:
+Sau khi hoàn thiện Sprint 4 sẽ tiếp tục:
 
-- Upload System (Sprint 5)
+- Upload System & File Validation (Sprint 5)
+- Frontend Initialization & Component Setup (Cuối Sprint 4 / Đầu Sprint 5)
 - AI Pipeline (Sprint 6)
 
 ---
@@ -99,7 +104,7 @@ Sau Learning Resource CRUD (Sprint 4) sẽ tiếp tục:
 
 - FastAPI
 - SQLAlchemy 2.0
-- PostgreSQL
+- PostgreSQL (có hỗ trợ JSONB)
 - pgvector
 - MinIO
 - pwdlib (Argon2id) — password hashing
@@ -122,7 +127,9 @@ Sau Learning Resource CRUD (Sprint 4) sẽ tiếp tục:
 
 # 7. Current Project Structure
 
+
 ```
+
 knowledge-sharing-platform/
 
 backend/
@@ -130,11 +137,14 @@ frontend/
 docs/
 
 README.md
+
 ```
 
 Backend
 
+
 ```
+
 app/
 
 api/
@@ -144,6 +154,7 @@ schemas/
 services/
 
 main.py
+
 ```
 
 ## Codebase Snapshot (update cuối mỗi Sprint)
@@ -159,44 +170,41 @@ app/
 │                           create_access_token(subject, role), decode_access_token(token) [PyJWT]
 ├── models/
 │   ├── base.py          — class Base(DeclarativeBase)
-│   ├── enums.py         — UserRole(STUDENT, ADMIN), ResourceType, VisibilityEnum, ResourceStatus
+│   ├── enums.py         — UserRole(STUDENT, ADMIN), ResourceType(DOCUMENT, VIDEO, AUDIO, LINK, AI_ARTIFACT), VisibilityEnum, ResourceStatus(PUBLISHED, DELETED, PROCESSING, READY, FAILED)
 │   ├── user.py          — class User(id, email, full_name, password_hash, google_id, role,
 │   │                       is_active, created_at, resources)
 │   ├── department.py    — class Department(id, name, majors, subjects)
-│   ├── major.py         — class Major(id, department_id, code, name, department, subjects),
-│   │                       major_subject table
+│   ├── major.py         — class Major(id, department_id, code, name, department, subjects)
 │   ├── subject.py       — class Subject(id, department_id, code, name, department, majors, resources)
-│   ├── learning_resource.py
-│   │                    — class LearningResource(id, owner_id, subject_id, title, description,
-│   │                       file_type, visibility, status, file_path, created_at, owner, subject)
-│   └── __init__.py      — exports: Base, User, Department, Major, Subject, LearningResource
+│   ├── resource.py      — class Resource (id, title, description, resource_type, metadata_json[JSONB], subject_id, owner_id, status, created_at, assets)
+│   │                      class Asset (id, resource_id, file_name, file_path, file_type, version, size)
+│   └── __init__.py      — exports: Base, User, Department, Major, Subject, Resource, Asset
 ├── schemas/
 │   ├── auth.py          — RegisterRequest, LoginRequest, UserResponse, TokenResponse
 │   ├── department.py    — DepartmentBase, DepartmentCreate, DepartmentUpdate, DepartmentResponse
 │   ├── major.py         — MajorBase, MajorCreate, MajorUpdate, MajorResponse
 │   ├── subject.py       — SubjectBase, SubjectCreate, SubjectUpdate, SubjectResponse
-│   └── __init__.py      — (hiện tại file trống)
+│   ├── resource.py      — ResourceBase, ResourceCreate, ResourceUpdate, ResourceResponse, ResourcePageResponse (Nested Schema with Asset)
+│   └── __init__.py      
 ├── services/
 │   ├── auth_service.py  — register_user(db, data), authenticate_user(db, email, password),
 │   │                       get_user_from_token(db, token), create_user_token(user)
 │   ├── startup_service.py — initialize_system(db), ensure_admin_exists(db)
 │   ├── department_service.py — get_all/get_by_id/create/update/delete for Department
 │   ├── major_service.py  — get_all/get_by_id/create/update/delete for Major
-│   ├── subject_service.py — get_all/get_by_id/create/update/delete for Subject,
-│   │                       validates department_id and major_ids in service layer
-│   └── __init__.py      — (hiện tại file trống)
+│   ├── subject_service.py — get_all/get_by_id/create/update/delete for Subject
+│   ├── resource_service.py — CRUD logic cho Resource, validate Subject, soft delete, public pagination, eager-load Asset
+│   └── __init__.py      
 ├── api/
 │   ├── health.py        — router = APIRouter(prefix="/health"), GET /health -> health_check()
-│   ├── auth.py          — router = APIRouter(prefix="/auth"), OAuth2PasswordBearer,
-│   │                       get_current_user(), get_current_admin(), POST /auth/register,
-│   │                       POST /auth/login, GET /auth/me
+│   ├── auth.py          — router = APIRouter(prefix="/auth"), OAuth2PasswordBearer
 │   ├── departments.py   — public GETs, admin-only POST/PUT/DELETE
 │   ├── majors.py        — public GETs, admin-only POST/PUT/DELETE
 │   ├── subjects.py      — public GETs, admin-only POST/PUT/DELETE
-│   └── __init__.py      — api_router = APIRouter(), include_router(health/auth/departments/majors/subjects)
-└── main.py               — lifespan(app), Base.metadata.create_all(bind=engine), initialize_system(db),
-                             app = FastAPI(title=settings.APP_NAME, lifespan=lifespan),
-                             include_router(api_router)
+│   ├── resources.py     — public GETs (list/detail), admin-only POST/PUT/DELETE
+│   └── __init__.py      — api_router = APIRouter(), include_router(...)
+└── main.py              — lifespan(app), Base.metadata.create_all(bind=engine), initialize_system(db)
+
 ```
 
 ---
@@ -229,6 +237,7 @@ PostgreSQL
 ↓
 
 MinIO (Storage)
+
 ```
 
 Business Logic luôn nằm trong Service Layer.
@@ -243,10 +252,10 @@ Luôn tuân theo các nguyên tắc sau.
 
 ## Architecture
 
-- Service Layer Architecture
-- Separation of Concerns
-- Clean Code
-- Single Responsibility Principle
+* Service Layer Architecture
+* Separation of Concerns
+* Clean Code
+* Single Responsibility Principle
 
 ## Không được
 
@@ -277,6 +286,13 @@ Không sử dụng SQLModel.
 ## Database
 
 PostgreSQL
+
+---
+
+## Database Schema Design (Quyết định kiến trúc)
+
+**Metadata-first & JSONB:**
+Sử dụng mô hình "Decoupling Entity and Asset". Tách thông tin mô tả tài liệu (Resource) và tệp vật lý (Asset) thành 2 bảng riêng. Sử dụng kiểu dữ liệu `JSONB` của PostgreSQL làm Resource Abstraction Layer (lưu siêu dữ liệu động như: ngôn ngữ, học kỳ, tác giả, nguồn gốc file) thay vì tạo ra nhiều cột tĩnh, giúp tối ưu truy vấn RAG sau này mà không cần `alembic revision` liên tục.
 
 ---
 
@@ -356,24 +372,24 @@ Tách `Router → Service → StorageService → MinIO` để sau này đổi Mi
 
 ## Upload
 
-- Giới hạn dung lượng file: (chưa chốt cụ thể, cần quyết định trước Sprint 5)
-- Định dạng cho phép: PDF, DOCX
+* Giới hạn dung lượng file: Cấu hình cứng chặn giới hạn (VD: 30MB) ngay từ API Router để phòng ngừa cạn kiệt ổ cứng/sập server (bài học từ hệ thống SV Bách Khoa).
+* Định dạng cho phép: PDF, DOCX
 
 ## Authentication
 
-- JWT: Single Access Token, HS256, expiry 24h. Đã chốt ở Sprint 2 (xem mục 10).
+* JWT: Single Access Token, HS256, expiry 24h. Đã chốt ở Sprint 2 (xem mục 10).
 
 ## API Cost Management (OpenAI API)
 
-- Cần có cơ chế giới hạn/quản lý chi phí khi gọi OpenAI API vì dùng ví cá nhân, ví dụ: giới hạn token mỗi request, cache câu trả lời cho câu hỏi lặp lại, giới hạn số lượt gọi API theo user/session.
-- Chi tiết cơ chế cụ thể sẽ quyết định khi triển khai Sprint 6 (AI Pipeline).
+* Cần có cơ chế giới hạn/quản lý chi phí khi gọi OpenAI API vì dùng ví cá nhân, ví dụ: giới hạn token mỗi request, cache câu trả lời cho câu hỏi lặp lại, giới hạn số lượt gọi API theo user/session.
+* Chi tiết cơ chế cụ thể sẽ quyết định khi triển khai Sprint 6 (AI Pipeline).
 
 ## Known Risks / Constraints
 
-- Đồ án cá nhân, thực hiện solo trong 1 học kỳ.
-- Giới hạn tài nguyên GPU: chỉ dùng free-tier (Colab/Kaggle), không có GPU riêng.
-- Ngân sách gọi OpenAI API là cá nhân, cần cân nhắc chi phí khi thiết kế AI Pipeline.
-- Mọi đề xuất kỹ thuật cần tính đến các giới hạn trên, tránh đề xuất giải pháp vượt quá khả năng thực hiện của 1 sinh viên trong 1 học kỳ.
+* Đồ án cá nhân, thực hiện solo trong 1 học kỳ.
+* Giới hạn tài nguyên GPU: chỉ dùng free-tier (Colab/Kaggle), không có GPU riêng.
+* Ngân sách gọi OpenAI API là cá nhân, cần cân nhắc chi phí khi thiết kế AI Pipeline.
+* Mọi đề xuất kỹ thuật cần tính đến các giới hạn trên, tránh đề xuất giải pháp vượt quá khả năng thực hiện của 1 sinh viên trong 1 học kỳ.
 
 ---
 
@@ -393,19 +409,19 @@ Sprint 2
 
 Sprint 3
 
-🟢 Department + Subject (đang làm)
+✅ Department + Subject
 
 ↓
 
 Sprint 4
 
-Learning Resource
+🟢 Resource (Refactoring DB & CRUD)
 
 ↓
 
 Sprint 5
 
-Upload System
+Upload System & Init Frontend
 
 ↓
 
@@ -523,9 +539,9 @@ feat: initialize backend foundation
 
 feat: implement authentication
 
-feat: add upload module
+feat: refactor db for resource and asset
 
-feat: integrate rag pipeline
+feat: add upload module
 
 Không commit kiểu:
 
@@ -543,15 +559,15 @@ abc
 
 Nếu AI đọc file này, hãy:
 
-- Hiểu toàn bộ bối cảnh project trước khi trả lời.
-- Không đề xuất thay đổi kiến trúc nếu không thật sự cần.
-- Ưu tiên giữ code đơn giản, dễ hiểu và phù hợp với đồ án đại học.
-- Giải thích ngắn gọn nhưng đúng bản chất.
-- Hướng dẫn theo từng Sprint, không nhảy quá xa.
-- Khi đề xuất cấu trúc hoặc thư viện mới, giải thích lý do sử dụng.
-- Luôn ưu tiên tính ổn định và khả năng hoàn thành đồ án đúng tiến độ.
-- Đầu tư thời gian và độ kỹ lưỡng ngang nhau giữa System Core (Backend, Database, Kiến trúc) và AI Pipeline (RAG, Notebook) — không ưu tiên bên nào hơn bên nào.
-- Cân nhắc các giới hạn tài nguyên (free-tier GPU, ngân sách API cá nhân, thời gian 1 học kỳ solo) khi đề xuất giải pháp.
+* Hiểu toàn bộ bối cảnh project trước khi trả lời.
+* Không đề xuất thay đổi kiến trúc nếu không thật sự cần.
+* Ưu tiên giữ code đơn giản, dễ hiểu và phù hợp với đồ án đại học.
+* Giải thích ngắn gọn nhưng đúng bản chất.
+* Hướng dẫn theo từng Sprint, không nhảy quá xa.
+* Khi đề xuất cấu trúc hoặc thư viện mới, giải thích lý do sử dụng.
+* Luôn ưu tiên tính ổn định và khả năng hoàn thành đồ án đúng tiến độ.
+* Đầu tư thời gian và độ kỹ lưỡng ngang nhau giữa System Core (Backend, Database, Kiến trúc) và AI Pipeline (RAG, Notebook) — không ưu tiên bên nào hơn bên nào.
+* Cân nhắc các giới hạn tài nguyên (free-tier GPU, ngân sách API cá nhân, thời gian 1 học kỳ solo) khi đề xuất giải pháp.
 
 ---
 
@@ -559,19 +575,19 @@ Nếu AI đọc file này, hãy:
 
 Current Sprint
 
-Sprint 3
+Sprint 4
 
 Current Module
 
-Department + Subject
+Resource & Asset
 
 Next Module
 
-Learning Resource
+Upload System
 
 Current Focus
 
-Xây dựng CRUD cho Department và Subject (Admin quản lý, public read), làm nền cho Learning Resource CRUD ở Sprint 4.
+Tái cấu trúc Database: Tách biệt thực thể Document (Resource) và file vật lý (Asset). Áp dụng JSONB để linh hoạt lưu trữ Metadata. Xây dựng CRUD Pydantic Schema lồng nhau và API cho Admin.
 
 ---
 
@@ -581,9 +597,17 @@ Xây dựng CRUD cho Department và Subject (Admin quản lý, public read), là
 
 Mục tiêu lớn nhất không phải sử dụng thật nhiều công nghệ, mà là:
 
-- Xây dựng một hệ thống hoàn chỉnh, cả phần System Core (Backend, Database, Kiến trúc) lẫn phần AI (RAG, Notebook, pgvector) đều được đầu tư kỹ lưỡng và ngang mức độ ưu tiên với nhau — không thiên lệch bên nào.
-- Hiểu rõ kiến trúc của từng thành phần, từ hạ tầng backend đến pipeline AI.
-- Có khả năng giải thích mọi quyết định thiết kế khi bảo vệ đồ án, cả về System Design lẫn về AI.
-- Tránh sa đà vào hạ tầng không cần thiết (over-engineering), nhưng cũng không được xem nhẹ chất lượng và độ vững chắc của System Core để dồn hết thời gian cho AI.
+* Xây dựng một hệ thống hoàn chỉnh, cả phần System Core (Backend, Database, Kiến trúc) lẫn phần AI (RAG, Notebook, pgvector) đều được đầu tư kỹ lưỡng và ngang mức độ ưu tiên với nhau — không thiên lệch bên nào.
+* Hiểu rõ kiến trúc của từng thành phần, từ hạ tầng backend đến pipeline AI.
+* Có khả năng giải thích mọi quyết định thiết kế khi bảo vệ đồ án, cả về System Design lẫn về AI.
+* Tránh sa đà vào hạ tầng không cần thiết (over-engineering), nhưng cũng không được xem nhẹ chất lượng và độ vững chắc của System Core để dồn hết thời gian cho AI.
 
 Mọi đề xuất nên cân bằng giữa tính thực tế, độ phức tạp và thời gian hoàn thành của một sinh viên thực hiện trong một học kỳ, đồng thời giữ mức đầu tư ngang nhau giữa System Core và AI Pipeline.
+
+---
+
+# 19. Idea Backlog / Future Considerations
+
+* **Sprint 5 (Upload):** Bắt buộc làm Validation Pipeline (mock scan virus, check định dạng PDF/DOCX, giới hạn dung lượng) trước khi lưu vào MinIO.
+* **Sprint 6 (AI RAG):** Tận dụng cấu trúc dữ liệu JSONB và `ResourceType` vừa thiết kế để lọc (filter) context trước khi đưa vào LangChain, giúp giảm token LLM.
+* **Sprint 7 (AI Artifact Layer):** Xây dựng hệ thống lưu trữ kết quả AI. Thay vì gọi lại OpenAI mỗi lần sinh viên mở tài liệu, các output như Tóm tắt (Summary), Thẻ ghi nhớ (Flashcards), Cấu trúc ý (Mindmap) sẽ được sinh ra 1 lần duy nhất, bọc lại thành định dạng .json hoặc .md và đính kèm vào như một `Asset` mới của `Resource`. Tiết kiệm chi phí và tăng tốc độ phản hồi.
