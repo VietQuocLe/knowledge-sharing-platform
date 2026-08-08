@@ -29,7 +29,7 @@ class User(Base):
 
     role: Mapped[UserRole] = mapped_column(
         Enum(UserRole),
-        default=UserRole.STUDENT,
+        default=UserRole.USER,
         nullable=False,
     )
 

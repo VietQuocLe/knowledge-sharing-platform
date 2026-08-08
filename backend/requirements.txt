@@ -10,6 +10,7 @@ pydantic-settings
 python-multipart
 
 pgvector
+minio
 
 pwdlib[argon2]
 pyjwt

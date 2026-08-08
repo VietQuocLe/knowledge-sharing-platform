@@ -2,7 +2,8 @@ from enum import Enum
 
 
 class UserRole(str, Enum):
-    STUDENT = "STUDENT"
+    USER = "USER"
+    PREMIUM_USER = "PREMIUM_USER"
     ADMIN = "ADMIN"
 
 
@@ -15,13 +16,13 @@ class ResourceType(str, Enum):
 
 
 class VisibilityEnum(str, Enum):
-    PUBLIC = "PUBLIC"
     PRIVATE = "PRIVATE"
+    PENDING_REVIEW = "PENDING_REVIEW"
+    PUBLIC = "PUBLIC"
 
 
 class ResourceStatus(str, Enum):
-    PUBLISHED = "PUBLISHED"
-    DELETED = "DELETED"
     PROCESSING = "PROCESSING"
     READY = "READY"
     FAILED = "FAILED"
+    DELETED = "DELETED"

@@ -42,13 +42,13 @@ class Resource(Base):
 
     visibility: Mapped[VisibilityEnum] = mapped_column(
         Enum(VisibilityEnum),
-        default=VisibilityEnum.PUBLIC,
+        default=VisibilityEnum.PRIVATE,
         nullable=False,
     )
 
     status: Mapped[ResourceStatus] = mapped_column(
         Enum(ResourceStatus),
-        default=ResourceStatus.PUBLISHED,
+        default=ResourceStatus.PROCESSING,
         nullable=False,
     )
 
@@ -71,7 +71,7 @@ class Resource(Base):
     assets: Mapped[list["Asset"]] = relationship(
         back_populates="resource",
         cascade="all, delete-orphan",
-        order_by="Asset.version",
+        order_by="Asset.id",
     )
 
 
@@ -90,8 +90,6 @@ class Asset(Base):
     file_path: Mapped[str] = mapped_column(String(1000), nullable=False)
 
     file_type: Mapped[str] = mapped_column(String(100), nullable=False)
-
-    version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     size: Mapped[int] = mapped_column(BigInteger, nullable=False)
 

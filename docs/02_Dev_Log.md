@@ -120,7 +120,7 @@ Resource & Asset Management
 - JSONB metadata-first schema
 - ResourceType taxonomy update
 - User.resources and Subject.resources rewired to Resource
-- Resource CRUD API for admin writes
+- Resource update/delete API for admin writes (Sprint 5 later mở create/upload/submit cho JWT user)
 - Public read endpoints with pagination and subject filtering
 - Soft delete via ResourceStatus.DELETED
 
@@ -139,3 +139,37 @@ Resource & Asset Management
 ## Next Sprint
 
 Upload System & File Validation
+
+---
+
+# Sprint 5
+
+## Goal
+
+Upload System & File Validation
+
+---
+
+## Completed
+
+- Upload PDF/DOCX asset qua FastAPI vào MinIO
+- `storage_service` adapter tạo bucket khi cần và ghi/xóa object
+- Kiểm tra file rỗng, kích thước tối đa, số asset tối đa và allowlist cấu hình
+- Xác thực chữ ký PDF; xác thực DOCX là ZIP có các entry bắt buộc
+- Lưu `Asset` chỉ sau khi upload thành công; dọn object MinIO nếu commit DB lỗi
+- Endpoint xem resource của chính chủ, submit review và admin approve
+- Visibility workflow: `PRIVATE → PENDING_REVIEW → PUBLIC`
+
+---
+
+## Decisions
+
+- Backend proxy upload thay vì presigned URL ở MVP.
+- Chỉ hỗ trợ PDF và DOCX ở Sprint 5; các `ResourceType` khác vẫn là taxonomy dữ liệu.
+- Chủ sở hữu hoặc admin có thể upload/submit; chỉ admin có thể approve hoặc cập nhật/xóa resource.
+
+---
+
+## Next Sprint
+
+AI Pipeline

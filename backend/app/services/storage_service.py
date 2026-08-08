@@ -1,0 +1,44 @@
+from __future__ import annotations
+
+import io
+
+from minio import Minio
+
+from app.core.config import settings
+
+_client: Minio | None = None
+
+
+def get_minio_client() -> Minio:
+    global _client
+    if _client is None:
+        _client = Minio(
+            endpoint=f"{settings.MINIO_HOST}:{settings.MINIO_API_PORT}",
+            access_key=settings.MINIO_ROOT_USER,
+            secret_key=settings.MINIO_ROOT_PASSWORD,
+            secure=settings.MINIO_SECURE,
+        )
+    return _client
+
+
+def ensure_bucket() -> None:
+    client = get_minio_client()
+    if not client.bucket_exists(settings.MINIO_BUCKET_NAME):
+        client.make_bucket(settings.MINIO_BUCKET_NAME)
+
+
+def upload_object(*, object_path: str, data: bytes, content_type: str) -> None:
+    ensure_bucket()
+    client = get_minio_client()
+    client.put_object(
+        bucket_name=settings.MINIO_BUCKET_NAME,
+        object_name=object_path,
+        data=io.BytesIO(data),
+        length=len(data),
+        content_type=content_type,
+    )
+
+
+def delete_object(object_path: str) -> None:
+    client = get_minio_client()
+    client.remove_object(settings.MINIO_BUCKET_NAME, object_path)

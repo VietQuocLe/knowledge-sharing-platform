@@ -24,13 +24,13 @@ Resource & Asset Management
 
 Sprint 5
 
-Upload
+✅ Upload
 
 ↓
 
 Sprint 6
 
-AI Pipeline
+🟢 AI Pipeline
 
 ↓
 

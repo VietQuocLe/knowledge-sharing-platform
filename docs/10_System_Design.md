@@ -1,4 +1,4 @@
-````markdown
+```markdown
 # PROJECT CONTEXT — NỀN TẢNG CHIA SẺ HỌC LIỆU TÍCH HỢP AI/RAG (V1.1 - RESTRUCTURED)
 
 ## 1. Bối cảnh & Tầm nhìn Dự án
@@ -22,22 +22,33 @@ Dự án tập trung vào **Độ sâu Kiến trúc (Architecture Depth)** và *
 • Quản lý & Chia sẻ học liệu               • Lưu trữ ghi chú / tài liệu riêng tư
 • Tổ chức tập trung theo Môn/Khoa           • AI Assistant / RAG trên tài liệu cá nhân
 • Phân quyền xem / Tải về / Tìm kiếm        • Tự động tạo Quiz / Summary / Q&A
+
 ```
-````
 
 **Cơ chế Bridge Flow:** Cho phép chuyển đổi tài liệu cá nhân trong Workspace thành tài liệu chia sẻ công khai lên Public Hub chỉ bằng cách thay đổi thuộc tính `visibility` (không duplicate dữ liệu).
 
 ---
 
-## 2. Công nghệ đã thống nhất với GVHD
+## 2. Technology Stack
 
-- **Frontend:** ReactJS + TypeScript + React Router (Không dùng Next.js)
-- **Backend:** FastAPI (Python 3.11+)
-- **Database:** PostgreSQL + `pgvector` extension (Lưu cả dữ liệu quan hệ lẫn Embeddings)
-- **Storage:** Object Storage (MinIO ở Local Dev, sẵn sàng chuyển AWS S3/Cloudflare R2 trên Prod)
-- **AI Integration:** LangChain / LlamaIndex + OpenAI API (`text-embedding-3-small`, `gpt-4o-mini`)
-- **Testing:** `pytest` (BE), `Jest` (FE), `Playwright` (E2E)
-- **DevOps:** Docker Compose (Local DB & MinIO), GitHub Actions (CI), Vercel (FE Deployment), Railway/Render (BE Deployment)
+### Đã quyết định — đang dùng trong project
+
+* **Frontend:** ReactJS + Vite + Tailwind CSS (không dùng TypeScript, không dùng Next.js/React Router — đã chốt từ đầu project để giữ đơn giản cho đồ án solo)
+* **Backend:** FastAPI (Python)
+* **Database:** PostgreSQL + `pgvector` extension (lưu cả dữ liệu quan hệ lẫn embeddings)
+* **Storage:** MinIO (local dev qua Docker Compose)
+* **AI Integration:** LangChain, OpenAI API, Sentence Transformers, pgvector (mô hình cụ thể — ví dụ embedding model, LLM model — chưa chốt, sẽ quyết định ở Sprint 6)
+
+### Tham khảo cho tương lai — chưa quyết định, chưa áp dụng
+
+Đây là các khuyến nghị công nghệ chung từ tài liệu gợi ý đề tài của GVHD (không phải quyết định riêng đã chốt cho project này), giữ lại làm tham khảo cho các sprint chưa tới:
+
+* **Testing:** `pytest` (BE), `Jest`/`Playwright` (FE) — cân nhắc áp dụng ở Sprint Testing
+* **DevOps:** GitHub Actions (CI), Vercel (FE Deployment), Railway/Render (BE Deployment) — cân nhắc áp dụng ở Sprint Deployment & Optimization
+
+### Quy trình & chuẩn deliverable theo GVHD
+
+Project là đề tài tự đề xuất đã được GVHD duyệt (không thuộc danh sách đề tài mẫu). Các yêu cầu quy trình cần tuân theo: deploy chạy thật (không chỉ chạy local), có kiểm thử, tài liệu chuyên nghiệp, mã nguồn GitHub sạch với commit history rõ ràng.
 
 ---
 
@@ -45,9 +56,9 @@ Dự án tập trung vào **Độ sâu Kiến trúc (Architecture Depth)** và *
 
 Để giải quyết hạn chế của các đồ án cũ (chỉ lưu được file PDF/Word cố định), hệ thống áp dụng pattern **Abstraction Layer**:
 
-- Bảng cốt lõi là `Resource` thay vì `documents`.
-- `Resource` giữ siêu dữ liệu học liệu và liên kết tới một hoặc nhiều `Asset` vật lý.
-- Sử dụng cột `resource_type` (Enum: `DOCUMENT`, `VIDEO`, `AUDIO`, `LINK`, `AI_ARTIFACT`) kết hợp với cột **`metadata_json` (PostgreSQL `JSONB`)** để lưu trữ thuộc tính động của từng loại học liệu mà không cần đổi Database Schema khi mở rộng.
+* Bảng cốt lõi là `Resource` thay vì `documents`.
+* `Resource` giữ siêu dữ liệu học liệu và liên kết tới một hoặc nhiều `Asset` vật lý.
+* Sử dụng cột `resource_type` (Enum: `DOCUMENT`, `VIDEO`, `AUDIO`, `LINK`, `AI_ARTIFACT`) kết hợp với cột **`metadata_json` (PostgreSQL `JSONB`)** để lưu trữ thuộc tính động của từng loại học liệu mà không cần đổi Database Schema khi mở rộng.
 
 ```text
 Resource
@@ -60,19 +71,20 @@ Resource
 Asset
 ├── id, resource_id
 ├── file_name, file_path
-├── file_type, version, size
-└── storage target: MinIO / S3 / external link
+├── file_type, size
+└── storage target hiện tại: MinIO
+
 
 ```
 
 **Chiến lược MVP (Extensible Architecture, Focused MVP):**
 
-- **Phase 1 (MVP):** Thiết kế schema hỗ trợ đa định dạng, nhưng chỉ triển khai upload/chạy pipeline cho tài liệu dạng document trước.
-- **Mở rộng tương lai:** Khi thêm `Audio`, `Video` hay AI-generated artifacts, chỉ cần bổ sung extractor/producer mới, không thay đổi Core DB hay API contract cũ.
+* **Phase 1 (MVP):** Thiết kế schema hỗ trợ đa định dạng, nhưng chỉ triển khai upload/chạy pipeline cho tài liệu dạng document trước.
+* **Mở rộng tương lai:** Khi thêm `Audio`, `Video` hay AI-generated artifacts, chỉ cần bổ sung extractor/producer mới, không thay đổi Core DB hay API contract cũ.
 
 ---
 
-## 4. AI Universal Processing Pipeline
+## 4. AI Universal Processing Pipeline (Planned)
 
 Toàn bộ luồng xử lý AI được thiết kế độc lập với nguồn học liệu ban đầu thông qua bước **Text Normalization**:
 
@@ -83,12 +95,13 @@ Toàn bộ luồng xử lý AI được thiết kế độc lập với nguồn 
                                                                                             │
 [User Query] ───────────────────► [Vector Search & RAG] ◄──────────────────────────────────┘
 
+
 ```
 
-- AI Layer (`Chunks` & `Embeddings`) chỉ làm việc trên `Normalized Text`.
-- Bảng `document_chunks` chứa `resource_id`, `user_id`, `text_content` và `embedding_vector`.
-- Khi hỏi AI trong **Workspace cá nhân**: Query filter theo `user_id` hoặc `resource_id`.
-- Khi hỏi AI trên **Public Hub**: Query filter theo `subject_id` và `visibility = 'PUBLIC'`.
+* AI Layer (`Chunks` & `Embeddings`) chỉ làm việc trên `Normalized Text`.
+* Bảng `document_chunks` và embedding schema chưa tồn tại trong code hiện tại; đây là thiết kế dự kiến cho Sprint 6+.
+* Khi hỏi AI trong **Workspace cá nhân**: Query filter theo `user_id` hoặc `resource_id`.
+* Khi hỏi AI trên **Public Hub**: Query filter theo `subject_id` và `visibility = 'PUBLIC'`.
 
 ---
 
@@ -96,9 +109,9 @@ Toàn bộ luồng xử lý AI được thiết kế độc lập với nguồn 
 
 Dự án ưu tiên hoàn thiện **Core System + AI Layer (MUST HAVE & SHOULD HAVE)**. Các tính năng như **Karma (Điểm thưởng)** hay **Payment (VNPay/VIP Plan)** được xếp vào nhóm **COULD HAVE** và được thiết kế theo dạng **Loose Coupling (Ghép nối lỏng)**:
 
-- **Core Tables (`users`, `resources`, `assets`, `subjects`):** Đứng hoàn toàn độc lập, không chứa các cột như `is_vip` hay `karma_points`.
-- **Module Mở Rộng (Nếu thêm sau):** Tạo các bảng vệ tinh mới (`subscriptions`, `user_points`) kết nối qua `user_id` Foreign Key.
-- **Tích hợp Code:** Dùng Middleware / Custom Dependency (`require_vip_user`) và Event/Background Tasks trong FastAPI để cắm module mở rộng vào mà không sửa logic Core.
+* **Core Tables (`users`, `resources`, `assets`, `subjects`):** Đứng hoàn toàn độc lập, không chứa các cột như `is_vip` hay `karma_points`.
+* **Module Mở Rộng (Nếu thêm sau):** Tạo các bảng vệ tinh mới (`subscriptions`, `user_points`) kết nối qua `user_id` Foreign Key.
+* **Tích hợp Code:** Dùng Middleware / Custom Dependency (`require_vip_user`) và Event/Background Tasks trong FastAPI để cắm module mở rộng vào mà không sửa logic Core.
 
 ---
 
@@ -106,9 +119,11 @@ Dự án ưu tiên hoàn thiện **Core System + AI Layer (MUST HAVE & SHOULD HA
 
 Sử dụng mô hình **User + Role** trên một bảng `users` duy nhất:
 
-- `STUDENT`: Upload tài liệu vào Workspace, publish lên Public Hub, chat RAG.
-- `LECTURER`: Upload học liệu chính thống, phê duyệt tài liệu.
-- `ADMIN`: Quản lý danh mục môn học, kiểm duyệt nội dung (Moderation).
+* `USER`: role mặc định; có thể tạo resource, xem resource của mình, upload asset và submit resource của mình để review.
+* `PREMIUM_USER`: enum đã có nhưng hiện chưa có quyền riêng trong code.
+* `ADMIN`: quản lý danh mục học thuật, approve resource pending review, cập nhật và soft-delete resource.
+
+Khi tạo, user thường có thể để mặc định `PRIVATE` hoặc truyền `PENDING_REVIEW` để đóng góp trực tiếp vào hàng chờ duyệt; chỉ `ADMIN` được truyền `PUBLIC` trực tiếp. Luồng review từ resource private là `PRIVATE → PENDING_REVIEW → PUBLIC`. Public list/detail chỉ hiển thị resource `PUBLIC` chưa có status `DELETED`.
 
 ---
 
@@ -117,17 +132,18 @@ Sử dụng mô hình **User + Role** trên một bảng `users` duy nhất:
 Chuyển hoàn toàn sang giai đoạn **Code & Design Chi Tiết**:
 
 ```text
-1. Thiết kế Chi tiết Database Schema (SQLAlchemy Models)
+1. ✅ Thiết kế Database Schema (SQLAlchemy Models)
         ↓
-2. Setup Repository & Docker Compose (PostgreSQL + pgvector + MinIO)
+2. ✅ Setup Repository & Docker Compose (PostgreSQL + pgvector + MinIO)
         ↓
-3. Xây dựng Restful API Spec cho Auth & Resource Management
+3. ✅ Xây dựng API Auth, Academic Structure, Resource và Upload
         ↓
-4. Triển khai Service Upload & Background Task Processing (PDF Extraction)
+4. ✅ Triển khai Service Upload & File Validation (PDF/DOCX → MinIO); PDF Extraction chưa có
         ↓
-5. Triển khai AI Layer (Chunking, Embedding, Vector Search & RAG Q&A)
+5. 🟢 Triển khai AI Layer (Chunking, Embedding, Vector Search & RAG Q&A)
         ↓
 6. Xây dựng Frontend UI (ReactJS + TS) & Kết nối API
+
 
 ```
 
@@ -135,16 +151,9 @@ Chuyển hoàn toàn sang giai đoạn **Code & Design Chi Tiết**:
 
 ## PROMPT MANG SANG CHAT MỚI (NẾU CẦN)
 
-> "Tôi đang xây dựng đồ án ngành 'Nền tảng chia sẻ học liệu tích hợp AI/RAG' theo file context PROJECT_CONTEXT.md. Chúng tôi đã chốt xong toàn bộ Architecture, Dual-Zone Boundary (Public Hub & Personal Workspace), Resource Abstraction Layer với PostgreSQL JSONB, và AI Pipeline.
-> Với vai trò Tech Lead/System Architect, hãy dẫn dắt tôi triển khai bước thực tế tiếp theo: Viết file SQLAlchemy Models (`models.py`) đầy đủ và chuẩn hóa cho toàn bộ cơ sở dữ liệu của hệ thống (Auth, Academic Structure, Learning Resources & RAG Chunks)."
-
-```
+> "Tôi đang xây dựng đồ án ngành 'Nền tảng chia sẻ học liệu tích hợp AI/RAG' theo file PROJECT_CONTEXT.md. Backend đã hoàn thành Sprint 5: Auth, academic CRUD, Resource/Asset, moderation và upload PDF/DOCX vào MinIO. Hãy đọc code hiện tại trước, sau đó giúp tôi triển khai Sprint 6 AI Pipeline theo scope phù hợp."
 
 ---
-
-Bản tái cấu trúc này đã cô đọng mọi góc nhìn kiến trúc nâng cao nhất của m. M có thể lưu lại ngay để làm tài liệu gốc nhé!
-
-```
 
 ## Scope of Implementation & Future Enhancements
 
@@ -156,25 +165,29 @@ Sau khi Core System ổn định, nếu còn thời gian trong quá trình thự
 
 ### Core Features (MVP)
 
-- Authentication & Authorization
-- Academic Structure Management
-- Learning Resource Management
-- Personal Workspace
-- AI Pipeline (Chunking, Embedding, Vector Search)
-- RAG Question Answering
-- Public Resource Hub
+* Authentication & Authorization
+* Academic Structure Management
+* Learning Resource Management
+* Personal Workspace
+* AI Pipeline (Chunking, Embedding, Vector Search) — planned
+* RAG Question Answering — planned
+* Public Resource Hub
 
 ### Planned Future Enhancements
 
 Các tính năng dưới đây **không bị loại bỏ khỏi định hướng phát triển**, mà chỉ được ưu tiên triển khai sau khi hoàn thành Core System:
 
-- Karma / Reward System
-- Premium Subscription & Payment Integration
-- Real-time Notifications / Chat
-- Recommendation System
-- Learning Analytics Dashboard
-- Flashcards & Quiz Generation nâng cao
-- Mobile Application
-- Distributed Architecture / Microservices (nếu cần mở rộng quy mô)
+* Karma / Reward System
+* Premium Subscription & Payment Integration
+* Real-time Notifications / Chat
+* Recommendation System
+* Learning Analytics Dashboard
+* Flashcards & Quiz Generation nâng cao
+* Mobile Application
+* Distributed Architecture / Microservices (nếu cần mở rộng quy mô)
 
 Việc triển khai các tính năng trên sẽ phụ thuộc vào thời gian còn lại của đồ án và mức độ hoàn thiện của hệ thống cốt lõi.
+
+```
+
+```

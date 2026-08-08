@@ -2,21 +2,19 @@
 
 ## Current Sprint
 
-Sprint 5 — Upload System & File Validation
+Sprint 6 — AI Pipeline
 
 ---
 
 ## Current Task
 
-☑ Resource & Asset data model refactor
+☑ Upload Asset (PDF/DOCX) to MinIO
 
-☑ ResourceType taxonomy + JSONB metadata
+☑ Validate content, file size and asset limit
 
-☑ Resource CRUD
+☑ PRIVATE → PENDING_REVIEW → PUBLIC workflow
 
-☑ Public read endpoints for resources
-
-☑ Admin-only write endpoints
+☑ My Resources endpoint and approval endpoint
 
 ---
 
@@ -24,22 +22,22 @@ Sprint 5 — Upload System & File Validation
 
 Overall
 
-70%
+80%
 
 ███████░░░░░░░░░
 
 Backend
 
-70%
+80%
 
 ---
 
 ## Next Task
 
-Upload System & File Validation
+AI Pipeline
 
 ---
 
 ## Current Problem
 
-- Chưa có Upload System/File Validation
+- Chưa triển khai AI Pipeline (trích xuất, chunking, embedding).

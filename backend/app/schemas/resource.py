@@ -5,14 +5,13 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.enums import ResourceStatus, ResourceType
+from app.models.enums import ResourceStatus, ResourceType, VisibilityEnum
 
 
 class AssetBase(BaseModel):
     file_name: str
     file_path: str
     file_type: str
-    version: int
     size: int
 
     model_config = ConfigDict(from_attributes=True)
@@ -36,6 +35,7 @@ class ResourceBase(BaseModel):
 
 class ResourceCreate(ResourceBase):
     subject_id: int
+    visibility: VisibilityEnum | None = None
 
 
 class ResourceUpdate(BaseModel):
@@ -50,6 +50,7 @@ class ResourceResponse(ResourceBase):
     id: int
     owner_id: int
     subject_id: int | None
+    visibility: VisibilityEnum
     status: ResourceStatus
     created_at: datetime
     assets: list[AssetResponse] = Field(default_factory=list)

@@ -14,10 +14,18 @@ class Settings(BaseSettings):
     POSTGRES_DB: str
 
     # MinIO
+    MINIO_HOST: str = "localhost"
     MINIO_ROOT_USER: str
     MINIO_ROOT_PASSWORD: str
     MINIO_API_PORT: int
     MINIO_CONSOLE_PORT: int
+    MINIO_BUCKET_NAME: str = "resources"
+    MINIO_SECURE: bool = False
+
+    # Upload System
+    MAX_FILE_SIZE_MB: int = 30
+    MAX_ASSETS_PER_RESOURCE: int = 5
+    ALLOWED_UPLOAD_FILE_TYPES: list[str] = ["PDF", "DOCX"]
 
     # JWT
     JWT_SECRET_KEY: str
@@ -44,6 +52,10 @@ class Settings(BaseSettings):
             f"{self.POSTGRES_PORT}/"
             f"{self.POSTGRES_DB}"
         )
+
+    @property
+    def MAX_UPLOAD_FILE_SIZE_MB(self) -> int:
+        return self.MAX_FILE_SIZE_MB
 
 
 settings = Settings()

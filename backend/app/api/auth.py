@@ -32,7 +32,8 @@ def require_roles(*allowed_roles: UserRole):
     return role_checker
 
 
-get_current_admin = require_roles(UserRole.ADMIN)
+require_admin = require_roles(UserRole.ADMIN)
+get_current_admin = require_admin
 
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
