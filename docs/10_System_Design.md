@@ -37,14 +37,14 @@ Dự án tập trung vào **Độ sâu Kiến trúc (Architecture Depth)** và *
 * **Backend:** FastAPI (Python)
 * **Database:** PostgreSQL + `pgvector` extension (lưu cả dữ liệu quan hệ lẫn embeddings)
 * **Storage:** MinIO (local dev qua Docker Compose)
-* **AI Integration:** LangChain, OpenAI API, Sentence Transformers, pgvector (mô hình cụ thể — ví dụ embedding model, LLM model — chưa chốt, sẽ quyết định ở Sprint 6)
+* **AI Integration:** LangChain, OpenAI API, Sentence Transformers, pgvector (mô hình cụ thể — ví dụ embedding model, LLM model — chưa chốt, sẽ quyết định ở Sprint 8)
 
 ### Tham khảo cho tương lai — chưa quyết định, chưa áp dụng
 
 Đây là các khuyến nghị công nghệ chung từ tài liệu gợi ý đề tài của GVHD (không phải quyết định riêng đã chốt cho project này), giữ lại làm tham khảo cho các sprint chưa tới:
 
-* **Testing:** `pytest` (BE), `Jest`/`Playwright` (FE) — cân nhắc áp dụng ở Sprint Testing
-* **DevOps:** GitHub Actions (CI), Vercel (FE Deployment), Railway/Render (BE Deployment) — cân nhắc áp dụng ở Sprint Deployment & Optimization
+* **Testing:** `pytest` (BE), `Jest`/`Playwright` (FE) — cân nhắc áp dụng ở Sprint 11 Testing
+* **DevOps:** GitHub Actions (CI), Vercel (FE Deployment), Railway/Render (BE Deployment) — cân nhắc áp dụng ở Sprint 12 Deployment & Optimization
 
 ### Quy trình & chuẩn deliverable theo GVHD
 
@@ -99,7 +99,7 @@ Toàn bộ luồng xử lý AI được thiết kế độc lập với nguồn 
 ```
 
 * AI Layer (`Chunks` & `Embeddings`) chỉ làm việc trên `Normalized Text`.
-* Bảng `document_chunks` và embedding schema chưa tồn tại trong code hiện tại; đây là thiết kế dự kiến cho Sprint 6+.
+* Bảng `document_chunks` và embedding schema chưa tồn tại trong code hiện tại; đây là thiết kế dự kiến cho Sprint 8+.
 * Khi hỏi AI trong **Workspace cá nhân**: Query filter theo `user_id` hoặc `resource_id`.
 * Khi hỏi AI trên **Public Hub**: Query filter theo `subject_id` và `visibility = 'PUBLIC'`.
 
@@ -151,7 +151,7 @@ Chuyển hoàn toàn sang giai đoạn **Code & Design Chi Tiết**:
 
 ## PROMPT MANG SANG CHAT MỚI (NẾU CẦN)
 
-> "Tôi đang xây dựng đồ án ngành 'Nền tảng chia sẻ học liệu tích hợp AI/RAG' theo file PROJECT_CONTEXT.md. Backend đã hoàn thành Sprint 5: Auth, academic CRUD, Resource/Asset, moderation và upload PDF/DOCX vào MinIO. Hãy đọc code hiện tại trước, sau đó giúp tôi triển khai Sprint 6 AI Pipeline theo scope phù hợp."
+> "Tôi đang xây dựng đồ án ngành 'Nền tảng chia sẻ học liệu tích hợp AI/RAG' theo file PROJECT_CONTEXT.md. Backend đã hoàn thành Sprint 5: Auth, academic CRUD, Resource/Asset, moderation và upload PDF/DOCX vào MinIO. Hãy đọc code hiện tại trước, sau đó giúp tôi triển khai Sprint 8 AI Pipeline theo scope phù hợp."
 
 ---
 

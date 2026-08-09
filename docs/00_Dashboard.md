@@ -2,19 +2,17 @@
 
 ## Current Sprint
 
-Sprint 6 — AI Pipeline
+Sprint 6 — FE Foundation
 
 ---
 
 ## Current Task
 
-☑ Upload Asset (PDF/DOCX) to MinIO
+☑ Project setup (Vite/Tailwind)
 
-☑ Validate content, file size and asset limit
+☑ Routing, API client, Auth Context, layout/navigation chung
 
-☑ PRIVATE → PENDING_REVIEW → PUBLIC workflow
-
-☑ My Resources endpoint and approval endpoint
+☑ Login + register flow hoạt động đúng với JWT flow
 
 ---
 
@@ -22,9 +20,9 @@ Sprint 6 — AI Pipeline
 
 Overall
 
-80%
+42%
 
-███████░░░░░░░░░
+█████░░░░░░░░░░░░
 
 Backend
 
@@ -34,10 +32,10 @@ Backend
 
 ## Next Task
 
-AI Pipeline
+FE Foundation
 
 ---
 
 ## Current Problem
 
-- Chưa triển khai AI Pipeline (trích xuất, chunking, embedding).
+- FE Foundation vẫn đang là sprint hiện tại; hệ thống vẫn cần hạ tầng frontend và auth shell trước khi đi vào các tính năng nghiệp vụ.

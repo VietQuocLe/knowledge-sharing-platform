@@ -43,3 +43,5 @@ MinIO (Storage)
 - `GET /resources/me`, tạo resource, upload asset và submit review yêu cầu JWT; chủ sở hữu hoặc admin được upload/submit. Cập nhật/xóa resource và approve public là admin-only.
 - Upload đi theo `Router → resource_service → storage_service → MinIO`: chỉ PDF/DOCX hợp lệ, kiểm tra giới hạn cấu hình, ghi object theo `resources/{resource_id}/{uuid}_{filename}`, rồi tạo `Asset`; lỗi commit DB sẽ cố gắng xóa object vừa ghi.
 - Khi tạo, user thường có thể để mặc định `PRIVATE` hoặc chọn trực tiếp `PENDING_REVIEW` để đóng góp vào hàng chờ duyệt; chỉ admin được tạo trực tiếp `PUBLIC`. Luồng review từ resource private vẫn là `PRIVATE → PENDING_REVIEW → PUBLIC`; soft delete dùng `ResourceStatus.DELETED`.
+- Sprint 6 hiện tại là FE Foundation: frontend sẽ bổ sung Vite/Tailwind, routing, API client, Auth Context, layout/navigation chung và login/register với JWT flow trên nền backend hiện có.
+- Sprint 7 là FE Catch-up Features: hoàn thành UI cho các nghiệp vụ backend Sprint 1–5 như browse theo Khoa/Ngành/Môn, resource list/detail, personal resources, upload form và submit-review.

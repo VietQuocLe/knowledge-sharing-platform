@@ -146,7 +146,7 @@ Upload System & File Validation
 
 ## Goal
 
-Upload System & File Validation
+Upload System & Visibility Workflow
 
 ---
 
@@ -170,6 +170,12 @@ Upload System & File Validation
 
 ---
 
+## Rationale
+
+- Roadmap cũ gộp FE Foundation và FE Catch-up Features thành 1 sprint lớn, gây rủi ro về chất lượng và khó kiểm thử.
+- Tách Sprint 6 (FE Foundation, hạ tầng + auth shell) và Sprint 7 (FE Catch-up Features, UI cho backend Sprint 1–5) để mỗi sprint có phạm vi rõ ràng.
+- Sprint 8–10 áp dụng mô hình vertical slice cho AI Pipeline, Notebook Workspace và RAG Chat vì đây là tính năng user-facing mới cần backend và frontend đi cùng nhau để test toàn bộ luồng ngay trong sprint.
+
 ## Next Sprint
 
-AI Pipeline
+FE Foundation

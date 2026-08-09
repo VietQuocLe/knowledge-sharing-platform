@@ -18,11 +18,11 @@ Knowledge Sharing Platform là hệ thống chia sẻ học liệu kết hợp A
 
 Current Sprint
 
-> Sprint 6 — AI Pipeline
+> Sprint 6 — FE Foundation
 
 Overall Progress
 
-80%
+42%
 
 Status
 
@@ -33,7 +33,7 @@ Status
 
 # 3. Current Sprint Goal
 
-Xây dựng AI Pipeline trên resource đã upload: trích xuất nội dung, chunking, embedding và chuẩn bị truy vấn vector/RAG.
+Xây dựng FE Foundation cho toàn bộ backend Sprint 1–5 đã có: project setup (Vite/Tailwind), routing, API client, Auth Context, layout/navigation chung, login + register hoạt động đúng với JWT flow.
 
 Sprint 6 chưa được triển khai trong code hiện tại.
 
@@ -61,8 +61,9 @@ Sprint 6 chưa được triển khai trong code hiện tại.
 
 # 5. Next Task
 
-- AI Pipeline: text extraction, chunking, embedding và vector retrieval
-- Notebook Workspace và RAG Chat theo roadmap
+- FE Foundation: project setup, routing, API client, Auth Context, layout/navigation chung, login/register flow
+- FE Catch-up Features: hoàn thành UI cho backend Sprint 1–5
+- AI Pipeline: chunking, embedding, pgvector và vector retrieval
 
 ---
 
@@ -220,13 +221,15 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 1. ✅ Backend Foundation
 2. ✅ Authentication
 3. ✅ Department + Major + Subject
-4. ✅ Resource & Asset Management
-5. ✅ Upload System & File Validation
-6. 🟢 AI Pipeline
-7. Notebook Workspace
-8. RAG Chat
-9. Testing
-10. Deployment & Optimization
+4. ✅ Resource (DB Refactor & CRUD)
+5. ✅ Upload System & Visibility Workflow
+6. 🟢 FE Foundation
+7. FE Catch-up Features
+8. AI Pipeline
+9. Notebook Workspace
+10. RAG Chat
+11. Testing
+12. Deployment & Optimization
 
 ---
 
@@ -259,11 +262,11 @@ Commit theo Sprint hoặc feature, ví dụ `feat: implement upload module`. Tr�
 
 # 17. Current Status
 
-Current Sprint: Sprint 6 — AI Pipeline
+Current Sprint: Sprint 6 — FE Foundation
 
-Current Module: Chưa có AI module; nền tảng upload và moderation của Resource/Asset đã hoàn thành.
+Current Module: Chưa có FE Foundation; nền tảng upload và moderation của Resource/Asset đã hoàn thành.
 
-Next Module: Notebook Workspace sau AI Pipeline.
+Next Module: FE Catch-up Features sau khi hạ tầng frontend và auth shell ổn định.
 
 ---
 

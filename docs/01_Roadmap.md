@@ -1,51 +1,69 @@
 Sprint 1
 
-Backend
+Backend Foundation — ✅ done
 
 ↓
 
 Sprint 2
 
-Authentication
+Authentication — ✅ done
 
 ↓
 
 Sprint 3
 
-Department + Major + Subject
+Department + Major + Subject — ✅ done
 
 ↓
 
 Sprint 4
 
-Resource & Asset Management
+Resource (DB Refactor & CRUD) — ✅ done
 
 ↓
 
 Sprint 5
 
-✅ Upload
+Upload System & Visibility Workflow — ✅ done
 
 ↓
 
 Sprint 6
 
-🟢 AI Pipeline
+🟢 FE Foundation
 
 ↓
 
 Sprint 7
 
-Notebook
+FE Catch-up Features
 
 ↓
 
 Sprint 8
 
-RAG
+AI Pipeline
 
 ↓
 
 Sprint 9
 
-Deploy
+Notebook Workspace
+
+↓
+
+Sprint 10
+
+RAG Chat
+
+↓
+
+Sprint 11
+
+Testing
+
+↓
+
+Sprint 12
+
+Deployment & Optimization
