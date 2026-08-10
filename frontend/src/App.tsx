@@ -1,13 +1,8 @@
-import { PublicLayout } from './layouts/PublicLayout'
 import { AppRouter } from './router/AppRouter'
 import './App.css'
 
 function App() {
-  return (
-    <PublicLayout>
-      <AppRouter />
-    </PublicLayout>
-  )
+  return <AppRouter />
 }
 
 export default App
