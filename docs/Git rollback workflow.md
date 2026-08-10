@@ -47,6 +47,8 @@ git commit -m "feat: <mô tả theo convention project>"
 
 ```bash
 git reset --hard HEAD~1
+git clean -fdn
+git clean -fd --
 ```
 
 ⚠️ Lệnh này xóa vĩnh viễn toàn bộ thay đổi của AI, không cứu lại được. Chỉ chạy khi chắc chắn.
