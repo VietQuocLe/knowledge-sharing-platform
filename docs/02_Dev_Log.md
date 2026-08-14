@@ -179,3 +179,54 @@ Upload System & Visibility Workflow
 ## Next Sprint
 
 FE Foundation
+
+---
+
+# Sprint 6
+
+## Goal
+
+FE Foundation
+
+## Completed
+
+- Setup thủ công frontend Vite + React + TypeScript + Tailwind (giảm rủi ro lỗi cho agent/AI trong quá trình phát triển).
+- Cấu trúc feature-based ở frontend: `api/`, `features/{auth,resources,taxonomy}/`, `layouts/`, `pages/`, `components/ui/`.
+- Tạo Axios-based `apiClient` tập trung với JSON/form-urlencoded/multipart support, interceptor Bearer token và xử lý 401 redirect về `/login`.
+- Triển khai `AuthContext` thật với state `user/token`, lưu token vào `localStorage`, gọi `GET /auth/me` khi có token, hỗ trợ `login/register/logout`.
+- Hoàn thiện routing bằng `createBrowserRouter`, nested layout với `Outlet`, `ProtectedRoute` và `AdminRoute`.
+- Scaffold các route public/protected/admin hiện có trong UI shell: `/`, `/login`, `/register`, `/departments/:id`, `/subjects/:id`, `/resources/:id`, `/me/resources`, `/resources/create`, `/resources/:id/upload`, `/admin/moderation`, `/admin/taxonomy`.
+- Test thành công auth thật qua backend và phân quyền admin/user bằng tài khoản admin mặc định (seed từ `.env`, xem `core/config.py`).
+
+## Phase Summary
+
+1. Setup thủ công frontend để giảm rủi ro lỗi và giữ cây thư mục ổn định.
+2. Tập trung vào API client và Auth flow thật với backend.
+3. Hoàn thiện router, layout và scaffold toàn bộ màn hình shell cho các route public/protected/admin.
+
+## Next Sprint
+
+FE Catch-up Features
+
+---
+
+# Sprint 7
+
+## Goal
+
+FE Catch-up Features — nối API thật cho browse, personal resources, upload/submit-review, admin moderation và admin taxonomy
+
+## Completed
+
+- TanStack Query v5 + react-hot-toast + shared UI (`Spinner`, `ErrorMessage`, `PaginationBar`)
+- Browse flow: Departments → Department detail → Major detail → Subject detail → Resource detail; `TaxonomyView` trên Home
+- `/me/resources`, luồng create → upload → submit-review
+- Admin moderation (approve/reject/delete) và admin taxonomy CRUD
+- Query key factory, cache invalidation, `getApiErrorMessage`, validate URL param (`parseRouteId`)
+- Backend phát sinh: filter `GET /majors/?department_id=`, `GET /subjects/?major_id=`, `GET /resources/me/{id}`, `GET /resources/admin`
+- Audit/fix: taxonomy filter, cache invalidation, owner resource by ID, upload timeout, admin nav, i18n VI, dead code cleanup
+
+## Next Sprint
+
+Chưa xác nhận
+

@@ -1,5 +1,5 @@
 ```markdown
-# PROJECT CONTEXT — NỀN TẢNG CHIA SẺ HỌC LIỆU TÍCH HỢP AI/RAG (V1.1 - RESTRUCTURED)
+# PROJECT CONTEXT — NỀN TẢNG CHIA SẺ HỌC LIỆU TÍCH HỢP AI/RAG (V1.3 - SPRINT 7 FE CATCH-UP COMPLETE)
 
 ## 1. Bối cảnh & Tầm nhìn Dự án
 
@@ -33,7 +33,7 @@ Dự án tập trung vào **Độ sâu Kiến trúc (Architecture Depth)** và *
 
 ### Đã quyết định — đang dùng trong project
 
-* **Frontend:** ReactJS + Vite + Tailwind CSS (không dùng TypeScript, không dùng Next.js/React Router — đã chốt từ đầu project để giữ đơn giản cho đồ án solo)
+* **Frontend:** React + Vite + TypeScript + Tailwind CSS + React Router + Axios + react-hook-form
 * **Backend:** FastAPI (Python)
 * **Database:** PostgreSQL + `pgvector` extension (lưu cả dữ liệu quan hệ lẫn embeddings)
 * **Storage:** MinIO (local dev qua Docker Compose)
@@ -140,9 +140,11 @@ Chuyển hoàn toàn sang giai đoạn **Code & Design Chi Tiết**:
         ↓
 4. ✅ Triển khai Service Upload & File Validation (PDF/DOCX → MinIO); PDF Extraction chưa có
         ↓
-5. 🟢 Triển khai AI Layer (Chunking, Embedding, Vector Search & RAG Q&A)
+5. ✅ Triển khai Frontend UI shell (React + TS) & Kết nối auth thật
         ↓
-6. Xây dựng Frontend UI (ReactJS + TS) & Kết nối API
+6. ✅ FE Catch-up Features — nối API thật (browse, /me/resources, upload, moderation, admin taxonomy)
+        ↓
+7. 🟢 Triển khai AI Layer (Chunking, Embedding, Vector Search & RAG Q&A) — chưa bắt đầu
 
 
 ```
@@ -151,7 +153,7 @@ Chuyển hoàn toàn sang giai đoạn **Code & Design Chi Tiết**:
 
 ## PROMPT MANG SANG CHAT MỚI (NẾU CẦN)
 
-> "Tôi đang xây dựng đồ án ngành 'Nền tảng chia sẻ học liệu tích hợp AI/RAG' theo file PROJECT_CONTEXT.md. Backend đã hoàn thành Sprint 5: Auth, academic CRUD, Resource/Asset, moderation và upload PDF/DOCX vào MinIO. Hãy đọc code hiện tại trước, sau đó giúp tôi triển khai Sprint 8 AI Pipeline theo scope phù hợp."
+> "Tôi đang xây dựng đồ án ngành 'Nền tảng chia sẻ học liệu tích hợp AI/RAG' theo file PROJECT_CONTEXT.md. Backend đã hoàn thành Sprint 5; Frontend đã hoàn thành Sprint 6–7 (auth, browse flow, personal resources, upload/submit-review, admin moderation/taxonomy). Hãy đọc code hiện tại trước, sau đó giúp tôi triển khai Sprint kế tiếp theo scope đã xác nhận."
 
 ---
 
@@ -172,6 +174,20 @@ Sau khi Core System ổn định, nếu còn thời gian trong quá trình thự
 * AI Pipeline (Chunking, Embedding, Vector Search) — planned
 * RAG Question Answering — planned
 * Public Resource Hub
+
+### Sprint 6 Delivered Scope
+
+* Frontend foundation hoàn tất: Vite + React + TypeScript + Tailwind
+* Auth flow thật hoạt động với backend: register/login/logout, token persistence, protected/admin routes
+* Routing shell và layout cho public/protected/admin area
+
+### Sprint 7 Delivered Scope
+
+* TanStack Query + react-hot-toast; shared UI (`Spinner`, `ErrorMessage`, `PaginationBar`)
+* Browse flow công khai: Departments → Major → Subject → Resource detail
+* `/me/resources`, create → upload → submit-review; admin moderation và admin taxonomy CRUD
+* Backend bổ sung: filter taxonomy (`department_id`, `major_id`), `GET /resources/me/{id}`, `GET /resources/admin`
+* Các màn hình core đã nối API thật end-to-end (không còn mock UI cho luồng chính)
 
 ### Planned Future Enhancements
 

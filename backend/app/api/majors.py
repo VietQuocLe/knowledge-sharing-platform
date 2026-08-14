@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.auth import require_admin
@@ -10,8 +10,11 @@ router = APIRouter(prefix="/majors", tags=["Majors"])
 
 
 @router.get("/", response_model=list[MajorResponse])
-def list_majors(db: Session = Depends(get_db)):
-    return get_all(db)
+def list_majors(
+    department_id: int | None = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    return get_all(db, department_id=department_id)
 
 
 @router.get("/{major_id}", response_model=MajorResponse)

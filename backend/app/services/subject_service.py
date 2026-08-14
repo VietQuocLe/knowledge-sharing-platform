@@ -3,13 +3,29 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.department import Department
-from app.models.major import Major
+from app.models.major import Major, major_subject
 from app.models.subject import Subject
 from app.schemas.subject import SubjectCreate, SubjectUpdate
 
 
-def get_all(db: Session) -> list[Subject]:
-    result = db.execute(select(Subject).order_by(Subject.id))
+def _get_major_or_404(db: Session, major_id: int) -> Major:
+    major = db.execute(select(Major).where(Major.id == major_id)).scalar_one_or_none()
+    if major is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Major not found")
+    return major
+
+
+def get_all(db: Session, *, major_id: int | None = None) -> list[Subject]:
+    query = select(Subject).order_by(Subject.id)
+    if major_id is not None:
+        _get_major_or_404(db, major_id)
+        query = (
+            select(Subject)
+            .join(major_subject, Subject.id == major_subject.c.subject_id)
+            .where(major_subject.c.major_id == major_id)
+            .order_by(Subject.id)
+        )
+    result = db.execute(query)
     return list(result.scalars().all())
 
 

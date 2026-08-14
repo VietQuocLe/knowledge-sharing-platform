@@ -7,8 +7,12 @@ from app.models.major import Major
 from app.schemas.major import MajorCreate, MajorUpdate
 
 
-def get_all(db: Session) -> list[Major]:
-    result = db.execute(select(Major).order_by(Major.id))
+def get_all(db: Session, *, department_id: int | None = None) -> list[Major]:
+    query = select(Major).order_by(Major.id)
+    if department_id is not None:
+        _get_department_or_404(db, department_id)
+        query = query.where(Major.department_id == department_id)
+    result = db.execute(query)
     return list(result.scalars().all())
 
 

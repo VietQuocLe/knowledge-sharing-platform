@@ -181,6 +181,49 @@ def get_owned(
     return list(result.scalars().all()), total
 
 
+def get_owned_by_id(db: Session, resource_id: int, current_user: User) -> Resource:
+    resource = db.execute(
+        select(Resource)
+        .options(selectinload(Resource.assets))
+        .where(
+            Resource.id == resource_id,
+            Resource.owner_id == current_user.id,
+            Resource.status != ResourceStatus.DELETED,
+        )
+    ).scalar_one_or_none()
+    if resource is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
+    return resource
+
+
+def get_for_admin(
+    db: Session,
+    *,
+    visibility: VisibilityEnum | None = None,
+    page: int = 1,
+    size: int = 100,
+) -> tuple[list[Resource], int]:
+    if page < 1:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="page must be greater than 0")
+    if size < 1 or size > 100:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="size must be between 1 and 100")
+
+    filters = [Resource.status != ResourceStatus.DELETED]
+    if visibility is not None:
+        filters.append(Resource.visibility == visibility)
+
+    total = db.execute(select(func.count()).select_from(Resource).where(*filters)).scalar_one()
+    result = db.execute(
+        select(Resource)
+        .options(selectinload(Resource.assets))
+        .where(*filters)
+        .order_by(Resource.created_at.desc(), Resource.id.desc())
+        .offset((page - 1) * size)
+        .limit(size)
+    )
+    return list(result.scalars().all()), total
+
+
 def get_by_id(db: Session, resource_id: int) -> Resource:
     return _get_resource_or_404(db, resource_id, public_only=True)
 
@@ -257,6 +300,7 @@ def submit_for_review(db: Session, resource_id: int, current_user: User) -> Reso
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Resource must be private to submit for review")
 
     resource.visibility = VisibilityEnum.PENDING_REVIEW
+    resource.rejection_reason = None
     db.commit()
     db.refresh(resource)
     return _refresh_resource(db, resource_id)
@@ -273,6 +317,23 @@ def approve_for_public(db: Session, resource_id: int, current_user: User) -> Res
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Resource must be pending review to approve")
 
     resource.visibility = VisibilityEnum.PUBLIC
+    db.commit()
+    db.refresh(resource)
+    return _refresh_resource(db, resource_id)
+
+
+def reject_resource(db: Session, resource_id: int, current_user: User, reason: str) -> Resource:
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
+
+    resource = _get_resource_or_404(db, resource_id, include_deleted=True)
+    if resource.status == ResourceStatus.DELETED:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Resource is deleted")
+    if resource.visibility != VisibilityEnum.PENDING_REVIEW:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Resource must be pending review to reject")
+
+    resource.visibility = VisibilityEnum.PRIVATE
+    resource.rejection_reason = reason
     db.commit()
     db.refresh(resource)
     return _refresh_resource(db, resource_id)

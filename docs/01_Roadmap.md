@@ -30,19 +30,19 @@ Upload System & Visibility Workflow — ✅ done
 
 Sprint 6
 
-🟢 FE Foundation
+✅ FE Foundation
 
 ↓
 
 Sprint 7
 
-FE Catch-up Features
+✅ FE Catch-up Features
 
 ↓
 
 Sprint 8
 
-AI Pipeline
+Chưa bắt đầu (roadmap tham khảo: AI Pipeline)
 
 ↓
 

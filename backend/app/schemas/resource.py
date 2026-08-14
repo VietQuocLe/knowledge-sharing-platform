@@ -53,7 +53,14 @@ class ResourceResponse(ResourceBase):
     visibility: VisibilityEnum
     status: ResourceStatus
     created_at: datetime
+    rejection_reason: str | None = None
     assets: list[AssetResponse] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ResourceRejectRequest(BaseModel):
+    reason: str
 
     model_config = ConfigDict(from_attributes=True)
 

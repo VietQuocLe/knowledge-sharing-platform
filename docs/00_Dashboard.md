@@ -2,17 +2,13 @@
 
 ## Current Sprint
 
-Sprint 6 — FE Foundation
+Chưa bắt đầu — Sprint kế tiếp chưa xác nhận
 
 ---
 
-## Current Task
+## Last Completed
 
-☑ Project setup (Vite/Tailwind)
-
-☑ Routing, API client, Auth Context, layout/navigation chung
-
-☑ Login + register flow hoạt động đúng với JWT flow
+Sprint 7 — FE Catch-up Features ✅
 
 ---
 
@@ -20,22 +16,26 @@ Sprint 6 — FE Foundation
 
 Overall
 
-42%
+58%
 
-█████░░░░░░░░░░░░
+███████░░░░░░░░░░
 
 Backend
 
-80%
+85%
+
+Frontend
+
+95%
 
 ---
 
 ## Next Task
 
-FE Foundation
+Chưa xác nhận — xem roadmap và quyết định Sprint 8+
 
 ---
 
 ## Current Problem
 
-- FE Foundation vẫn đang là sprint hiện tại; hệ thống vẫn cần hạ tầng frontend và auth shell trước khi đi vào các tính năng nghiệp vụ.
+Không có blocker kỹ thuật cho luồng core FE–BE. Các quan sát polish UI/code structure được ghi ở `PROJECT_CONTEXT.md` mục 19 (ngoài phạm vi Sprint 7).

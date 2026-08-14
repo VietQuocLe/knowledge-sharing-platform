@@ -7,8 +7,10 @@ import { PublicLayout } from '../layouts/PublicLayout'
 import { AdminModerationPage } from '../pages/AdminModerationPage'
 import { AdminTaxonomyPage } from '../pages/AdminTaxonomyPage'
 import { DepartmentDetailPage } from '../pages/DepartmentDetailPage'
+import { DepartmentsPage } from '../pages/DepartmentsPage'
 import { HomePage } from '../pages/HomePage'
 import { LoginPage } from '../pages/LoginPage'
+import { MajorDetailPage } from '../pages/MajorDetailPage'
 import { MyResourcesPage } from '../pages/MyResourcesPage'
 import { RegisterPage } from '../pages/RegisterPage'
 import { ResourceCreatePage } from '../pages/ResourceCreatePage'
@@ -23,7 +25,9 @@ const router = createBrowserRouter([
       { path: '/', element: <HomePage /> },
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
+      { path: '/departments', element: <DepartmentsPage /> },
       { path: '/departments/:id', element: <DepartmentDetailPage /> },
+      { path: '/majors/:id', element: <MajorDetailPage /> },
       { path: '/subjects/:id', element: <SubjectDetailPage /> },
       { path: '/resources/:id', element: <ResourceDetailPage /> },
     ],
@@ -36,7 +40,7 @@ const router = createBrowserRouter([
     ),
     children: [
       { path: '/me/resources', element: <MyResourcesPage /> },
-      { path: '/resources/new', element: <ResourceCreatePage /> },
+      { path: '/resources/create', element: <ResourceCreatePage /> },
       { path: '/resources/:id/upload', element: <ResourceUploadPage /> },
     ],
   },

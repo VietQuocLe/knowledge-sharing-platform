@@ -64,6 +64,11 @@ class Resource(Base):
         nullable=False,
     )
 
+    rejection_reason: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
     owner: Mapped["User"] = relationship(back_populates="resources")
 
     subject: Mapped[Optional["Subject"]] = relationship(back_populates="resources")

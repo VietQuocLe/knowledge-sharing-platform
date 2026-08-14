@@ -30,18 +30,68 @@ MinIO (Storage)
 
 ---
 
+## Frontend Architecture
+
+### Stack
+
+- React 19 + Vite 8 + TypeScript
+- Tailwind CSS v3
+- TanStack Query v5, react-hot-toast
+- Không dùng UI library ngoài; component cơ bản tự viết trong `components/ui/`
+- `tsconfig` cấu hình lỏng với `strict=false` và `noImplicitAny=false` nhằm giữ tốc độ phát triển MVP
+
+### Folder Structure
+
+- `src/api/` — `apiClient`, `getApiErrorMessage`
+- `src/features/{auth,resources,taxonomy}/` — mỗi feature có `api.ts`, `queryKeys.ts` (resources/taxonomy), `components/`
+- `src/layouts/` — `PublicLayout`, `AppLayout`, `AdminLayout`
+- `src/pages/` — page components; lắp ráp UI và wiring TanStack Query (logic mutation/query hiện nằm tại đây)
+- `src/components/ui/` — `Button`, `Input`, `Modal`, `Spinner`, `ErrorMessage`, `PaginationBar`
+- `src/components/` — `AdminNavLinks`, `ProtectedRoute`, `AdminRoute`
+- `src/utils/` — `parseRouteId`
+
+### API Layer
+
+- `apiClient` dùng Axios: JSON, form-urlencoded (OAuth2 login), multipart (upload asset)
+- Request interceptor gắn `Authorization: Bearer <token>` từ `localStorage`
+- Response interceptor xử lý `401` bằng cách xóa token và redirect về `/login`
+- Upload asset dùng timeout riêng 120s (`features/resources/api.ts`)
+
+### Auth Layer
+
+- `AuthContext` quản lý `user`, `token`, `isLoading`
+- Token lưu vào `localStorage`
+- Khi có token, gọi `GET /auth/me` để lấy user hiện tại
+- Login/register/logout hoạt động với backend; `ProtectedRoute` / `AdminRoute` bảo vệ route
+
+### Routing
+
+- `createBrowserRouter` với nested layout qua `<Outlet/>`
+- Route hiện có:
+  - Public: `/`, `/login`, `/register`, `/departments`, `/departments/:id`, `/majors/:id`, `/subjects/:id`, `/resources/:id`
+  - Protected: `/me/resources`, `/resources/create`, `/resources/:id/upload`
+  - Admin: `/admin/moderation`, `/admin/taxonomy`
+- User `ADMIN` thấy link Kiểm duyệt / Phân loại trên `PublicLayout` và sidebar `AppLayout`
+
+### State & Forms
+
+- TanStack Query cho server state (list/detail, admin moderation, taxonomy CRUD)
+- Query key factory: `features/resources/queryKeys.ts`, `features/taxonomy/queryKeys.ts`
+- Cache invalidation sau mutation (create/upload/submit, admin approve/reject/delete, taxonomy CRUD)
+- `react-hook-form` cho login/register và form tạo resource
+- `react-hot-toast` cho feedback mutation; `getApiErrorMessage` parse `detail` từ backend
+
+---
+
 ## Current Notes
 
-- Router chỉ nhận request và trả response.
-- Business logic nằm trong Service Layer.
-- Authentication hiện tại dùng JWT Bearer token qua `OAuth2PasswordBearer`.
-- `security.py` xử lý password hashing và token creation/decoding.
-- Mô hình học thuật hiện tại đi qua `Department -> Major -> Subject`.
-- Các route ghi dữ liệu cho Department/Major/Subject dùng admin dependency, còn GET endpoints vẫn public.
-- CRUD của Department/Major/Subject được xử lý trong Service Layer, không query DB trong Router.
-- Resource public list/detail chỉ trả resource `PUBLIC` chưa bị xóa; list yêu cầu `subject_id` và phân trang theo `created_at DESC, id DESC`.
-- `GET /resources/me`, tạo resource, upload asset và submit review yêu cầu JWT; chủ sở hữu hoặc admin được upload/submit. Cập nhật/xóa resource và approve public là admin-only.
-- Upload đi theo `Router → resource_service → storage_service → MinIO`: chỉ PDF/DOCX hợp lệ, kiểm tra giới hạn cấu hình, ghi object theo `resources/{resource_id}/{uuid}_{filename}`, rồi tạo `Asset`; lỗi commit DB sẽ cố gắng xóa object vừa ghi.
-- Khi tạo, user thường có thể để mặc định `PRIVATE` hoặc chọn trực tiếp `PENDING_REVIEW` để đóng góp vào hàng chờ duyệt; chỉ admin được tạo trực tiếp `PUBLIC`. Luồng review từ resource private vẫn là `PRIVATE → PENDING_REVIEW → PUBLIC`; soft delete dùng `ResourceStatus.DELETED`.
-- Sprint 6 hiện tại là FE Foundation: frontend sẽ bổ sung Vite/Tailwind, routing, API client, Auth Context, layout/navigation chung và login/register với JWT flow trên nền backend hiện có.
-- Sprint 7 là FE Catch-up Features: hoàn thành UI cho các nghiệp vụ backend Sprint 1–5 như browse theo Khoa/Ngành/Môn, resource list/detail, personal resources, upload form và submit-review.
+- Router chỉ nhận request và trả response; business logic nằm trong Service Layer.
+- JWT Bearer qua `OAuth2PasswordBearer`; `security.py` xử lý hash và token.
+- Mô hình học thuật: `Department → Major → Subject → Resource`.
+- Taxonomy GET hỗ trợ filter: `GET /majors/?department_id=`, `GET /subjects/?major_id=` (optional).
+- Resource public list/detail chỉ trả `PUBLIC` chưa xóa; list yêu cầu `subject_id`.
+- `GET /resources/me`, `GET /resources/me/{resource_id}`, create, upload, submit-review yêu cầu JWT.
+- Admin: `GET /resources/admin`, approve, reject, update, delete.
+- Upload: PDF/DOCX qua backend proxy → MinIO; giới hạn cấu hình qua Settings.
+- Visibility: `PRIVATE → PENDING_REVIEW → PUBLIC`; soft delete `ResourceStatus.DELETED`.
+- Sprint 7 hoàn thành: toàn bộ luồng browse, personal resources, upload/submit, admin moderation/taxonomy đã nối API thật.

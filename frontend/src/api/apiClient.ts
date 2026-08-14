@@ -51,7 +51,7 @@ export function createFormRequest<T = unknown>(config: AxiosRequestConfig): Prom
 
 export function createMultipartRequest<T = unknown>(config: AxiosRequestConfig): Promise<T> {
   const headers = new AxiosHeaders(config.headers)
-  headers.set('Content-Type', 'multipart/form-data')
+  headers.delete('Content-Type')
 
   return apiClient.request<T>({
     ...config,
