@@ -228,5 +228,82 @@ FE Catch-up Features — nối API thật cho browse, personal resources, upload
 
 ## Next Sprint
 
-Chưa xác nhận
+Sprint 8
+
+---
+
+# Sprint 8
+
+## Goal
+
+Code Structure Refactor: Tách logic khỏi pages xuống feature hooks, thống nhất query key factory, gộp error handling, tạo DepartmentMajorSubjectPicker dùng chung, dọn barrel export, đồng bộ upload limit config FE/BE.
+
+## Completed
+
+- **Action-Based Hooks**: Tách các query/mutation hooks ở features/ resources và taxonomy.
+- **DepartmentMajorSubjectPicker**: Component quản lý cascade khoa/ngành/môn tự động reset, thay thế logic trùng lặp ở TaxonomyView, ResourceCreatePage và AdminTaxonomyPage.
+- **Upload Limit Configurations API**: Endpoint backend GET `/config/upload` expose limits cho hook `useUploadConfig` tiêu thụ, xóa sạch FE client settings.
+- **Error Handling & Translations**: `AuthForm` sử dụng `getApiErrorMessage` và bổ sung localized translations trong `getApiErrorMessage.ts`.
+- **Barrel Exports & Packaging**: Barrel `index.ts` cho resources feature và module component placement guidelines ở `features/README.md`.
+
+## Decisions
+
+- Đưa toàn bộ cấu trúc hooks về dạng feature-scoped.
+- Component dùng một nơi giữ tại feature, dùng chung không có business logic chuyển về components/ui/.
+- Sync dynamic config qua API Endpoint thay vì constants.
+
+## Learned
+
+- Cascade selection có nhiều corner case reset state cần xử lý thận trọng tại một component chung.
+- Quản lý logic hooks giúp components chỉ làm render layout.
+
+## Next Sprint
+
+UI/UX Polish & Design Consistency
+
+---
+
+# Sprint 8.5
+
+## Goal
+
+Database Architecture Refactor: tách `Resource` dùng chung thành `Document` (Public) + `Notebook` (Private Workspace AI), dọn dẹp Frontend để build sạch.
+
+## Completed
+
+**Backend (Phase 1 & 2):**
+- Xóa model `Resource` cũ, thay bằng `Document`, `Notebook`, `NotebookSavedDocument`, `Asset` (dùng `document_id`/`notebook_id` nullable + CHECK constraint loại trừ nhau)
+- `DocumentStatus` enum (DRAFT/PUBLIC/DELETED); giữ `ResourceType` taxonomy
+- API `/documents/`: `GET /documents/` (paginated, filter `subject_id` + `resource_type`), `GET /documents/{id}`, `GET /documents/{id}/assets/{asset_id}/download` (presigned MinIO URL — 15 phút, không cần JWT)
+- `document_service.py`, `asset_service.py` — business logic tách khỏi router theo Service Layer pattern
+- `storage_service.get_presigned_download_url()` hoạt động
+- `seed.py` cập nhật chèn Document mẫu PUBLIC
+
+**Frontend (Phase 3 — Cleanup):**
+- `features/resources/api.ts`: types mới `Document`/`Asset`/`DocumentPageResponse`; 3 active API calls
+- `features/resources/queryKeys.ts`: `documentsKeys` root `['documents']`; alias `resourcesKeys` giữ backwards-compat
+- Hooks mới: `useDocuments`, `useDocumentDetail`
+- 7 write/admin hooks cũ: stubbed (`export {}`), giữ trong repo
+- `PublicResourceCard`: nhận `Document` prop
+- `SubjectDetailPage`, `ResourceDetailPage`: consume Document API + nút Tải về presigned
+- `MyResourcesPage`, `ResourceCreatePage`, `ResourceUploadPage`, `AdminModerationPage`: stubbed/notice
+- `AppRouter`: routes Admin/contribution commented; alias `/documents/:id` thêm
+- Nav links "Đóng góp tài liệu" ẩn ở `PublicLayout`, `AppLayout`, `HomePage`
+- `npm run build` ✅ exit code 0
+
+## Decisions
+
+- Giữ tên thư mục `features/resources/` để tránh gãy import paths — chỉ update internals.
+- Download file dùng presigned URL thay vì proxy backend — bỏ cần JWT, giảm tải server.
+- Nhánh Admin (tạo/upload/moderation) tạm dừng, giữ file trong repo với `// [PAUSED - Admin branch]` comment.
+
+## Learned
+
+- `tsc --noEmit` có thể pass nhưng `vite build` vẫn fail nếu các file `.ts` unreachable từ exports vẫn tồn tại trong repo với broken imports — cần stub tất cả.
+- Backwards-compat alias (`resourcesKeys = documentsKeys`) giúp tránh đổi import tại nhiều file cùng lúc.
+
+## Next Sprint
+
+UI/UX Polish & Design Consistency
+
 

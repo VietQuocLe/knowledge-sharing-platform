@@ -1,9 +1,10 @@
-import { createJsonRequest, createMultipartRequest } from '../../api/apiClient'
+import { createJsonRequest } from '../../api/apiClient'
 
-/** Allow up to 30 MB uploads on slower connections without hitting the default 10s timeout. */
-const UPLOAD_REQUEST_TIMEOUT_MS = 120_000
+// ─── Active Types (Document domain) ────────────────────────────────────────
 
 export const ResourceType = {
+  EXAM: 'EXAM',
+  SLIDE: 'SLIDE',
   DOCUMENT: 'DOCUMENT',
   VIDEO: 'VIDEO',
   AUDIO: 'AUDIO',
@@ -13,170 +14,112 @@ export const ResourceType = {
 
 export type ResourceType = (typeof ResourceType)[keyof typeof ResourceType]
 
-export const VisibilityEnum = {
-  PRIVATE: 'PRIVATE',
-  PENDING_REVIEW: 'PENDING_REVIEW',
+export const DocumentStatus = {
+  DRAFT: 'DRAFT',
   PUBLIC: 'PUBLIC',
-} as const
-
-export type VisibilityEnum = (typeof VisibilityEnum)[keyof typeof VisibilityEnum]
-
-export const ResourceStatus = {
-  PROCESSING: 'PROCESSING',
-  READY: 'READY',
-  FAILED: 'FAILED',
   DELETED: 'DELETED',
 } as const
 
-export type ResourceStatus = (typeof ResourceStatus)[keyof typeof ResourceStatus]
+export type DocumentStatus = (typeof DocumentStatus)[keyof typeof DocumentStatus]
 
 export interface Asset {
   id: number
-  resource_id: number
+  document_id: number | null
+  notebook_id: number | null
   file_name: string
   file_path: string
   file_type: string
   size: number
 }
 
-export interface Resource {
+export interface Document {
   id: number
   title: string
   description: string | null
+  subject_id: number
   resource_type: ResourceType
-  owner_id: number
-  subject_id: number | null
-  visibility: VisibilityEnum
-  status: ResourceStatus
+  status: DocumentStatus
+  created_by: number
   created_at: string
-  rejection_reason: string | null
-  metadata_json: Record<string, unknown>
   assets: Asset[]
 }
 
-export interface ResourcePageResponse {
-  items: Resource[]
+export interface DocumentPageResponse {
+  items: Document[]
   total: number
   page: number
   size: number
 }
 
-export interface ResourceCreatePayload {
-  title: string
-  description?: string
-  subject_id: number
-  resource_type: ResourceType
+export interface AssetDownloadResponse {
+  download_url: string
+  file_name: string
+  expires_in_seconds: number
 }
+
+export interface UploadConfig {
+  max_file_size_mb: number
+  max_assets_per_resource: number
+  allowed_upload_file_types: string[]
+}
+
+// ─── Active API calls ───────────────────────────────────────────────────────
 
 export const resourcesApi = {
-  getResourceList: async (params?: {
+  getDocumentList: async (params?: {
     subjectId?: number
     resourceType?: string
     page?: number
     size?: number
-  }): Promise<ResourcePageResponse> => {
+  }): Promise<DocumentPageResponse> => {
     const queryParams: Record<string, unknown> = {
       page: params?.page ?? 1,
       size: params?.size ?? 20,
     }
+    if (params?.subjectId !== undefined) queryParams.subject_id = params.subjectId
+    if (params?.resourceType !== undefined) queryParams.resource_type = params.resourceType
 
-    if (params?.subjectId !== undefined) {
-      queryParams.subject_id = params.subjectId
-    }
-    if (params?.resourceType !== undefined) {
-      queryParams.resource_type = params.resourceType
-    }
+    return createJsonRequest({ method: 'GET', url: '/documents/', params: queryParams })
+  },
 
+  getDocumentDetail: async (id: number): Promise<Document> => {
+    return createJsonRequest({ method: 'GET', url: `/documents/${id}` })
+  },
+
+  getAssetDownloadUrl: async (
+    documentId: number,
+    assetId: number,
+  ): Promise<AssetDownloadResponse> => {
     return createJsonRequest({
       method: 'GET',
-      url: '/resources',
-      params: queryParams,
+      url: `/documents/${documentId}/assets/${assetId}/download`,
     })
   },
 
-  getResourceDetail: async (id: number): Promise<Resource> => {
-    return createJsonRequest({
-      method: 'GET',
-      url: `/resources/${id}`,
-    })
-  },
-
-  getMyResources: async (params?: {
-    subjectId?: number
-    resourceType?: string
-    page?: number
-    size?: number
-  }): Promise<ResourcePageResponse> => {
-    const queryParams: Record<string, unknown> = {
-      page: params?.page ?? 1,
-      size: params?.size ?? 20,
-    }
-
-    if (params?.subjectId !== undefined) {
-      queryParams.subject_id = params.subjectId
-    }
-    if (params?.resourceType !== undefined) {
-      queryParams.resource_type = params.resourceType
-    }
-
-    return createJsonRequest({
-      method: 'GET',
-      url: '/resources/me',
-      params: queryParams,
-    })
-  },
-
-  getMyResourceById: async (id: number): Promise<Resource> => {
-    return createJsonRequest({
-      method: 'GET',
-      url: `/resources/me/${id}`,
-    })
-  },
-
-  createResource: async (payload: ResourceCreatePayload): Promise<Resource> => {
-    return createJsonRequest({
-      method: 'POST',
-      url: '/resources/',
-      data: payload,
-    })
-  },
-
-  uploadResourceAsset: async (resourceId: number, file: File): Promise<Resource> => {
-    const formData = new FormData()
-    formData.append('file', file)
-
-    return createMultipartRequest({
-      method: 'POST',
-      url: `/resources/${resourceId}/assets`,
-      data: formData,
-      timeout: UPLOAD_REQUEST_TIMEOUT_MS,
-    })
-  },
-
-  submitResourceForReview: async (resourceId: number): Promise<Resource> => {
-    return createJsonRequest({
-      method: 'POST',
-      url: `/resources/${resourceId}/submit-review`,
-    })
-  },
-
-  getAdminResources: async (params?: { visibility?: VisibilityEnum }): Promise<ResourcePageResponse> => {
-    return createJsonRequest({
-      method: 'GET',
-      url: '/resources/admin',
-      params: { visibility: params?.visibility, page: 1, size: 100 },
-    })
-  },
-
-  approveResource: async (resourceId: number): Promise<Resource> => {
-    return createJsonRequest({ method: 'POST', url: `/resources/${resourceId}/approve` })
-  },
-
-  rejectResource: async (resourceId: number, reason: string): Promise<Resource> => {
-    return createJsonRequest({ method: 'POST', url: `/resources/${resourceId}/reject`, data: { reason } })
-  },
-
-  deleteResource: async (resourceId: number): Promise<void> => {
-    return createJsonRequest({ method: 'DELETE', url: `/resources/${resourceId}` })
+  getUploadConfig: async (): Promise<UploadConfig> => {
+    return createJsonRequest({ method: 'GET', url: '/config/upload' })
   },
 }
+
+// ─── [PAUSED - Admin branch] ─────────────────────────────────────────────────
+// The following types and API calls belong to the Admin/contribution flow.
+// They are kept here for when the Admin branch is re-activated.
+//
+// export const VisibilityEnum = { PRIVATE, PENDING_REVIEW, PUBLIC } as const
+// export type VisibilityEnum = ...
+// export const ResourceStatus = { PROCESSING, READY, FAILED, DELETED } as const
+// export type ResourceStatus = ...
+// export interface Resource { id, title, description, resource_type, owner_id,
+//   subject_id, visibility, status, created_at, rejection_reason,
+//   metadata_json, assets }
+// export interface ResourceCreatePayload { title, description?, subject_id, resource_type }
+//
+// resourcesApi.getMyResources        → GET /resources/me
+// resourcesApi.getMyResourceById     → GET /resources/me/:id
+// resourcesApi.createResource        → POST /resources/
+// resourcesApi.uploadResourceAsset   → POST /resources/:id/assets
+// resourcesApi.submitResourceForReview → POST /resources/:id/submit-review
+// resourcesApi.getAdminResources     → GET /resources/admin
+// resourcesApi.approveResource       → POST /resources/:id/approve
+// resourcesApi.rejectResource        → POST /resources/:id/reject
+// resourcesApi.deleteResource        → DELETE /resources/:id

@@ -1,12 +1,10 @@
-import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { PaginationBar } from '../components/ui/PaginationBar'
 import { ErrorMessage } from '../components/ui/ErrorMessage'
 import { Spinner } from '../components/ui/Spinner'
-import { PublicResourceCard } from '../features/resources/components/PublicResourceCard'
-import { resourcesApi } from '../features/resources/api'
-import { resourcesKeys } from '../features/resources/queryKeys'
+import { PublicResourceCard, resourcesApi, resourcesKeys } from '../features/resources'
 import { taxonomyApi } from '../features/taxonomy/api'
 import { taxonomyKeys } from '../features/taxonomy/queryKeys'
 import { parseRouteId } from '../utils/parseRouteId'
@@ -28,13 +26,13 @@ export function SubjectDetailPage() {
   })
 
   const {
-    data: resourcesPage,
-    isLoading: isLoadingResources,
-    error: errorResources,
+    data: documentsPage,
+    isLoading: isLoadingDocuments,
+    error: errorDocuments,
   } = useQuery({
     queryKey: resourcesKeys.listPaginated({ subjectId: subjectId ?? undefined, page }),
     queryFn: () =>
-      resourcesApi.getResourceList({
+      resourcesApi.getDocumentList({
         subjectId: subjectId!,
         page,
         size: pageSize,
@@ -42,8 +40,8 @@ export function SubjectDetailPage() {
     enabled: subjectId !== null,
   })
 
-  const resources = resourcesPage?.items ?? []
-  const total = resourcesPage?.total ?? 0
+  const documents = documentsPage?.items ?? []
+  const total = documentsPage?.total ?? 0
 
   if (subjectId === null) {
     return (
@@ -92,25 +90,25 @@ export function SubjectDetailPage() {
             ))}
           </div>
 
-          <h2 className="mt-8 text-xl font-semibold text-slate-900">Tài nguyên liên quan</h2>
+          <h2 className="mt-8 text-xl font-semibold text-slate-900">Tài liệu liên quan</h2>
 
-          {isLoadingResources ? (
+          {isLoadingDocuments ? (
             <div className="mt-6 flex justify-center py-8">
               <Spinner />
             </div>
-          ) : errorResources ? (
+          ) : errorDocuments ? (
             <div className="mt-6">
-              <ErrorMessage message="Không thể tải danh sách tài nguyên" />
+              <ErrorMessage message="Không thể tải danh sách tài liệu" />
             </div>
-          ) : resources.length > 0 ? (
+          ) : documents.length > 0 ? (
             <div className="mt-6 space-y-3">
-              {resources.map((resource) => (
-                <PublicResourceCard key={resource.id} resource={resource} />
+              {documents.map((document) => (
+                <PublicResourceCard key={document.id} document={document} />
               ))}
               <PaginationBar page={page} total={total} pageSize={pageSize} onPageChange={setPage} />
             </div>
           ) : (
-            <p className="mt-6 text-slate-600">Không có tài nguyên nào cho môn học này</p>
+            <p className="mt-6 text-slate-600">Không có tài liệu nào cho môn học này</p>
           )}
         </>
       )}

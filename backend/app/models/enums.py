@@ -8,6 +8,8 @@ class UserRole(str, Enum):
 
 
 class ResourceType(str, Enum):
+    EXAM = "EXAM"
+    SLIDE = "SLIDE"
     DOCUMENT = "DOCUMENT"
     VIDEO = "VIDEO"
     AUDIO = "AUDIO"
@@ -15,14 +17,7 @@ class ResourceType(str, Enum):
     AI_ARTIFACT = "AI_ARTIFACT"
 
 
-class VisibilityEnum(str, Enum):
-    PRIVATE = "PRIVATE"
-    PENDING_REVIEW = "PENDING_REVIEW"
+class DocumentStatus(str, Enum):
+    DRAFT = "DRAFT"
     PUBLIC = "PUBLIC"
-
-
-class ResourceStatus(str, Enum):
-    PROCESSING = "PROCESSING"
-    READY = "READY"
-    FAILED = "FAILED"
     DELETED = "DELETED"

@@ -2,13 +2,13 @@
 
 ## Current Sprint
 
-Chưa bắt đầu — Sprint kế tiếp chưa xác nhận
+Sprint 9 — UI/UX Polish & Design Consistency 🎨
 
 ---
 
 ## Last Completed
 
-Sprint 7 — FE Catch-up Features ✅
+Sprint 8 — Code Structure Refactor ✅
 
 ---
 
@@ -16,9 +16,9 @@ Sprint 7 — FE Catch-up Features ✅
 
 Overall
 
-58%
+67%
 
-███████░░░░░░░░░░
+████████░░░░░░░░░
 
 Backend
 
@@ -32,7 +32,7 @@ Frontend
 
 ## Next Task
 
-Chưa xác nhận — xem roadmap và quyết định Sprint 8+
+Tổ chức lại HomePage và các layouts để thống nhất entry point và responsive navigation, Việt hóa enums hiển thị, và refactor styling cho admin space.
 
 ---
 

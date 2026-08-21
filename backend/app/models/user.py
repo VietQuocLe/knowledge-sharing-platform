@@ -11,7 +11,8 @@ from app.models.base import Base
 from app.models.enums import UserRole
 
 if TYPE_CHECKING:
-    from app.models.resource import Resource
+    from app.models.document import Document
+    from app.models.notebook import Notebook
 
 
 class User(Base):
@@ -40,7 +41,12 @@ class User(Base):
         server_default=func.now(),
     )
 
-    resources: Mapped[list["Resource"]] = relationship(
+    documents: Mapped[list["Document"]] = relationship(
+        back_populates="creator",
+        cascade="all, delete-orphan",
+    )
+
+    notebooks: Mapped[list["Notebook"]] = relationship(
         back_populates="owner",
         cascade="all, delete-orphan",
     )

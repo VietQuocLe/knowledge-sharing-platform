@@ -7,9 +7,10 @@ from app.models.base import Base
 from app.models.major import major_subject  # Nhập bảng trung gian
 
 if TYPE_CHECKING:
-    from app.models.resource import Resource
+    from app.models.document import Document
     from app.models.major import Major
     from app.models.department import Department
+    from app.models.notebook import Notebook
 
 
 class Subject(Base):
@@ -33,6 +34,10 @@ class Subject(Base):
         back_populates="subjects",
     )
 
-    resources: Mapped[list["Resource"]] = relationship(
-        back_populates="subject"
+    documents: Mapped[list["Document"]] = relationship(
+        back_populates="subject",
+    )
+
+    notebooks: Mapped[list["Notebook"]] = relationship(
+        back_populates="subject",
     )

@@ -1,34 +1,32 @@
 /**
- * Query Key Factory for Resources
+ * Query Key Factory for Documents
  * Convention: keys are organized hierarchically for better cache invalidation
  */
 
-export const resourcesKeys = {
-  all: ['resources'] as const,
+export const documentsKeys = {
+  all: ['documents'] as const,
 
-  // Public resource list (searchable, paginated, filterable by subject/type)
-  list: () => [...resourcesKeys.all, 'list'] as const,
+  uploadConfig: () => [...documentsKeys.all, 'uploadConfig'] as const,
+
+  // Public document list (paginated, filterable by subject/type)
+  list: () => [...documentsKeys.all, 'list'] as const,
   listPaginated: (params?: { subjectId?: number; page?: number; type?: string }) =>
-    params
-      ? [...resourcesKeys.list(), params]
-      : [...resourcesKeys.list()],
+    params ? [...documentsKeys.list(), params] : [...documentsKeys.list()],
 
-  // Resource details
-  detail: () => [...resourcesKeys.all, 'detail'] as const,
-  detailById: (id: number) => [...resourcesKeys.detail(), id] as const,
+  // Document details
+  detail: () => [...documentsKeys.all, 'detail'] as const,
+  detailById: (id: number) => [...documentsKeys.detail(), id] as const,
 
-  // Current user's resources (my resources)
-  me: () => [...resourcesKeys.all, 'me'] as const,
-  myList: () => [...resourcesKeys.me(), 'list'] as const,
-  myListPaginated: (params?: { page?: number; type?: string }) =>
-    params ? [...resourcesKeys.myList(), params] : [...resourcesKeys.myList()],
-  myDetail: () => [...resourcesKeys.me(), 'detail'] as const,
-  myDetailById: (id: number) => [...resourcesKeys.myDetail(), id] as const,
-
-  // Admin moderation/management
-  adminList: () => [...resourcesKeys.all, 'adminList'] as const,
-  adminListFiltered: (params?: { visibility?: string }) =>
-    params
-      ? [...resourcesKeys.adminList(), params]
-      : resourcesKeys.adminList(),
+  // [PAUSED - Admin branch] me / adminList keys removed until re-activated
+  // me: () => [...documentsKeys.all, 'me'] as const,
+  // myList: () => [...documentsKeys.me(), 'list'] as const,
+  // myListPaginated: (params?) => ...
+  // myDetail: () => [...documentsKeys.me(), 'detail'] as const,
+  // myDetailById: (id: number) => ...
+  // adminList: () => [...documentsKeys.all, 'adminList'] as const,
+  // adminListFiltered: (params?) => ...
 } as const
+
+// Backwards-compat alias — existing code using `resourcesKeys` still compiles
+/** @deprecated Use documentsKeys instead */
+export const resourcesKeys = documentsKeys

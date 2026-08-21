@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+from datetime import timedelta
 
 from minio import Minio
 
@@ -42,3 +43,13 @@ def upload_object(*, object_path: str, data: bytes, content_type: str) -> None:
 def delete_object(object_path: str) -> None:
     client = get_minio_client()
     client.remove_object(settings.MINIO_BUCKET_NAME, object_path)
+
+
+def get_presigned_download_url(*, object_path: str, expires_seconds: int = 900) -> str:
+    ensure_bucket()
+    client = get_minio_client()
+    return client.presigned_get_object(
+        bucket_name=settings.MINIO_BUCKET_NAME,
+        object_name=object_path,
+        expires=timedelta(seconds=expires_seconds),
+    )

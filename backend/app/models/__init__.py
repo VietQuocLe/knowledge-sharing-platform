@@ -3,7 +3,9 @@ from .user import User
 from .department import Department
 from .major import Major
 from .subject import Subject
-from .resource import Asset, Resource
+from .document import Document
+from .notebook import Notebook, NotebookSavedDocument
+from .asset import Asset
 
 __all__ = [
     "Base",
@@ -11,6 +13,8 @@ __all__ = [
     "Department",
     "Major",
     "Subject",
-    "Resource",
+    "Document",
+    "Notebook",
+    "NotebookSavedDocument",
     "Asset",
 ]

@@ -60,12 +60,14 @@ export function HomePage() {
                 >
                   Tài liệu của tôi
                 </Link>
+                {/* [PAUSED - Admin branch] Contribution link hidden until re-activated
                 <Link
                   to="/resources/create"
                   className="rounded-lg bg-slate-900 px-3 py-2 text-sm text-white transition hover:bg-slate-700"
                 >
                   Đóng góp tài liệu
                 </Link>
+                */}
               </>
             ) : null}
           </div>

@@ -42,28 +42,52 @@ Sprint 7
 
 Sprint 8
 
-Chưa bắt đầu (roadmap tham khảo: AI Pipeline)
+Code Structure Refactor — ✅ done
+
+↓
+
+Sprint 8.5
+
+Database Architecture Refactor (Document/Notebook/Asset split) — ✅ done
 
 ↓
 
 Sprint 9
 
-Notebook Workspace
+UI/UX Polish & Design Consistency
 
 ↓
 
 Sprint 10
 
-RAG Chat
+Core Feature Completion
 
 ↓
 
 Sprint 11
 
-Testing
+AI Pipeline
 
 ↓
 
 Sprint 12
+
+Notebook Workspace
+
+↓
+
+Sprint 13
+
+RAG Chat
+
+↓
+
+Sprint 14
+
+Testing
+
+↓
+
+Sprint 15
 
 Deployment & Optimization

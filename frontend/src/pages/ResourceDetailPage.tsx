@@ -1,29 +1,41 @@
-import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { ErrorMessage } from '../components/ui/ErrorMessage'
 import { Spinner } from '../components/ui/Spinner'
-import { resourcesApi } from '../features/resources/api'
-import { resourcesKeys } from '../features/resources/queryKeys'
+import { resourcesApi, resourcesKeys } from '../features/resources'
 import { parseRouteId } from '../utils/parseRouteId'
 
 export function ResourceDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const resourceId = parseRouteId(id)
+  const documentId = parseRouteId(id)
+  const [downloadingAssetId, setDownloadingAssetId] = useState<number | null>(null)
 
   const {
-    data: resource,
+    data: document,
     isLoading,
     error,
   } = useQuery({
-    queryKey: resourcesKeys.detailById(resourceId!),
-    queryFn: () => resourcesApi.getResourceDetail(resourceId!),
-    enabled: resourceId !== null,
+    queryKey: resourcesKeys.detailById(documentId!),
+    queryFn: () => resourcesApi.getDocumentDetail(documentId!),
+    enabled: documentId !== null,
   })
 
-  if (resourceId === null) {
+  async function handleDownload(assetId: number) {
+    if (documentId === null) return
+    setDownloadingAssetId(assetId)
+    try {
+      const { download_url } = await resourcesApi.getAssetDownloadUrl(documentId, assetId)
+      window.open(download_url, '_blank', 'noopener,noreferrer')
+    } finally {
+      setDownloadingAssetId(null)
+    }
+  }
+
+  if (documentId === null) {
     return (
       <div className="mx-auto max-w-5xl px-6 py-12">
-        <ErrorMessage message="Mã tài nguyên không hợp lệ." />
+        <ErrorMessage message="Mã tài liệu không hợp lệ." />
       </div>
     )
   }
@@ -41,7 +53,7 @@ export function ResourceDetailPage() {
   if (error) {
     return (
       <div className="mx-auto max-w-5xl px-6 py-12">
-        <ErrorMessage message="Không thể tải thông tin tài nguyên" />
+        <ErrorMessage message="Không thể tải thông tin tài liệu" />
       </div>
     )
   }
@@ -54,51 +66,54 @@ export function ResourceDetailPage() {
         </Link>
       </div>
 
-      {resource && (
+      {document && (
         <>
-          <h1 className="text-3xl font-semibold text-slate-900">{resource.title}</h1>
+          <h1 className="text-3xl font-semibold text-slate-900">{document.title}</h1>
 
           <div className="mt-4 flex flex-wrap gap-3">
             <span className="rounded-lg bg-slate-100 px-3 py-1 text-sm text-slate-700">
-              {resource.resource_type}
+              {document.resource_type}
             </span>
             <span className="rounded-lg bg-blue-100 px-3 py-1 text-sm text-blue-700">
-              {resource.status}
+              {document.status}
             </span>
             <span className="rounded-lg bg-slate-100 px-3 py-1 text-sm text-slate-700">
-              {new Date(resource.created_at).toLocaleDateString('vi-VN')}
+              {new Date(document.created_at).toLocaleDateString('vi-VN')}
             </span>
           </div>
 
-          {resource.description && (
+          {document.description && (
             <div className="mt-6">
               <h2 className="text-lg font-semibold text-slate-900">Mô tả</h2>
-              <p className="mt-2 text-slate-700">{resource.description}</p>
+              <p className="mt-2 text-slate-700">{document.description}</p>
             </div>
           )}
 
-          {resource.assets && resource.assets.length > 0 && (
+          {document.assets && document.assets.length > 0 && (
             <div className="mt-6">
               <h2 className="text-lg font-semibold text-slate-900">Tài liệu đính kèm</h2>
               <div className="mt-4 space-y-2">
-                {resource.assets.map((asset) => (
-                  <div key={asset.id} className="flex items-center gap-3 rounded-lg border border-slate-200 p-3">
+                {document.assets.map((asset) => (
+                  <div
+                    key={asset.id}
+                    className="flex items-center gap-3 rounded-lg border border-slate-200 p-3"
+                  >
                     <div className="flex-1">
                       <div className="font-medium text-slate-900">{asset.file_name}</div>
                       <div className="text-xs text-slate-500">
                         {asset.file_type} · {(asset.size / 1024).toFixed(2)} KB
                       </div>
                     </div>
+                    <button
+                      onClick={() => handleDownload(asset.id)}
+                      disabled={downloadingAssetId === asset.id}
+                      className="shrink-0 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:opacity-60"
+                    >
+                      {downloadingAssetId === asset.id ? 'Đang tải…' : 'Tải về'}
+                    </button>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-
-          {resource.rejection_reason && (
-            <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4">
-              <h3 className="font-medium text-red-900">Lý do từ chối</h3>
-              <p className="mt-2 text-sm text-red-800">{resource.rejection_reason}</p>
             </div>
           )}
         </>

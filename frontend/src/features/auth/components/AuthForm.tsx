@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '../../../components/ui/Button'
 import { Input } from '../../../components/ui/Input'
 import { useAuth } from '../context/AuthContext'
+import { getApiErrorMessage } from '../../../api/getApiErrorMessage'
 
 type AuthFormValues = {
   email: string
@@ -39,20 +40,7 @@ export function AuthForm({ mode = 'login' }: AuthFormProps) {
       const redirectTo = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname
       navigate(redirectTo && redirectTo !== '/login' ? redirectTo : '/')
     } catch (err) {
-      if (typeof err === 'object' && err !== null && 'response' in err) {
-        const axiosError = err as { response?: { status?: number; data?: { detail?: string } } }
-        const detail = axiosError.response?.data?.detail
-
-        if (axiosError.response?.status === 401) {
-          setError('Email hoặc mật khẩu không đúng.')
-        } else if (axiosError.response?.status === 409) {
-          setError('Email đã tồn tại.')
-        } else {
-          setError(detail ?? 'Có lỗi xảy ra. Vui lòng thử lại.')
-        }
-      } else {
-        setError('Có lỗi xảy ra. Vui lòng thử lại.')
-      }
+      setError(getApiErrorMessage(err, 'Có lỗi xảy ra. Vui lòng thử lại.'))
     } finally {
       setIsSubmitting(false)
     }

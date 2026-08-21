@@ -18,31 +18,34 @@ Knowledge Sharing Platform là hệ thống chia sẻ học liệu kết hợp A
 
 Current Sprint
 
-> Sprint 8 — Code Structure Refactor (chưa bắt đầu)
+> Sprint 9 — UI/UX Polish & Design Consistency
 
 Overall Progress
 
-58%
+72%
 
 Status
 
 ✅ Sprint 5 Completed
 ✅ Sprint 6 Completed
 ✅ Sprint 7 Completed
+✅ Sprint 8 Completed
+✅ Sprint 8.5 — Database Architecture Refactor — **hoàn thành**
+🔄 Sprint 9 — UI/UX Polish & Design Consistency — **đang thực hiện**
 
 ---
 
 # 3. Current Sprint Goal
 
-Sprint 7 (FE Catch-up Features) đã hoàn thành: nối toàn bộ màn hình shell với API thật cho browse taxonomy, resource cá nhân, upload/submit-review, admin moderation và admin taxonomy CRUD.
+Sprint 8.5 (Database Architecture Refactor) đã hoàn thành: tách `Resource` cũ thành `Document`/`Notebook`/`Asset` riêng biệt, viết API `/documents/*` + presigned download URL, dọn dẹp frontend (build sạch), ẩn các route/trang Admin/contribution tạm ngừng.
 
-**Định hướng mới (sau Sprint 7):** Trước khi chuyển sang AI Pipeline, hoàn thiện một "bản Studocu cơ bản" đầy đủ UI như sản phẩm thực tế — dọn cấu trúc code trước, sau đó polish UI/UX trên nền code đã sạch (tránh phải sửa lại cùng file 2 lần), rồi bổ sung các tính năng lõi còn thiếu (download, search). AI Pipeline (roadmap mục 8) lùi lại thành sprint sau khi 3 sprint này hoàn thành. Đi chậm nhưng chắc để hiểu sâu nền tảng hiện tại trước khi mở rộng.
-
-Sprint kế tiếp: **Sprint 8 — Code Structure Refactor** (xem mục 12 và mục 19 để biết chi tiết hạng mục).
+**Sprint 9 — UI/UX Polish & Design Consistency:** Chuẩn hóa và cải thiện UI/UX toàn bộ ứng dụng, áp dụng Progressive Disclosure (Home → Department → Major → Subject → Document), thống nhất component dùng chung, responsive nav, badge/label tiếng Việt. Chi tiết xem mục 19b.
 
 ---
 
 # 4. Completed
+
+> Phần này mô tả code **đã thực sự tồn tại trong repo** tính đến hết Sprint 8.5.
 
 ## Backend
 
@@ -50,29 +53,36 @@ Sprint kế tiếp: **Sprint 8 — Code Structure Refactor** (xem mục 12 và m
 - Authentication: register, OAuth2 password login, Argon2id password hashing và JWT Bearer
 - Default admin được tạo khi app khởi động
 - Department, Major, Subject CRUD; GET public, ghi dữ liệu admin-only
-- Resource/Asset model, JSONB metadata và soft delete
-- Public resource list/detail; personal resource list; moderation workflow
 - Sprint 5 upload: PDF/DOCX validation và lưu Asset trong MinIO
-- Seed script idempotent cho một department, major, hai subject và user test
-- **Sprint 7 (backend phát sinh khi fix FE):**
-  - `GET /majors/?department_id=` — lọc major theo khoa (optional; không truyền thì trả toàn bộ)
-  - `GET /subjects/?major_id=` — lọc subject theo ngành (optional; không truyền thì trả toàn bộ)
-  - `GET /resources/me/{resource_id}` — owner lấy resource của mình theo ID (mọi visibility trừ DELETED)
-  - `GET /resources/admin` — admin list resource (filter `visibility`, paginated)
-  - Service: `get_owned_by_id`, filter trong `major_service.get_all` / `subject_service.get_all`
+- Seed script idempotent có Document mẫu
+- **Sprint 7 (backend phát sinh):**
+  - `GET /majors/?department_id=`, `GET /subjects/?major_id=`
+  - `GET /resources/admin`; service `get_owned_by_id`
+- **Sprint 8.5 — Database Architecture Refactor:**
+  - Models: `Document`, `Notebook`, `NotebookSavedDocument`, `Asset` (bỏ `resource_id`, thêm `document_id`/`notebook_id`); `AssetEmbedding` placeholder
+  - Enums: `DocumentStatus` (DRAFT/PUBLIC/DELETED), `ResourceType` (EXAM/SLIDE/DOCUMENT/VIDEO/AUDIO/LINK/AI_ARTIFACT)
+  - API `/documents/`: `GET /documents/` (paginated, filter subject_id + resource_type), `GET /documents/{id}`, `GET /documents/{id}/assets/{assetId}/download` (presigned MinIO URL, 15 phút)
+  - `storage_service.get_presigned_download_url()` hoạt động
+  - `document_service.py`, `asset_service.py` — business logic tách khỏi router
+  - Model cũ `Resource` đã xóa hoàn toàn
 
 ## Frontend
 
 - **Sprint 6 — FE Foundation:** Vite/React/TS/Tailwind, routing, API client, AuthContext, layout/navigation, login/register, ProtectedRoute/AdminRoute
-- **Sprint 7 — FE Catch-up Features:**
-  - TanStack Query v5 + react-hot-toast + shared UI (`Spinner`, `ErrorMessage`, `PaginationBar`)
-  - Browse công khai: `DepartmentsPage` → `DepartmentDetailPage` → `MajorDetailPage` → `SubjectDetailPage` → `ResourceDetailPage`; `TaxonomyView` trên Home
-  - `/me/resources` — danh sách resource cá nhân (badge visibility, rejection reason)
-  - Luồng đóng góp 2 bước: `ResourceCreatePage` (PRIVATE) → `ResourceUploadPage` (upload PDF/DOCX + submit-review)
-  - Admin: `AdminModerationPage` (approve/reject/delete PENDING_REVIEW), `AdminTaxonomyPage` (CRUD khoa/ngành/môn)
-  - Query key factory (`resources/queryKeys`, `taxonomy/queryKeys`), cache invalidation sau mutation
-  - `GET /resources/me/{id}` cho upload page; upload timeout riêng 120s; `getApiErrorMessage` cho toast lỗi backend
-  - Validate URL param (`parseRouteId`), admin nav link cho role ADMIN, đồng bộ tiếng Việt UI
+- **Sprint 7 — FE Catch-up Features:** TanStack Query v5, browse public flow, personal resources, upload/submit-review, admin moderation & taxonomy, query key factory, cache invalidation
+- **Sprint 8 — Code Structure Refactor:** Action-based hooks, DepartmentMajorSubjectPicker, upload config API, error handling, barrel exports
+- **Sprint 8.5 — Frontend Cleanup:**
+  - `features/resources/api.ts`: types mới `Document`/`Asset`/`DocumentPageResponse`; 3 active API calls (`getDocumentList`, `getDocumentDetail`, `getAssetDownloadUrl`); old APIs commented
+  - `features/resources/queryKeys.ts`: `documentsKeys` root `['documents']`; backwards-compat alias `resourcesKeys`
+  - Hooks mới: `useDocuments`, `useDocumentDetail`
+  - Hooks write/admin cũ: stubbed (giữ trong repo, không export)
+  - `PublicResourceCard`: nhận `Document` prop, link `/documents/:id`
+  - `SubjectDetailPage`, `ResourceDetailPage` (+ nút Tải về presigned): cập nhật sang Document API
+  - `MyResourcesPage`: temp notice (no `/resources/me` API)
+  - `ResourceCreatePage`, `ResourceUploadPage`, `AdminModerationPage`: stubbed (`return null`)
+  - `AppRouter`: routes cũ commented, alias `/documents/:id` thêm vào; `/admin/taxonomy` giữ active
+  - Nav links "Đóng góp tài liệu" ẩn ở `PublicLayout`, `AppLayout`, `HomePage`
+  - `npm run build` ✅ exit code 0
 
 ## Infrastructure
 
@@ -83,16 +93,14 @@ Sprint kế tiếp: **Sprint 8 — Code Structure Refactor** (xem mục 12 và m
 
 # 5. Next Task
 
-**Sprint 8 — Code Structure Refactor**
+## Ngay lúc này: Sprint 9 — UI/UX Polish & Design Consistency
 
-- Tách logic ra khỏi pages: đưa `useQuery`/`useMutation`/form state của `ResourceCreatePage`, `ResourceUploadPage`, `AdminModerationPage`, `AdminTaxonomyPage` xuống feature hooks
-- Dùng nhất quán query key factory (`resourcesKeys.myList`/`myListPaginated`) thay vì gọi trực tiếp `.me()`
-- Gộp logic parse lỗi Axios: `AuthForm` dùng chung `getApiErrorMessage` thay vì tự parse riêng
-- Tạo component dùng chung `DepartmentMajorSubjectPicker` cho cascade chọn khoa/ngành/môn (thay vì lặp ở 3 nơi)
-- Dọn barrel export `features/resources/index.ts`, quy tắc rõ feature-specific vs app-wide UI component
-- Cơ chế đồng bộ upload limit config FE/BE (ít nhất là 1 constant duy nhất tham chiếu)
-
-Xem roadmap mục 12 cho Sprint 9 (UI/UX Polish & Design Consistency) và Sprint 10 (Core Feature Completion) tiếp theo.
+- **HomePage**: Thống nhất một entry point duy nhất cho luồng browse học liệu (giữa `TaxonomyView` và Quick Start/Duyệt theo khoa) — sẽ điều chỉnh lại theo luồng Progressive Disclosure mới (Department → Major → Subject → Document, xem mục 19c).
+- **Layout & Spacing**: Nâng cấp responsive collapse/hamburger menu cho thanh navigation của `PublicLayout` trên các viewport nhỏ. Nhất quán nút "Quay lại" giữa các trang browse.
+- **Badge & Label Translations**: Việt hóa các raw enum (như `resource_type`, `status` hiển thị ở trang chi tiết Document).
+- **Form Elements Consistency**: Tạo/Đồng bộ hóa các component form element tương tự như `Input`/`Button` dùng chung, loại bỏ Tailwind inline raw input.
+- **Admin Spacing & Styling**: *(có thể tạm hoãn nếu nhánh Admin vẫn đang dừng phát triển theo mục 19c — chỉ áp dụng nếu quay lại làm tiếp admin)*.
+- **Admin Navigation Entry**: *(tương tự — phụ thuộc quyết định có quay lại làm admin trong thời gian còn lại của đồ án hay không)*.
 
 ---
 
@@ -119,83 +127,43 @@ Xem roadmap mục 12 cho Sprint 9 (UI/UX Polish & Design Consistency) và Sprint
 
 # 7. Current Project Structure
 
+> Cập nhật sau Sprint 8.5. Model `Resource` cũ đã xóa hoàn toàn.
+
 ```text
 knowledge-sharing-platform/
 ├── backend/
 │   ├── app/
-│   │   ├── api/                 # auth, health, departments, majors, subjects, resources
-│   │   ├── core/                # config, database, security
-│   │   ├── models/              # SQLAlchemy entities and enums
-│   │   ├── schemas/             # Pydantic request/response schemas
-│   │   ├── services/            # business logic, MinIO adapter, startup
-│   │   ├── workers/             # package placeholder
-│   │   ├── main.py
-│   │   └── seed.py
-│   ├── alembic/                 # Alembic scaffold; no migration versions currently
-│   ├── tests/
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   └── .env.example
-├── frontend/
-│   ├── public/
-│   ├── src/
-│   │   ├── api/                 # apiClient, getApiErrorMessage
-│   │   ├── components/
-│   │   │   ├── ui/              # Button, Input, Modal, Spinner, ErrorMessage, PaginationBar
-│   │   │   ├── AdminNavLinks.tsx
-│   │   │   ├── ProtectedRoute.tsx
-│   │   │   └── AdminRoute.tsx
-│   │   ├── features/
-│   │   │   ├── auth/            # api, context/, components/AuthForm
-│   │   │   ├── resources/     # api, config, queryKeys, components/PublicResourceCard
-│   │   │   └── taxonomy/        # api, queryKeys, components/TaxonomyView
-│   │   ├── layouts/             # PublicLayout, AppLayout, AdminLayout
-│   │   ├── pages/               # page components (lắp ráp + query/mutation wiring)
-│   │   ├── router/              # AppRouter.tsx
-│   │   ├── utils/               # parseRouteId
-│   │   ├── App.tsx, main.tsx, index.css
-│   │   └── assets/
-│   ├── package.json, vite.config.ts, tailwind.config.js, tsconfig.json, .env
+│   │   ├── api/       # health, auth, config, departments, majors, subjects, documents
+│   │   ├── core/      # config, database, security
+│   │   ├── models/    # base, enums, user, department, major, subject,
+│   │   │              # document, notebook, asset
+│   │   ├── schemas/   # auth, department, major, subject, document, asset
+│   │   ├── services/  # auth, department, major, subject, document, asset,
+│   │   │              # storage, startup
+│   │   ├── main.py, seed.py
+│   ├── alembic/
+│   ├── Dockerfile, requirements.txt, .env.example
+├── frontend/src/
+│   ├── api/           # apiClient, getApiErrorMessage
+│   ├── components/ui/ # Button, Input, Modal, Spinner, ErrorMessage, PaginationBar
+│   ├── components/    # AdminNavLinks, ProtectedRoute, AdminRoute
+│   ├── features/
+│   │   ├── auth/      # api, AuthContext, AuthForm
+│   │   ├── resources/ # api (Document types), queryKeys (documentsKeys),
+│   │   │              # hooks/ (useDocuments, useDocumentDetail, useUploadConfig,
+│   │   │              #         + 7 paused/stubbed hooks),
+│   │   │              # components/PublicResourceCard, index.ts
+│   │   ├── taxonomy/  # api, queryKeys, TaxonomyView, DepartmentMajorSubjectPicker, hooks/
+│   │   └── README.md
+│   ├── layouts/       # PublicLayout, AppLayout, AdminLayout
+│   ├── pages/         # active: Home, Departments, DepartmentDetail, MajorDetail,
+│   │                  #         SubjectDetail, ResourceDetail, Login, Register,
+│   │                  #         MyResources (notice), AdminTaxonomy
+│   │                  # stubbed: ResourceCreate, ResourceUpload, AdminModeration
+│   ├── router/AppRouter.tsx
+│   └── utils/parseRouteId.ts
 ├── init-db/01-enable-pgvector.sql
-├── tests/
-├── docs/
-├── docker-compose.yml
-└── .env.example
-```
-
-## Codebase Snapshot (update cuối Sprint 7)
-
-```text
-backend/app/
-├── core/
-│   ├── config.py        — Settings: PostgreSQL, MinIO, upload limits/allowlist, JWT, default-admin
-│   ├── database.py      — engine, SessionLocal, get_db()
-│   └── security.py      — Argon2id hash/verify; JWT create/decode (HS256, 24h mặc định)
-├── models/
-│   ├── enums.py         — UserRole; ResourceType; VisibilityEnum; ResourceStatus
-│   ├── user.py, department.py, major.py, subject.py, resource.py
-├── schemas/             — auth, department, major, subject, resource (+ Asset nested)
-├── services/
-│   ├── auth_service.py, department_service.py, major_service.py, subject_service.py
-│   ├── resource_service.py — public/personal/admin reads, lifecycle, upload, get_owned_by_id
-│   ├── storage_service.py, startup_service.py
-├── api/                 — health, auth, departments, majors, subjects, resources
-├── main.py, seed.py
-
-frontend/src/ (chính)
-├── api/apiClient.ts, getApiErrorMessage.ts
-├── components/ui/     — Button, Input, Modal, Spinner, ErrorMessage, PaginationBar
-├── components/        — AdminNavLinks, ProtectedRoute, AdminRoute
-├── features/
-│   ├── auth/          — api, AuthContext, AuthForm
-│   ├── resources/     — api, config.ts, queryKeys, PublicResourceCard
-│   └── taxonomy/      — api, queryKeys, TaxonomyView
-├── layouts/           — PublicLayout, AppLayout, AdminLayout
-├── pages/             — Home, Departments, DepartmentDetail, MajorDetail, SubjectDetail,
-│                        ResourceDetail, Login, Register, MyResources, ResourceCreate,
-│                        ResourceUpload, AdminModeration, AdminTaxonomy
-├── router/AppRouter.tsx
-└── utils/parseRouteId.ts
+├── docs/, docker-compose.yml, .env.example
 ```
 
 ---
@@ -208,7 +176,7 @@ Client → FastAPI Router → Dependencies/Auth Guard → Service Layer
        → storage_service → MinIO
 ```
 
-## Frontend Architecture (Sprint 6–7)
+## Frontend Architecture (Sprint 6–8.5)
 
 ```text
 Browser → React Router → Layouts (Public/App/Admin) + Route Guards
@@ -220,43 +188,30 @@ Browser → React Router → Layouts (Public/App/Admin) + Route Guards
 
 Business logic nằm trong Service Layer; router chỉ bind request/dependency và trả response.
 
-### Resource and visibility flow
+### Document visibility flow (Sprint 8.5+)
 
-- Tạo resource cần JWT. User thường không truyền `visibility` sẽ tạo resource `PRIVATE`.
-- User thường cũng có thể truyền trực tiếp `visibility=PENDING_REVIEW` khi tạo; code chỉ chặn user không phải admin truyền `visibility=PUBLIC` (403).
-- Admin có thể tạo trực tiếp resource với `visibility=PUBLIC`.
-- Chủ sở hữu hoặc admin upload asset và submit review. Submit chỉ hợp lệ từ `PRIVATE` sang `PENDING_REVIEW`.
-- Admin approve resource `PENDING_REVIEW` sang `PUBLIC`; list/detail công khai chỉ thấy resource `PUBLIC` chưa `DELETED`.
-- `GET /resources/me` trả paginated toàn bộ resource chưa bị xóa của user hiện tại, bất kể visibility.
-- `GET /resources/me/{resource_id}` trả một resource thuộc owner (không áp dụng filter public-only).
-- `GET /resources/{resource_id}` (public) chỉ trả resource `PUBLIC`.
-- Cập nhật, soft delete, approve/reject admin list và approve là admin-only theo router hiện tại.
+- `Document` luôn có `status = PUBLIC` ngay khi tạo qua `seed.py` (nhánh Admin tạm dừng).
+- Không có luồng duyệt (`PENDING_REVIEW`) cho đến khi nhánh Admin được mở lại.
+- Download file qua presigned URL MinIO (15 phút) thay vì backend proxy — không cần JWT.
 
-### Current API endpoints
+### Current API endpoints (Sprint 8.5)
 
 - `GET /health`
-- `POST /auth/register`, `POST /auth/login` (OAuth2 form: `username`, `password`), `GET /auth/me`
-- `GET /departments/`, `GET /departments/{department_id}`; admin: `POST`, `PUT`, `DELETE /departments/{department_id}`
-- `GET /majors/?department_id=` (optional), `GET /majors/{major_id}`; admin: `POST`, `PUT`, `DELETE /majors/{major_id}`
-- `GET /subjects/?major_id=` (optional), `GET /subjects/{subject_id}`; admin: `POST`, `PUT`, `DELETE /subjects/{subject_id}`
-- `GET /resources/?subject_id=<required>&resource_type=&page=&size=` (public only)
-- `GET /resources/{resource_id}` (public only)
-- JWT: `GET /resources/me`, `GET /resources/me/{resource_id}`, `POST /resources/`, `POST /resources/{resource_id}/assets`, `POST /resources/{resource_id}/submit-review`
-- Admin: `GET /resources/admin?visibility=&page=&size=`, `POST /resources/{resource_id}/approve`, `POST /resources/{resource_id}/reject`, `PUT /resources/{resource_id}`, `DELETE /resources/{resource_id}`
+- `POST /auth/register`, `POST /auth/login`, `GET /auth/me`
+- `GET /departments/`, `GET /departments/{id}`; admin: `POST`, `PUT`, `DELETE`
+- `GET /majors/?department_id=`, `GET /majors/{id}`; admin: `POST`, `PUT`, `DELETE`
+- `GET /subjects/?major_id=`, `GET /subjects/{id}`; admin: `POST`, `PUT`, `DELETE`
+- `GET /documents/?subject_id=&resource_type=&page=&size=` (only PUBLIC)
+- `GET /documents/{id}` (only PUBLIC, nested assets)
+- `GET /documents/{id}/assets/{asset_id}/download` → presigned MinIO URL (no JWT)
+- `GET /config/upload`
 
-### Frontend routes (Sprint 7)
+### Frontend routes (Sprint 8.5)
 
-- Public: `/`, `/login`, `/register`, `/departments`, `/departments/:id`, `/majors/:id`, `/subjects/:id`, `/resources/:id`
-- Protected: `/me/resources`, `/resources/create`, `/resources/:id/upload`
-- Admin: `/admin/moderation`, `/admin/taxonomy`
-
-### Upload and storage flow
-
-1. `POST /resources/{resource_id}/assets` nhận multipart `file` qua backend proxy.
-2. Service kiểm tra quyền, file không rỗng, giới hạn `MAX_FILE_SIZE_MB` (30 mặc định), tối đa `MAX_ASSETS_PER_RESOURCE` (5 mặc định), và allowlist `ALLOWED_UPLOAD_FILE_TYPES` (`PDF`, `DOCX`).
-3. PDF phải có header `%PDF-`; DOCX phải là ZIP chứa `[Content_Types].xml` và `word/document.xml`.
-4. Tên file được chuẩn hóa; object ghi vào MinIO bucket `resources` (mặc định) theo `resources/{resource_id}/{uuid}_{filename}`.
-5. Sau khi upload thành công, hệ thống tạo Asset. Nếu commit DB lỗi, service cố gắng xóa object vừa upload.
+- Public (active): `/`, `/login`, `/register`, `/departments`, `/departments/:id`, `/majors/:id`, `/subjects/:id`, `/resources/:id`, `/documents/:id`
+- Protected (active): `/me/resources` (temp notice)
+- Admin (active): `/admin/taxonomy`
+- Commented out: `/resources/create`, `/resources/:id/upload`, `/admin/moderation`
 
 ---
 
@@ -278,7 +233,8 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 - Primary key: integer.
 - API chưa versioned (`/api/v1` chưa có).
 - JWT là single access token HS256, expiry mặc định 24 giờ; chưa có refresh token.
-- FE upload limit mirror: `frontend/src/features/resources/config.ts` (phải khớp tay với `Settings.MAX_FILE_SIZE_MB` / `MAX_ASSETS_PER_RESOURCE`).
+- Centralized configurations: Upload limit configurations được quản lý tập trung ở settings backend và cung cấp cho frontend qua API GET `/config/upload` để đảm bảo duy nhất nguồn dữ liệu (single source of truth).
+- Action-Based Hooks Pattern: Toàn bộ data fetching và state mutation được đóng gói thành các custom hook riêng trong feature layer (ví dụ: client-side CRUD và actions), giúp pages chỉ làm nhiệm vụ lắp ghép giao diện (UI layout composition).
 
 ---
 
@@ -306,10 +262,11 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 5. ✅ Upload System & Visibility Workflow
 6. ✅ FE Foundation
 7. ✅ FE Catch-up Features
-8. **Code Structure Refactor** (chưa bắt đầu) — dọn các quan sát cấu trúc code ở mục 19: tách logic khỏi pages xuống feature hooks, dùng nhất quán query key factory, gộp error handling, tạo `DepartmentMajorSubjectPicker` dùng chung, dọn barrel export, đồng bộ upload limit config FE/BE
-9. **UI/UX Polish & Design Consistency** (chưa bắt đầu) — dọn các quan sát UI/UX ở mục 19 trên nền code đã sạch: entry point browse, Việt hóa badge, đồng bộ layout card/form component, responsive nav, gộp admin nav link, polish AdminTaxonomyPage
-10. **Core Feature Completion** (chưa bắt đầu) — hoàn thiện tính năng lõi còn thiếu để giống sản phẩm thật: download endpoint, presigned URL (nếu còn thời gian), search cơ bản, rà lại toàn bộ luồng end-to-end
-11. AI Pipeline (chưa bắt đầu — lùi lại sau khi Sprint 8-10 hoàn thành)
+8. ✅ Code Structure Refactor
+8.5. 🔄 **Database Architecture Refactor** (đang thực hiện — tách `Resource` thành `Document`/`Notebook`, xem mục 19c)
+9. UI/UX Polish & Design Consistency (chưa bắt đầu, sau khi hoàn tất 8.5)
+10. Core Feature Completion (chưa bắt đầu)
+11. AI Pipeline (chưa bắt đầu)
 12. Notebook Workspace
 13. RAG Chat
 14. Testing
@@ -320,6 +277,8 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 # 13. AI Features (Planned)
 
 Document upload → text extraction → chunking → embedding → pgvector → retriever/LLM → notebook chat, citation, summary; flashcards và quiz là optional.
+
+*(Đề xuất sơ bộ về bảng embedding — `AssetEmbedding`, gắn theo `asset_id` để tránh embed trùng file Public được nhiều Notebook lưu — xem mục 19c. Đây mới là ý tưởng logic, chưa có thiết kế kỹ thuật chi tiết về chunking/dimension/index.)*
 
 ---
 
@@ -346,13 +305,11 @@ Commit theo Sprint hoặc feature, ví dụ `feat: implement upload module`. Tr�
 
 # 17. Current Status
 
-Current Sprint: Chưa bắt đầu — Sprint kế tiếp là **Sprint 8 — Code Structure Refactor**
+Current Sprint: **Sprint 9 — UI/UX Polish & Design Consistency** (đang thực hiện)
 
-Last Completed: Sprint 7 — FE Catch-up Features (browse flow, personal resources, upload/submit-review, admin moderation, admin taxonomy; backend filter endpoints và `GET /resources/me/{id}`)
+Last Completed: Sprint 8.5 — Database Architecture Refactor (tách `Resource` → `Document`/`Notebook`/`Asset`; API `/documents/*` + presigned download; frontend cleanup — `npm run build` ✅).
 
-Current Module: Toàn bộ luồng core FE–BE cho taxonomy browse, resource lifecycle và moderation đã nối API và hoạt động end-to-end.
-
-Next Module: Sprint 8 (Code Structure Refactor) → Sprint 9 (UI/UX Polish) → Sprint 10 (Core Feature Completion) → sau đó mới tới AI Pipeline (roadmap mục 11). Mục tiêu: hoàn thiện một "bản Studocu cơ bản" đầy đủ UI như sản phẩm thực tế trước khi mở rộng AI, đi chậm nhưng chắc để hiểu sâu nền tảng hiện tại.
+Next Module: Sprint 9 (UI/UX Polish, mục 19b) → Sprint 10 (Core Feature Completion) → AI Pipeline.
 
 ---
 
@@ -364,36 +321,87 @@ Next Module: Sprint 8 (Code Structure Refactor) → Sprint 9 (UI/UX Polish) → 
 
 # 19. Idea Backlog / Future Considerations
 
-## Backlog kỹ thuật (đã có từ trước)
+## 19a. Backlog kỹ thuật (đã có từ trước)
 
 - Virus scanning và presigned upload/download URL.
 - AI artifact layer (summary, flashcards, mindmap) có thể được lưu thành metadata hoặc Asset mới khi pipeline đã có.
 - Quản lý chi phí OpenAI: giới hạn token/request, cache và quota theo user/session.
 
-## Quan sát UI/UX & cấu trúc code (đã đưa vào kế hoạch từ Sprint 8)
+## 19b. Quan sát UI/UX & cấu trúc code (sẽ xử lý ở Sprint 9, sau khi hoàn tất Sprint 8.5)
 
-> Các mục dưới đây được ghi nhận khách quan từ code hiện tại sau Sprint 7. Đã được phân bổ vào Sprint 8 (cấu trúc code) và Sprint 9 (UI/UX) — xem mục 5 và mục 12.
-
-### Layout / spacing / thẩm mỹ / nhất quán
-
-- **HomePage:** Có hai lối browse song song — `TaxonomyView` (widget 3 bước) và khối "Bắt đầu nhanh" + nav "Duyệt theo khoa" dẫn tới `/departments`; trải nghiệm trùng lặp, chưa thống nhất một entry point duy nhất.
+- **HomePage:** Có hai lối browse song song — `TaxonomyView` (widget 3 bước) và khối "Bắt đầu nhanh" + nav "Duyệt theo khoa" dẫn tới `/departments`; trải nghiệm trùng lặp, chưa thống nhất một entry point duy nhất. *(Sau Sprint 8.5 sẽ thay bằng lưới Card Department theo Progressive Disclosure — xem 19c.)*
 - **PublicLayout:** Thanh nav gom nhiều link (browse, trang chủ, tài liệu, đóng góp, admin, user) trên một hàng — dễ chật trên viewport hẹp, chưa có responsive collapse/menu.
 - **Browse pages (`DepartmentsPage`, `DepartmentDetailPage`, `MajorDetailPage`, `SubjectDetailPage`):** Cùng pattern `max-w-5xl px-6 py-12` nhưng link "Quay lại" không nhất quán (một số về `/`, một số về `/departments`, `MajorDetailPage` về khoa cha).
 - **ResourceDetailPage:** Badge hiển thị raw enum tiếng Anh (`resource_type`, `status` — ví dụ `DOCUMENT`, `READY`) trong khi các trang khác đã Việt hóa label.
-- **ResourceUploadPage:** Badge visibility vẫn hiển thị raw enum (`PRIVATE`, `PENDING_REVIEW`) thay vì label tiếng Việt như `MyResourcesPage`.
+- **ResourceUploadPage:** Badge visibility vẫn hiển thị raw enum (`PRIVATE`, `PENDING_REVIEW`) thay vì label tiếng Việt như `MyResourcesPage`. *(Trang này gắn với luồng Resource cũ — sẽ đổi/ẩn theo mục 19c khi Admin tạm dừng.)*
 - **MyResourcesPage vs SubjectDetailPage:** Card resource khác layout hoàn toàn — grid 2 cột có badge/reject/upload (cá nhân) vs list link đơn giản (công khai qua `PublicResourceCard`); hợp lý về nghiệp vụ nhưng chưa có design system thống nhất.
-- **ResourceCreatePage:** Form dùng raw `<input>`/`<select>` Tailwind inline; **Login/Register** dùng shared `Input`/`Button` — không đồng nhất component form.
+- **ResourceCreatePage:** Form dùng raw `<input>`/`<select>` Tailwind inline; **Login/Register** dùng shared `Input`/`Button` — không đồng nhất component form. *(Trang này gắn với luồng đóng góp cũ — sẽ ẩn/thay theo Google Form ở mục 19c.)*
 - **AdminModerationPage / AdminTaxonomyPage:** Nội dung admin nằm trong card trắng giống AppLayout pages, nhưng markup JSX bị nén một dòng ở bảng/modal (`AdminTaxonomyPage`) — khó đọc và khó chỉnh spacing từng cell.
 - **AdminTaxonomyPage:** Bảng HTML thuần không có zebra/hover rõ, modal form dày đặc, thiếu empty-state illustration nhất quán với trang public.
 - **AppLayout vs PublicLayout:** Link admin xuất hiện ở cả nav ngang (`AdminNavLinks`) và sidebar AppLayout — admin thấy hai cách vào cùng chức năng tùy layout đang ở.
 
-### Cấu trúc code frontend (lệch convention / trùng lặp)
+> Các mục liên quan tới Admin/luồng đóng góp cũ ở trên **tạm hoãn xử lý** trong lúc nhánh Admin dừng phát triển (mục 19c). Chỉ quay lại polish khi/nếu nhánh Admin được làm tiếp vào cuối đồ án.
 
-- **`pages/` chứa logic nghiệp vụ:** Doc convention ghi "pages chỉ lắp ráp", nhưng `ResourceCreatePage`, `ResourceUploadPage`, `AdminModerationPage`, `AdminTaxonomyPage` chứa trực tiếp `useQuery`/`useMutation`, form state, invalidate cache — logic chưa tách xuống feature hooks/components.
-- **`AdminNavLinks` vs `AppLayout` sidebar:** Link admin được định nghĩa ở hai nơi (`components/AdminNavLinks.tsx` và inline trong `AppLayout.tsx`) — trùng lặp, dễ lệch khi đổi route/label.
-- **Error handling API:** `getApiErrorMessage.ts` dùng cho toast mutation, nhưng `AuthForm.tsx` vẫn parse lỗi Axios riêng với nhánh status 401/409 — hai pattern song song.
-- **Query key factory:** `resourcesKeys` định nghĩa `myList`/`myListPaginated` nhưng `MyResourcesPage` và `ResourceUploadPage` dùng `resourcesKeys.me()` trực tiếp — factory chưa được dùng nhất quán.
-- **Vị trí shared component:** `PublicResourceCard` nằm `features/resources/components/`; `PaginationBar` nằm `components/ui/` — chưa có quy tắc rõ feature-specific vs app-wide UI.
-- **Cascade taxonomy chọn khoa/ngành/môn:** Logic tương tự lặp giữa `TaxonomyView`, `ResourceCreatePage`, và phần editor Subject trong `AdminTaxonomyPage` — chưa có hook/component dùng chung (ví dụ `DepartmentMajorSubjectPicker`).
-- **`features/resources/index.ts`:** Barrel chỉ re-export `api` — component `PublicResourceCard` import trực tiếp từ path sâu, barrel gần như không dùng.
-- **Upload config mirror:** `features/resources/config.ts` hardcode 30MB/5 assets — cần sync tay với backend env (đã comment trong file nhưng chưa có cơ chế single source of truth).
+## 19c. Sprint 8.5 — Database Architecture Refactor ✅ **HOÀN THÀNH**
+
+> Toàn bộ kế hoạch trong mục này đã được triển khai. Xem mục 4, 7, 8, 17 để biết trạng thái code thật.
+
+### Lý do
+
+Bảng `Resource` cũ dùng chung cho cả tài liệu Public (học liệu kiểu Studocu) và Workspace AI cá nhân (kiểu NotebookLM) gây xung đột: Public cần lưu trọn bộ slide bài giảng (10–15 file, không giới hạn), trong khi Private Workspace bắt buộc giới hạn số nguồn rất khắt khe để bảo vệ chi phí/token AI RAG và tránh quá tải context window. Quyết định tách hoàn toàn 2 domain thành DB riêng thay vì che bằng giao diện Frontend.
+
+### Kiến trúc dữ liệu mới
+
+**`Document`** — Tài liệu Public (thư viện dùng chung)
+- Gắn chặt với `Subject` (bắt buộc).
+- Thuộc tính: `id`, `title` (bắt buộc), `description` (tùy chọn), `subject_id` (FK bắt buộc), `resource_type` (enum: `EXAM`, `SLIDE`, `DOCUMENT`... — gom nhóm hiển thị UI), `status` (enum: `DRAFT`, `PUBLIC`, `DELETED` — **giữ 3 giá trị, không thêm `PENDING_REVIEW` ngay** vì đăng bài giờ qua seed trực tiếp ra `PUBLIC`, không qua duyệt), `created_by` (FK Admin/user tạo).
+- Không giới hạn số lượng file.
+
+**`Notebook`** — Không gian AI cá nhân (Private Workspace)
+- Gắn với `User` (bắt buộc).
+- Thuộc tính: `id`, `title` (bắt buộc), `owner_id` (FK bắt buộc), `subject_id` (nullable — chỉ để gợi ý tài liệu liên quan sau này).
+
+**`Asset`** — Quản lý file vật lý
+- Bỏ cột `resource_id`.
+- Thêm 2 FK nullable: `document_id`, `notebook_id`.
+- Quy tắc Service Layer: 1 Asset chỉ gắn `Document` **HOẶC** `Notebook` — không đồng thời, không để trống cả hai. Đảm bảo xóa Notebook cá nhân không vô tình mất file hệ thống công cộng.
+
+**`Notebook_Saved_Documents`** — bảng liên kết logic
+- Khi user lưu 1 `Document` public vào `Notebook` để chat RAG, **không nhân bản file vật lý** trên MinIO, chỉ tạo record liên kết logic (`notebook_id`, `document_id`).
+
+**`AssetEmbedding`** — bảng vector cho RAG *(đề xuất thêm ngoài bản thảo gốc, mới ở mức ý tưởng logic, chưa có thiết kế kỹ thuật chi tiết chunking/dimension/index — cần làm rõ khi thật sự triển khai AI Pipeline)*
+- Khóa ngoại tới `asset_id` (không phải `notebook_id`), vì `Asset` đã là tầng file dùng chung.
+- RAG truy vấn cho 1 Notebook sẽ gom 2 nguồn: (a) Asset thuộc chính Notebook (`notebook_id = X`), (b) Asset thuộc Document đã lưu qua `Notebook_Saved_Documents`.
+- → Document public chỉ embed 1 lần dù nhiều Notebook cùng lưu, đúng tinh thần tiết kiệm token ban đầu.
+
+**Quota Notebook** (tách 2 config thay vì gộp 1)
+- `MAX_OWN_ASSETS_PER_NOTEBOOK` = 5 (mặc định) — đếm file user tự upload trực tiếp (tốn storage + phải embed mới).
+- `MAX_SAVED_DOCUMENTS_PER_NOTEBOOK` = 10 (đã chốt) — đếm Document lưu qua liên kết logic (không tốn embed lại, chỉ tốn context lúc query). Để dạng config, không hard-code, dễ điều chỉnh sau khi thấy chi phí context RAG thực tế.
+- Lý do tách: nếu gộp chung, lưu 5 tài liệu Public là hết quota, không upload riêng được nữa — không hợp lý vì bản chất chi phí khác nhau.
+
+**Background Worker dọn file rác**
+- Khi `Document` bị xóa mềm (`status = DELETED`), Postgres vẫn giữ text/metadata để lưu vết, chống spam, phục vụ audit; worker ngầm xóa file vật lý trên MinIO sau **30 ngày**.
+- Áp dụng logic tương tự cho `Asset` thuộc `Notebook` khi user tự xóa file, để nhất quán giữa 2 domain.
+
+### Contribution Flow MVP (điều chỉnh — tạm dừng Admin)
+
+- Dùng **Google Forms** để nhận đóng góp tài liệu Public từ người dùng thay vì tự code upload/duyệt phía Frontend — tránh chi phí MinIO, rủi ro bảo mật/virus scan, lập trình preview PDF/DOCX, khối lượng code Frontend (progress bar, timeout, trang duyệt admin...).
+- **Nhánh Admin (form/API tạo Document) tạm dừng phát triển** — không code thêm, **không xóa code cũ** của các sprint trước (API + FE admin cũ vẫn giữ nguyên trong repo, mở lại/demo được bất cứ lúc nào).
+- **Không đổi kế hoạch gần**: tạm dừng qua hết Sprint 8.5/9/10. Nếu còn dư thời gian ở giai đoạn cuối đồ án, sẽ quay lại hoàn thiện tiếp nhánh Admin + đóng góp tài liệu (dự tính ban đầu là sẽ làm tiếp nếu kịp thời gian).
+- **Cách đăng data Public trong lúc admin tạm dừng**: mở rộng `seed.py` sẵn có để chèn Document mẫu thật, đủ dùng demo và phát triển tiếp Sprint 9 — không cần viết CLI/tool riêng.
+- Khi cần mở lại luồng đóng góp/duyệt trực tiếp trên web trong tương lai: thêm `PENDING_REVIEW` vào enum `status` bằng 1 Alembic migration riêng lúc đó, và bật lại nhánh Admin đã có sẵn.
+
+### Luồng trải nghiệm Frontend (Progressive Disclosure)
+
+1. **HomePage** — bỏ widget chọn 3 bước cũ, thay bằng lưới Card **Department**, có nút đóng góp nhanh dẫn qua Google Form.
+2. **DepartmentDetailPage** — click Department → danh sách **Major**.
+3. **MajorDetailPage** — click Major → danh sách **Subject** dạng Accordion.
+4. **SubjectDetailPage** — click Subject → danh sách **Document** công khai, gom nhóm theo `resource_type` (SLIDE, EXAM...) thay vì rải Asset vật lý ra ngoài. Click 1 dòng Document → trang chi tiết để tải file.
+
+### Kế hoạch thực hiện
+
+**Sprint 8.5 (Backend):** Sửa SQLAlchemy models/Schemas cho `Document`/`Notebook`/`Asset`/`Notebook_Saved_Documents`/`AssetEmbedding`; viết API mới `/documents` `/notebooks` (làm luôn download/presigned URL theo `asset_id` mới, không nợ sang Sprint 10); Alembic migration (không cần migrate data cũ, xóa và seed lại từ đầu); mở rộng `seed.py`.
+
+**Sprint 8.5 (Frontend, chỉ dọn tạm):** đổi hook `useResources` → `useDocuments`/`useNotebooks`, cập nhật TS interfaces; ẩn/comment nút upload public cũ + form tạo Document phía Admin. Mục tiêu duy nhất: app chạy lại được, không lỗi build, chưa cần đẹp.
+
+**Sau Sprint 8.5:** refactor lại API BE/FE liên quan cho chuẩn (không dừng ở mức dọn tạm) để chuẩn bị tốt cho Sprint tiếp theo, tránh để nợ kỹ thuật — rồi mới vào Sprint 9 (UI/UX Polish, mục 12) theo chiến lược bottom-up: Giai đoạn 1 chuẩn hóa component dùng chung `src/components/ui/` + layout; Giai đoạn 2 lắp component vào từng trang theo đúng luồng khám phá mới (Home → Department → Major → Subject → chi tiết Document).

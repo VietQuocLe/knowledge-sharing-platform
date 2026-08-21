@@ -13,9 +13,11 @@ export function AppLayout() {
             <Link to="/me/resources" className="block rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-100">
               Tài liệu của tôi
             </Link>
+            {/* [PAUSED - Admin branch] Contribution link hidden until re-activated
             <Link to="/resources/create" className="block rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-100">
               Đóng góp tài liệu
             </Link>
+            */}
             {isAdmin ? (
               <>
                 <div className="my-3 border-t border-slate-200" />

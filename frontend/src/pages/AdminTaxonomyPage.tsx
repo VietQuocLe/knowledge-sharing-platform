@@ -1,12 +1,23 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { getApiErrorMessage } from '../api/getApiErrorMessage'
 import { ErrorMessage } from '../components/ui/ErrorMessage'
 import { Modal } from '../components/ui/Modal'
 import { Spinner } from '../components/ui/Spinner'
-import { taxonomyApi, type Department, type Major, type Subject } from '../features/taxonomy/api'
-import { taxonomyKeys } from '../features/taxonomy/queryKeys'
+import type { Department, Major, Subject } from '../features/taxonomy/api'
+import { useDepartments } from '../features/taxonomy/hooks/useDepartments'
+import { useMajors } from '../features/taxonomy/hooks/useMajors'
+import { useSubjects } from '../features/taxonomy/hooks/useSubjects'
+import { useCreateDepartment } from '../features/taxonomy/hooks/useCreateDepartment'
+import { useUpdateDepartment } from '../features/taxonomy/hooks/useUpdateDepartment'
+import { useDeleteDepartment } from '../features/taxonomy/hooks/useDeleteDepartment'
+import { useCreateMajor } from '../features/taxonomy/hooks/useCreateMajor'
+import { useUpdateMajor } from '../features/taxonomy/hooks/useUpdateMajor'
+import { useDeleteMajor } from '../features/taxonomy/hooks/useDeleteMajor'
+import { useCreateSubject } from '../features/taxonomy/hooks/useCreateSubject'
+import { useUpdateSubject } from '../features/taxonomy/hooks/useUpdateSubject'
+import { useDeleteSubject } from '../features/taxonomy/hooks/useDeleteSubject'
+import { DepartmentMajorSubjectPicker } from '../features/taxonomy/components/DepartmentMajorSubjectPicker'
 
 type EntityType = 'department' | 'major' | 'subject'
 type EditingEntity = { type: EntityType; entity?: Department | Major | Subject } | null
@@ -24,69 +35,111 @@ const sectionTitle: Record<EntityType, string> = {
 }
 
 export function AdminTaxonomyPage() {
-  const queryClient = useQueryClient()
   const [editing, setEditing] = useState<EditingEntity>(null)
   const [deleting, setDeleting] = useState<EditingEntity>(null)
   const [name, setName] = useState('')
   const [code, setCode] = useState('')
-  const [departmentId, setDepartmentId] = useState('')
-  const [majorIds, setMajorIds] = useState<number[]>([])
+  const [departmentId, setDepartmentId] = useState<number | null>(null)
+  const [majorId, setMajorId] = useState<number | null>(null)
 
-  const departmentsQuery = useQuery({ queryKey: taxonomyKeys.departmentsList(), queryFn: taxonomyApi.getDepartments })
-  const majorsQuery = useQuery({ queryKey: taxonomyKeys.majorsList(), queryFn: taxonomyApi.getMajors })
-  const subjectsQuery = useQuery({ queryKey: taxonomyKeys.subjectsList(), queryFn: taxonomyApi.getSubjects })
-  const editorDepartmentId =
-    editing?.type === 'subject' && departmentId ? Number(departmentId) : null
-  const editorMajorsQuery = useQuery({
-    queryKey: taxonomyKeys.majorsList(editorDepartmentId ?? undefined),
-    queryFn: () => taxonomyApi.getMajorsByDepartment(editorDepartmentId!),
-    enabled: editorDepartmentId !== null && editorDepartmentId > 0,
-  })
-  const invalidateTaxonomy = () => queryClient.invalidateQueries({ queryKey: taxonomyKeys.all })
+  const departmentsQuery = useDepartments()
+  const majorsQuery = useMajors()
+  const subjectsQuery = useSubjects()
 
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      if (!editing) throw new Error('No entity selected')
-      const id = editing.entity?.id
-      if (editing.type === 'department') return id ? taxonomyApi.updateDepartment(id, { name }) : taxonomyApi.createDepartment({ name })
-      if (editing.type === 'major') {
-        const payload = { name, code, department_id: Number(departmentId) }
-        return id ? taxonomyApi.updateMajor(id, payload) : taxonomyApi.createMajor(payload)
+  const createDepartment = useCreateDepartment()
+  const updateDepartment = useUpdateDepartment()
+  const deleteDepartment = useDeleteDepartment()
+
+  const createMajor = useCreateMajor()
+  const updateMajor = useUpdateMajor()
+  const deleteMajor = useDeleteMajor()
+
+  const createSubject = useCreateSubject()
+  const updateSubject = useUpdateSubject()
+  const deleteSubject = useDeleteSubject()
+
+  const handleSave = async () => {
+    if (!editing) return
+    const id = editing.entity?.id
+    try {
+      if (editing.type === 'department') {
+        if (id) {
+          await updateDepartment.mutateAsync({ id, data: { name } })
+        } else {
+          await createDepartment.mutateAsync({ name })
+        }
+      } else if (editing.type === 'major') {
+        const payload = { name, code, department_id: departmentId! }
+        if (id) {
+          await updateMajor.mutateAsync({ id, data: payload })
+        } else {
+          await createMajor.mutateAsync(payload)
+        }
+      } else {
+        const payload = { name, code, department_id: departmentId!, major_ids: majorId ? [majorId] : [] }
+        if (id) {
+          await updateSubject.mutateAsync({ id, data: payload })
+        } else {
+          await createSubject.mutateAsync(payload)
+        }
       }
-      const payload = { name, code, department_id: Number(departmentId), major_ids: majorIds }
-      return id ? taxonomyApi.updateSubject(id, payload) : taxonomyApi.createSubject(payload)
-    },
-    onSuccess: () => { setEditing(null); void invalidateTaxonomy(); toast.success('Đã lưu phân loại.') },
-    onError: (error) => toast.error(getApiErrorMessage(error, 'Không thể lưu. Hãy kiểm tra các trường bắt buộc.')),
-  })
-  const deleteMutation = useMutation({
-    mutationFn: async () => {
-      if (!deleting?.entity) throw new Error('No entity selected')
-      if (deleting.type === 'department') return taxonomyApi.deleteDepartment(deleting.entity.id)
-      if (deleting.type === 'major') return taxonomyApi.deleteMajor(deleting.entity.id)
-      return taxonomyApi.deleteSubject(deleting.entity.id)
-    },
-    onSuccess: () => { setDeleting(null); void invalidateTaxonomy(); toast.success('Đã xóa phân loại.') },
-    onError: (error) => toast.error(getApiErrorMessage(error, 'Không thể xóa phân loại.')),
-  })
+      setEditing(null)
+      toast.success('Đã lưu phân loại.')
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể lưu. Hãy kiểm tra các trường bắt buộc.'))
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleting?.entity) return
+    const id = deleting.entity.id
+    try {
+      if (deleting.type === 'department') {
+        await deleteDepartment.mutateAsync(id)
+      } else if (deleting.type === 'major') {
+        await deleteMajor.mutateAsync(id)
+      } else {
+        await deleteSubject.mutateAsync(id)
+      }
+      setDeleting(null)
+      toast.success('Đã xóa phân loại.')
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể xóa phân loại.'))
+    }
+  }
+
+  const isSaving =
+    createDepartment.isPending ||
+    updateDepartment.isPending ||
+    createMajor.isPending ||
+    updateMajor.isPending ||
+    createSubject.isPending ||
+    updateSubject.isPending
+
+  const isDeleting =
+    deleteDepartment.isPending ||
+    deleteMajor.isPending ||
+    deleteSubject.isPending
 
   const openEditor = (type: EntityType, entity?: Department | Major | Subject) => {
     setEditing({ type, entity })
     setName(entity?.name ?? '')
     setCode(entity && type !== 'department' ? (entity as Major | Subject).code : '')
-    if (entity && type === 'major') setDepartmentId(String((entity as Major).department_id))
-    else if (entity && type === 'subject') {
+    if (entity && type === 'major') {
+      setDepartmentId((entity as Major).department_id)
+      setMajorId(null)
+    } else if (entity && type === 'subject') {
       const subject = entity as Subject
-      setDepartmentId(String(subject.majors[0]?.department_id ?? ''))
-      setMajorIds(subject.majors.map((major) => major.id))
+      const firstMajor = subject.majors[0]
+      setDepartmentId(firstMajor?.department_id ?? null)
+      setMajorId(firstMajor?.id ?? null)
     } else {
-      setDepartmentId('')
-      setMajorIds([])
+      setDepartmentId(null)
+      setMajorId(null)
     }
   }
   const currentType = editing?.type
-  const editorMajors = editorMajorsQuery.data ?? []
-  const isFormValid = Boolean(name.trim()) && (currentType === 'department' || (code.trim() && departmentId && (currentType === 'major' || majorIds.length > 0)))
+  const isFormValid = Boolean(name.trim()) && (currentType === 'department' || (code.trim() && departmentId !== null && (currentType === 'major' || majorId !== null)))
 
   const section = (title: string, type: EntityType, rows: Array<Department | Major | Subject>, columns: string[], render: (item: Department | Major | Subject) => string[]) => (
     <section className="rounded-xl border border-slate-200 p-4">
@@ -109,11 +162,38 @@ export function AdminTaxonomyPage() {
       <div className="space-y-4">
         {currentType !== 'department' ? <label className="block text-sm font-medium text-slate-700">Mã<input value={code} onChange={(event) => setCode(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" /></label> : null}
         <label className="block text-sm font-medium text-slate-700">Tên<input value={name} onChange={(event) => setName(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" /></label>
-        {currentType !== 'department' ? <label className="block text-sm font-medium text-slate-700">Khoa<select value={departmentId} onChange={(event) => { setDepartmentId(event.target.value); setMajorIds([]) }} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"><option value="">Chọn khoa</option>{departmentsQuery.data?.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></label> : null}
-        {currentType === 'subject' ? <label className="block text-sm font-medium text-slate-700">Ngành (chọn ít nhất một)<select multiple value={majorIds.map(String)} onChange={(event) => setMajorIds(Array.from(event.target.selectedOptions, (option) => Number(option.value)))} className="mt-1 h-28 w-full rounded-lg border border-slate-300 px-3 py-2" disabled={!departmentId || editorMajorsQuery.isLoading}>{editorMajors.map((major) => <option key={major.id} value={major.id}>{major.code} — {major.name}</option>)}</select></label> : null}
+
+        {currentType === 'major' && (
+          <DepartmentMajorSubjectPicker
+            departmentId={departmentId}
+            majorId={null}
+            subjectId={null}
+            showMajor={false}
+            showSubject={false}
+            onChange={(values) => {
+              setDepartmentId(values.departmentId)
+            }}
+            departmentRequired
+          />
+        )}
+
+        {currentType === 'subject' && (
+          <DepartmentMajorSubjectPicker
+            departmentId={departmentId}
+            majorId={majorId}
+            subjectId={null}
+            showSubject={false}
+            onChange={(values) => {
+              setDepartmentId(values.departmentId)
+              setMajorId(values.majorId)
+            }}
+            departmentRequired
+            majorRequired
+          />
+        )}
       </div>
-      <div className="mt-5 flex justify-end gap-2"><button onClick={() => setEditing(null)} className="rounded-lg border px-3 py-2 text-sm">Hủy</button><button onClick={() => saveMutation.mutate()} disabled={!isFormValid || saveMutation.isPending} className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm text-white disabled:opacity-60">{saveMutation.isPending ? <Spinner size="sm" className="border-slate-500 border-t-white" /> : null}Lưu</button></div>
+      <div className="mt-5 flex justify-end gap-2"><button onClick={() => setEditing(null)} className="rounded-lg border px-3 py-2 text-sm">Hủy</button><button onClick={() => handleSave()} disabled={!isFormValid || isSaving} className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm text-white disabled:opacity-60">{isSaving ? <Spinner size="sm" className="border-slate-500 border-t-white" /> : null}Lưu</button></div>
     </Modal>
-    <Modal isOpen={deleting !== null} title="Xác nhận xóa"><p className="text-sm text-slate-600">Xóa “{deleting?.entity?.name}”?</p><div className="mt-5 flex justify-end gap-2"><button onClick={() => setDeleting(null)} className="rounded-lg border px-3 py-2 text-sm">Hủy</button><button onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending} className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-sm text-white disabled:opacity-60">{deleteMutation.isPending ? <Spinner size="sm" className="border-red-300 border-t-white" /> : null}Xóa</button></div></Modal>
+    <Modal isOpen={deleting !== null} title="Xác nhận xóa"><p className="text-sm text-slate-600">Xóa “{deleting?.entity?.name}”?</p><div className="mt-5 flex justify-end gap-2"><button onClick={() => setDeleting(null)} className="rounded-lg border px-3 py-2 text-sm">Hủy</button><button onClick={() => handleDelete()} disabled={isDeleting} className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-sm text-white disabled:opacity-60">{isDeleting ? <Spinner size="sm" className="border-red-300 border-t-white" /> : null}Xóa</button></div></Modal>
   </div>
 }
