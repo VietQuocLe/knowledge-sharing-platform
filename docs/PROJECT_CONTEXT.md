@@ -18,11 +18,11 @@ Knowledge Sharing Platform là hệ thống chia sẻ học liệu kết hợp A
 
 Current Sprint
 
-> Sprint 9 — UI/UX Polish & Design Consistency
+> Sprint 10 — Core Feature Completion & Personal Workspace
 
 Overall Progress
 
-72%
+75%
 
 Status
 
@@ -31,21 +31,22 @@ Status
 ✅ Sprint 7 Completed
 ✅ Sprint 8 Completed
 ✅ Sprint 8.5 — Database Architecture Refactor — **hoàn thành**
-🔄 Sprint 9 — UI/UX Polish & Design Consistency — **đang thực hiện**
+✅ Sprint 9 — UI/UX Polish & Design Consistency — **hoàn thành**
+🔄 Sprint 10 — Core Feature Completion & Personal Workspace — **đang thực hiện**
 
 ---
 
 # 3. Current Sprint Goal
 
-Sprint 8.5 (Database Architecture Refactor) đã hoàn thành: tách `Resource` cũ thành `Document`/`Notebook`/`Asset` riêng biệt, viết API `/documents/*` + presigned download URL, dọn dẹp frontend (build sạch), ẩn các route/trang Admin/contribution tạm ngừng.
+Sprint 9 (UI/UX Polish & Design Consistency) đã hoàn thành: chuẩn hóa UI/UX, áp dụng luồng Progressive Disclosure, tích hợp tìm kiếm môn học tức thì không dấu và PDF preview modal, tối giản hóa Flat Document List, đổi tên và cấu trúc thư mục sang `documents`.
 
-**Sprint 9 — UI/UX Polish & Design Consistency:** Chuẩn hóa và cải thiện UI/UX toàn bộ ứng dụng, áp dụng Progressive Disclosure (Home → Department → Major → Subject → Document), thống nhất component dùng chung, responsive nav, badge/label tiếng Việt. Chi tiết xem mục 19b.
+**Sprint 10 — Core Feature Completion & Personal Workspace:** Triển khai Personal Workspace (Notebook), cho phép người dùng tạo notebook cá nhân, lưu tài liệu hệ thống vào notebook và chuẩn bị hạ tầng AI/RAG.
 
 ---
 
 # 4. Completed
 
-> Phần này mô tả code **đã thực sự tồn tại trong repo** tính đến hết Sprint 8.5.
+> Phần này mô tả code **đã thực sự tồn tại trong repo** tính đến hết Sprint 9.
 
 ## Backend
 
@@ -65,6 +66,9 @@ Sprint 8.5 (Database Architecture Refactor) đã hoàn thành: tách `Resource` 
   - `storage_service.get_presigned_download_url()` hoạt động
   - `document_service.py`, `asset_service.py` — business logic tách khỏi router
   - Model cũ `Resource` đã xóa hoàn toàn
+  - **Sprint 9 — UI/UX Polish & Design Consistency:**
+    - Tích hợp API tìm kiếm môn học (`GET /subjects/?q=...`) hỗ trợ tìm kiếm không phân biệt dấu tiếng Việt (ILike query).
+    - Cập nhật idempotent seed script (`seed.py`) để chèn Document mẫu và chèn file tài liệu PDF thực tế (`KTLT_Chapter1_nDArray.pdf`) vào MinIO cho chế độ kiểm thử / validation.
 
 ## Frontend
 
@@ -83,6 +87,20 @@ Sprint 8.5 (Database Architecture Refactor) đã hoàn thành: tách `Resource` 
   - `AppRouter`: routes cũ commented, alias `/documents/:id` thêm vào; `/admin/taxonomy` giữ active
   - Nav links "Đóng góp tài liệu" ẩn ở `PublicLayout`, `AppLayout`, `HomePage`
   - `npm run build` ✅ exit code 0
+  - **Sprint 9 — UI/UX Polish & Design Consistency:**
+    - Tách và dọn dẹp features: đổi tên thư mục `features/resources/` thành `features/documents/` và gỡ bỏ hoàn toàn các hook/file legacy không còn sử dụng.
+    - Tạo các component UI dùng chung chuẩn hóa: `Badge`, `Breadcrumb`, `Card`, `EmptyState` tại `src/components/ui/`.
+    - Triển khai định dạng localized translations tiếng Việt (`src/utils/formatters.ts`) cho resource types, document status, và relative times.
+    - Tích hợp ô tìm kiếm môn học tức thì (`SubjectSearchInput`) được debounced vào Navbar trong `PublicLayout` và `AppLayout`.
+    - Triển khai `PdfPreviewModal` cho phép hiển thị trực tiếp file PDF bằng iframe từ CDN presigned URL (15 phút).
+    - Hoàn thiện luồng duyệt Progressive Disclosure:
+      - `HomePage`: thay TaxonomyView bằng lưới card Khoa (Department) và thanh tìm kiếm nhanh cùng nút đóng góp qua Google Form.
+      - `DepartmentDetailPage`: hiển thị danh sách Ngành trực thuộc dạng card.
+      - `MajorDetailPage`: hiển thị chuyên đề Môn học theo khối kiến thức dưới dạng accordion nhóm.
+      - `SubjectDetailPage`: thay thế card tài liệu bằng danh sách flat hàng ngang gọn nhẹ, cho phép tải/xem trực tiếp.
+      - `DocumentDetailPage`: trang chi tiết tài liệu hỗ trợ PDF preview và nút tải về.
+    - Hoàn thành responsive navbar với hamburger toggle menu cho mobile devices.
+    - `npm run build` ✅ hoạt động bình thường, không gặp lỗi import/type.
 
 ## Infrastructure
 
@@ -93,14 +111,11 @@ Sprint 8.5 (Database Architecture Refactor) đã hoàn thành: tách `Resource` 
 
 # 5. Next Task
 
-## Ngay lúc này: Sprint 9 — UI/UX Polish & Design Consistency
+## Ngay lúc này: Sprint 10 — Core Feature Completion & Personal Workspace
 
-- **HomePage**: Thống nhất một entry point duy nhất cho luồng browse học liệu (giữa `TaxonomyView` và Quick Start/Duyệt theo khoa) — sẽ điều chỉnh lại theo luồng Progressive Disclosure mới (Department → Major → Subject → Document, xem mục 19c).
-- **Layout & Spacing**: Nâng cấp responsive collapse/hamburger menu cho thanh navigation của `PublicLayout` trên các viewport nhỏ. Nhất quán nút "Quay lại" giữa các trang browse.
-- **Badge & Label Translations**: Việt hóa các raw enum (như `resource_type`, `status` hiển thị ở trang chi tiết Document).
-- **Form Elements Consistency**: Tạo/Đồng bộ hóa các component form element tương tự như `Input`/`Button` dùng chung, loại bỏ Tailwind inline raw input.
-- **Admin Spacing & Styling**: *(có thể tạm hoãn nếu nhánh Admin vẫn đang dừng phát triển theo mục 19c — chỉ áp dụng nếu quay lại làm tiếp admin)*.
-- **Admin Navigation Entry**: *(tương tự — phụ thuộc quyết định có quay lại làm admin trong thời gian còn lại của đồ án hay không)*.
+- **Personal Workspace (Notebook)**: Nghiên cứu, thiết kế database và APIs cho phép người dùng tạo Notebook cá nhân.
+- **Notebook Linkage**: Phát triển chức năng lưu tài liệu công cộng vào Notebook cá nhân (được liên kết logic qua `NotebookSavedDocument`, không duplicate tệp vật lý).
+- **AI/RAG Setup**: Thiết lập hạ tầng AI và chuẩn bị cho pipeline chunking/embedding (Sprint 11).
 
 ---
 
@@ -263,9 +278,9 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 6. ✅ FE Foundation
 7. ✅ FE Catch-up Features
 8. ✅ Code Structure Refactor
-8.5. 🔄 **Database Architecture Refactor** (đang thực hiện — tách `Resource` thành `Document`/`Notebook`, xem mục 19c)
-9. UI/UX Polish & Design Consistency (chưa bắt đầu, sau khi hoàn tất 8.5)
-10. Core Feature Completion (chưa bắt đầu)
+8.5. ✅ **Database Architecture Refactor** — **hoàn thành**
+9. ✅ **UI/UX Polish & Design Consistency** — **hoàn thành**
+10. 🔄 **Core Feature Completion & Personal Workspace** — **đang thực hiện**
 11. AI Pipeline (chưa bắt đầu)
 12. Notebook Workspace
 13. RAG Chat
@@ -305,11 +320,11 @@ Commit theo Sprint hoặc feature, ví dụ `feat: implement upload module`. Tr�
 
 # 17. Current Status
 
-Current Sprint: **Sprint 9 — UI/UX Polish & Design Consistency** (đang thực hiện)
+Current Status: **Sprint 10 — Core Feature Completion & Personal Workspace** (đang thực hiện)
 
-Last Completed: Sprint 8.5 — Database Architecture Refactor (tách `Resource` → `Document`/`Notebook`/`Asset`; API `/documents/*` + presigned download; frontend cleanup — `npm run build` ✅).
+Last Completed: Sprint 9 — UI/UX Polish & Design Consistency (chuẩn hóa UI/UX qua Progressive Disclosure, search môn học tức thì không dấu, PDF preview modal, flat document list, đổi tên thư mục và module sang `documents`).
 
-Next Module: Sprint 9 (UI/UX Polish, mục 19b) → Sprint 10 (Core Feature Completion) → AI Pipeline.
+Next Module: Sprint 10 (Core Feature Completion & Personal Workspace) → Sprint 11 (AI Pipeline & RAG Chat).
 
 ---
 

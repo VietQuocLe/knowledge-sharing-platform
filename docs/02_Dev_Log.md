@@ -306,4 +306,43 @@ Database Architecture Refactor: tách `Resource` dùng chung thành `Document` (
 
 UI/UX Polish & Design Consistency
 
+---
+
+# Sprint 9
+
+## Goal
+
+UI/UX Polish & Design Consistency: Chuẩn hóa, cải thiện UI/UX toàn bộ ứng dụng, áp dụng Progressive Disclosure (Home → Department → Major → Subject → Document), Việt hóa enums hiển thị, debounce tìm kiếm môn học tức thì không dấu và tích hợp PDF preview modal.
+
+## Completed
+
+- **Foundation Components**: Triển khai các UI component dùng chung có tính đồng bộ cao: `Badge.tsx`, `Breadcrumb.tsx`, `Card.tsx`, `EmptyState.tsx` trong `src/components/ui/`.
+- **Page Refactoring (Progressive Disclosure Flow)**:
+  - `HomePage`: Thay thế widget TaxonomyView 3 bước cũ bằng lưới card Department kèm thanh tìm kiếm môn học và nút liên kết đóng góp Google Form.
+  - `DepartmentDetailPage`: Hiển thị danh sách card Major trực thuộc.
+  - `MajorDetailPage`: Hiển thị chuyên đề Môn học theo khối kiến thức dưới dạng accordion nhóm (đáp ứng khối kiến thức ngành).
+  - `SubjectDetailPage`: Danh sách tài liệu phẳng nằm ngang (Flat Document List) phân loại theo loại học liệu, hỗ trợ xem trước hoặc tải về trực tiếp.
+  - `DocumentDetailPage`: Trang chi tiết hiển thị siêu dữ liệu tài liệu, frame xem trước PDF và nút tải về tệp tin CDN presigned.
+- **Subject Search & Navbar Dropdown**: Debounce tìm kiếm không dấu/tiếng Việt (`SubjectSearchInput` sử dụng hook `useSearchSubjects`) được tích hợp tại Header trong `PublicLayout` và `AppLayout`, kết nối API `GET /subjects/?q=...` dùng ILIKE ở backend.
+- **PDF Preview Modal**: Cho phép xem tệp PDF trực tiếp qua iframe từ CDN presigned URL (15 phút) của MinIO.
+- **Feature Renaming & Modularization**: Di chuyển cấu trúc từ `src/features/resources` sang `src/features/documents` để nhất quán với Database model, dọn sạch code/hook thừa của luồng cũ.
+- **Vietnamese Localizer**: Xây dựng bộ định dạng `src/utils/formatters.ts` hỗ trợ chuyển ngữ resource type, trạng thái của document và format relative time tiếng Việt.
+- **Responsive Layout**: Hamburger toggle menu hoàn chỉnh cho mobile viewports.
+
+## Decisions
+
+- Độc lập ô tìm kiếm môn học và hộp thoại xem trước (PDF Preview Modal) thành các component feature-scoped riêng biệt.
+- Sử dụng iframe trực tiếp kết hợp presigned URL của MinIO để tránh gánh nặng tải dung lượng cho backend của FastAPI.
+- Loại bỏ toàn bộ các inline raw Tailwind form control ở các trang chi tiết/tạo mới để dùng chung UI components chuẩn hóa của hệ thống.
+
+## Learned
+
+- Giao diện phẳng (Flat List) giúp sinh viên tiếp cận tài liệu nhanh hơn so với card hiển thị phụ.
+- Xử lý tìm kiếm không dấu ở database (PostgreSQL ILIKE tìm kiếm) là rất cần thiết cho ứng dụng tiếng Việt.
+
+## Next Sprint
+
+Core Feature Completion & Personal Workspace
+
+
 

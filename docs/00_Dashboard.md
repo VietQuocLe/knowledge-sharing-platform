@@ -2,13 +2,13 @@
 
 ## Current Sprint
 
-Sprint 9 — UI/UX Polish & Design Consistency 🎨
+Sprint 10 — Core Feature Completion & Personal Workspace 📒
 
 ---
 
 ## Last Completed
 
-Sprint 8 — Code Structure Refactor ✅
+Sprint 9 — UI/UX Polish & Design Consistency ✅
 
 ---
 
@@ -16,26 +16,26 @@ Sprint 8 — Code Structure Refactor ✅
 
 Overall
 
-67%
+75%
 
-████████░░░░░░░░░
+█████████░░░░░░░░
 
 Backend
 
-85%
+90%
 
 Frontend
 
-95%
+98%
 
 ---
 
 ## Next Task
 
-Tổ chức lại HomePage và các layouts để thống nhất entry point và responsive navigation, Việt hóa enums hiển thị, và refactor styling cho admin space.
+Khởi dựng Sprint 10: Thiết kế và triển khai Personal Workspace (Notebook), tạo liên kết các Document học liệu vào Notebook cá nhân, và chuẩn bị tích hợp RAG pipeline.
 
 ---
 
 ## Current Problem
 
-Không có blocker kỹ thuật cho luồng core FE–BE. Các quan sát polish UI/code structure được ghi ở `PROJECT_CONTEXT.md` mục 19 (ngoài phạm vi Sprint 7).
+Không có blocker. Toàn bộ luồng browse học liệu theo Progressive Disclosure đã chạy ổn định và được tối ưu hóa giao diện.

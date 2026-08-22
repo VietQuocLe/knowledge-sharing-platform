@@ -54,13 +54,13 @@ Database Architecture Refactor (Document/Notebook/Asset split) — ✅ done
 
 Sprint 9
 
-UI/UX Polish & Design Consistency
+UI/UX Polish & Design Consistency — ✅ done
 
 ↓
 
 Sprint 10
 
-Core Feature Completion
+Core Feature Completion & Personal Workspace — 🔄 in progress
 
 ↓
 
