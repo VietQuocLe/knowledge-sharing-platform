@@ -171,19 +171,19 @@ Sprint 9 (UI/UX Polish & Design Consistency) đã hoàn thành: chuẩn hóa UI/
 
 # 7. Current Project Structure
 
-> Cập nhật sau Sprint 8.5. Model `Resource` cũ đã xóa hoàn toàn.
+> Cập nhật sau Sprint 10. Model `Resource` cũ đã xóa hoàn toàn.
 
 ```text
 knowledge-sharing-platform/
 ├── backend/
 │   ├── app/
-│   │   ├── api/       # health, auth, config, departments, majors, subjects, documents
+│   │   ├── api/       # health, auth, config, departments, majors, subjects, documents, notebooks
 │   │   ├── core/      # config, database, security
 │   │   ├── models/    # base, enums, user, department, major, subject,
 │   │   │              # document, notebook, asset
-│   │   ├── schemas/   # auth, department, major, subject, document, asset
+│   │   ├── schemas/   # auth, department, major, subject, document, asset, notebook
 │   │   ├── services/  # auth, department, major, subject, document, asset,
-│   │   │              # storage, startup
+│   │   │              # storage, startup, notebook_service
 │   │   ├── main.py, seed.py
 │   ├── alembic/
 │   ├── Dockerfile, requirements.txt, .env.example
@@ -193,15 +193,17 @@ knowledge-sharing-platform/
 │   ├── components/    # AdminNavLinks, ProtectedRoute, AdminRoute
 │   ├── features/
 │   │   ├── auth/      # api, AuthContext, AuthForm
-│   │   ├── resources/ # api (Document types), queryKeys (documentsKeys),
-│   │   │              # hooks/ (useDocuments, useDocumentDetail, useUploadConfig,
-│   │   │              #         + 7 paused/stubbed hooks),
+│   │   ├── documents/ # api (Document types), queryKeys (documentsKeys),
+│   │   │              # hooks/ (useDocuments, useDocumentDetail, useUploadConfig),
 │   │   │              # components/PublicResourceCard, index.ts
+│   │   ├── notebooks/ # api, queryKeys, hooks/useNotebooks, hooks/useCreateNotebook,
+│   │   │              # components/NotebookCard, components/CreateNotebookCard, components/CreateNotebookModal
 │   │   ├── taxonomy/  # api, queryKeys, TaxonomyView, DepartmentMajorSubjectPicker, hooks/
 │   │   └── README.md
 │   ├── layouts/       # PublicLayout, AppLayout, AdminLayout
 │   ├── pages/         # active: Home, Departments, DepartmentDetail, MajorDetail,
-│   │                  #         SubjectDetail, ResourceDetail, Login, Register,
+│   │                  #         SubjectDetail, DocumentDetail, Login, Register,
+│   │                  #         MyNotebooksPage, NotebookDetailPage,
 │   │                  #         MyResources (notice), AdminTaxonomy
 │   │                  # stubbed: ResourceCreate, ResourceUpload, AdminModeration
 │   ├── router/AppRouter.tsx
@@ -238,7 +240,7 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 - Không có luồng duyệt (`PENDING_REVIEW`) cho đến khi nhánh Admin được mở lại.
 - Download file qua presigned URL MinIO (15 phút) thay vì backend proxy — không cần JWT.
 
-### Current API endpoints (Sprint 8.5)
+### Current API endpoints (Sprint 10)
 
 - `GET /health`
 - `POST /auth/register`, `POST /auth/login`, `GET /auth/me`
@@ -249,11 +251,13 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 - `GET /documents/{id}` (only PUBLIC, nested assets)
 - `GET /documents/{id}/assets/{asset_id}/download` → presigned MinIO URL (no JWT)
 - `GET /config/upload`
+- `POST /notebooks/` (JWT protected)
+- `GET /notebooks/me` (JWT protected)
 
-### Frontend routes (Sprint 8.5)
+### Frontend routes (Sprint 10)
 
 - Public (active): `/`, `/login`, `/register`, `/departments`, `/departments/:id`, `/majors/:id`, `/subjects/:id`, `/resources/:id`, `/documents/:id`
-- Protected (active): `/me/resources` (temp notice)
+- Protected (active): `/me/workspace` (MyNotebooksPage), `/me/workspace/:notebookId` (NotebookDetailPage - placeholder), `/me/resources` (temp notice)
 - Admin (active): `/admin/taxonomy`
 - Commented out: `/resources/create`, `/resources/:id/upload`, `/admin/moderation`
 
