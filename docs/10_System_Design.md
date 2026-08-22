@@ -52,27 +52,34 @@ Project là đề tài tự đề xuất đã được GVHD duyệt (không thu�
 
 ---
 
-## 3. Kiến trúc Học liệu Trừu tượng (Resource Abstraction Layer)
+## 3. Kiến trúc Học liệu & Không gian Học tập (Document & Notebook Abstraction Layer)
 
-Để giải quyết hạn chế của các đồ án cũ (chỉ lưu được file PDF/Word cố định), hệ thống áp dụng pattern **Abstraction Layer**:
+Để giải quyết hạn chế của việc phân mảnh dữ liệu và tách biệt giữa các khu vực, từ Sprint 8.5 hệ thống tách biệt luồng lưu trữ học liệu thành hai phân vùng:
 
-* Bảng cốt lõi là `Resource` thay vì `documents`.
-* `Resource` giữ siêu dữ liệu học liệu và liên kết tới một hoặc nhiều `Asset` vật lý.
-* Sử dụng cột `resource_type` (Enum: `DOCUMENT`, `VIDEO`, `AUDIO`, `LINK`, `AI_ARTIFACT`) kết hợp với cột **`metadata_json` (PostgreSQL `JSONB`)** để lưu trữ thuộc tính động của từng loại học liệu mà không cần đổi Database Schema khi mở rộng.
+* Bảng `Document` đại diện cho các học liệu công khai chia sẻ trên Public Hub.
+* Bảng `Notebook` đại diện cho các ghi chú, tài liệu nghiên cứu cá nhân bên trong Workspace.
+* Bảng `Asset` đại diện cho lớp lưu trữ tệp vật lý thực tế trên MinIO.
+* `Asset` liên kết với `Document` hoặc `Notebook` bằng cách dùng 2 trường nullable: `document_id` và `notebook_id` kèm theo một ràng buộc loại trừ lẫn nhau `CHECK ((document_id IS NULL) != (notebook_id IS NULL))` (XOR constraint). Trong MVP hiện tại, Document đi kèm đúng 1 Asset (quan hệ 1:1).
 
 ```text
-Resource
+Document (Public Hub)
 ├── id, title, description
-├── resource_type (DOCUMENT | VIDEO | AUDIO | LINK | AI_ARTIFACT)
-├── metadata_json (JSONB: ngôn ngữ, học kỳ, tác giả, source...)
+├── resource_type (Enum: LECTURE, EXAM, REFERENCE, SYLLABUS...)
 ├── subject_id, owner_id
-└── assets (0..n)
+└── status (Enum: DRAFT, PUBLIC, DELETED)
 
-Asset
-├── id, resource_id
+Notebook (Private Workspace)
+├── id, title, owner_id
+└── visibility (Enum: PRIVATE, PENDING_REVIEW, PUBLIC)
+
+Asset (Physical Storage)
+├── id
+├── document_id (XOR with notebook_id)
+├── notebook_id (XOR with document_id)
 ├── file_name, file_path
 ├── file_type, size
-└── storage target hiện tại: MinIO
+└── storage target: MinIO
+```
 
 
 ```
@@ -144,9 +151,9 @@ Chuyển hoàn toàn sang giai đoạn **Code & Design Chi Tiết**:
         ↓
 6. ✅ FE Catch-up Features — nối API thật (browse, /me/resources, upload, moderation, admin taxonomy)
         ↓
-7. 🟢 Triển khai AI Layer (Chunking, Embedding, Vector Search & RAG Q&A) — chưa bắt đầu
-
-
+7. ✅ Sprint 8.5/9 Cleanup: Document/Notebook split, Quota adjustments, Search & PDF Preview
+        ↓
+8. 🟢 Triển khai AI Layer (Chunking, Embedding, Vector Search & RAG Q&A) — chưa bắt đầu
 ```
 
 ---
@@ -188,6 +195,13 @@ Sau khi Core System ổn định, nếu còn thời gian trong quá trình thự
 * `/me/resources`, create → upload → submit-review; admin moderation và admin taxonomy CRUD
 * Backend bổ sung: filter taxonomy (`department_id`, `major_id`), `GET /resources/me/{id}`, `GET /resources/admin`
 * Các màn hình core đã nối API thật end-to-end (không còn mock UI cho luồng chính)
+
+### Sprint 8.5 & 9 Delivered Scope (Cleanup & AI Prep)
+
+* **Document / Notebook Architecture split:** Tự động tách `Resource` cũ thành `Document` (chia sẻ) và `Notebook` (Workspace), dọn sạch references và types.
+* **Subject Search API & Dropdown:** Hỗ trợ tìm kiếm môn học tức thì không phân biệt dấu tại Header.
+* **PDF Preview Modal:** Hỗ trợ preview tệp văn bản PDF từ CDN Presigned URL của MinIO.
+* **Flat Document List:** Tối giản hóa danh mục tài liệu theo luồng ngang, loại bỏ Card trung gian.
 
 ### Planned Future Enhancements
 
