@@ -38,19 +38,10 @@ export function HomePage() {
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-10 font-sans">
       {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-900 via-slate-900 to-indigo-950 px-8 py-10 shadow-lg text-white">
-        <div className="relative z-10 max-w-2xl">
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl text-white leading-snug">
-            Nền tảng chia sẻ học liệu trực tuyến
-          </h1>
-          <p className="mt-3 text-sm sm:text-base text-slate-300 leading-relaxed">
-            Hệ thống tổ chức tài liệu thông minh theo Khoa → Ngành → Môn học giúp sinh viên dễ dàng tra cứu, tiếp cận những tài nguyên học tập chất lượng nhất từ giảng viên và bạn học.
-          </p>
-        </div>
-
-        {/* Decorative subtle background shapes */}
-        <div className="absolute top-0 right-0 -translate-y-12 translate-x-12 h-64 w-64 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/2 -translate-x-12 translate-y-12 h-80 w-80 rounded-full bg-slate-500/10 blur-3xl pointer-events-none" />
+      <div className="pt-2 pb-4">
+        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl text-slate-900 leading-snug">
+          Nền tảng chia sẻ học liệu trực tuyến
+        </h1>
       </div>
 
       {/* Main Browse Section */}

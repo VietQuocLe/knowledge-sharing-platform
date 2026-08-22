@@ -16,13 +16,16 @@ Knowledge Sharing Platform là hệ thống chia sẻ học liệu kết hợp A
 
 # 2. Current Progress
 
+**Top of mind / Định hướng phát triển gần:**
+Hệ thống đang chuyển đổi triệt để sang mô hình sprint "vertical slice" (triển khai hoàn chỉnh cả Frontend + Backend trong cùng một sprint thay vì tách rời lẻ tẻ). Sprint 10 là sprint dọc đầu tiên hoàn thành giao diện & API Dashboard cơ bản (tạo mới + danh sách), chuẩn bị bước vào Sprint 10.5 để hoàn tất đổi tên / xóa.
+
 Current Sprint
 
-> Sprint 10 — Core Feature Completion & Personal Workspace
+> Sprint 10.5 — Notebook Dashboard Actions (Rename/Delete)
 
 Overall Progress
 
-75%
+80%
 
 Status
 
@@ -32,7 +35,8 @@ Status
 ✅ Sprint 8 Completed
 ✅ Sprint 8.5 — Database Architecture Refactor — **hoàn thành**
 ✅ Sprint 9 — UI/UX Polish & Design Consistency — **hoàn thành**
-🔄 Sprint 10 — Core Feature Completion & Personal Workspace — **đang thực hiện**
+✅ Sprint 10 — Notebook (AI Workspace) Feature — Dashboard + Layout Redesign — **hoàn thành**
+🔄 Sprint 10.5 — Notebook Dashboard Actions (Rename/Delete) — **đang thực hiện**
 
 ---
 
@@ -40,13 +44,15 @@ Status
 
 Sprint 9 (UI/UX Polish & Design Consistency) đã hoàn thành: chuẩn hóa UI/UX, áp dụng luồng Progressive Disclosure, tích hợp tìm kiếm môn học tức thì không dấu và PDF preview modal, tối giản hóa Flat Document List, đổi tên và cấu trúc thư mục sang `documents`.
 
-**Sprint 10 — Core Feature Completion & Personal Workspace:** Triển khai Personal Workspace (Notebook), cho phép người dùng tạo notebook cá nhân, lưu tài liệu hệ thống vào notebook và chuẩn bị hạ tầng AI/RAG.
+**Sprint 10 — Notebook (AI Workspace) Feature — Dashboard + Layout Redesign:** Thiết kế và hoàn thiện toàn bộ giao diện dashboard, cấu trúc thư mục `features/notebooks` bám sát `features/documents`, triển khai card, modal tạo mới, bộ lọc local client-side, dynamic welcome header, tối ưu service/API backend đếm tài liệu và tích hợp hệ thống layout Dark Sidebar thống nhất, ẩn `SubjectSearchInput` khi ở trang workspace.
+
+**Sprint 10.5 — Notebook Dashboard Actions (Rename/Delete):** Triển khai các API và tương tác giao diện chỉnh sửa tên và xóa bỏ Notebook, giải quyết các vướng mắc về chính sách đồng bộ quản lý tài liệu.
 
 ---
 
 # 4. Completed
 
-> Phần này mô tả code **đã thực sự tồn tại trong repo** tính đến hết Sprint 9.
+> Phần này mô tả code **đã thực sự tồn tại trong repo** tính đến hết Sprint 10.
 
 ## Backend
 
@@ -66,9 +72,15 @@ Sprint 9 (UI/UX Polish & Design Consistency) đã hoàn thành: chuẩn hóa UI/
   - `storage_service.get_presigned_download_url()` hoạt động
   - `document_service.py`, `asset_service.py` — business logic tách khỏi router
   - Model cũ `Resource` đã xóa hoàn toàn
-  - **Sprint 9 — UI/UX Polish & Design Consistency:**
-    - Tích hợp API tìm kiếm môn học (`GET /subjects/?q=...`) hỗ trợ tìm kiếm không phân biệt dấu tiếng Việt (ILike query).
-    - Cập nhật idempotent seed script (`seed.py`) để chèn Document mẫu và chèn file tài liệu PDF thực tế (`KTLT_Chapter1_nDArray.pdf`) vào MinIO cho chế độ kiểm thử / validation.
+- **Sprint 9 — UI/UX Polish & Design Consistency:**
+  - Tích hợp API tìm kiếm môn học (`GET /subjects/?q=...`) hỗ trợ tìm kiếm không phân biệt dấu tiếng Việt (ILike query).
+  - Cập nhật idempotent seed script (`seed.py`) để chèn Document mẫu và chèn file tài liệu PDF thực tế (`KTLT_Chapter1_nDArray.pdf`) vào MinIO cho chế độ kiểm thử / validation.
+- **Sprint 10 — Notebook (AI Workspace) Feature — Dashboard + Layout Redesign:**
+  - Model `Notebook`: thêm cập nhật tự động `updated_at` (với `onupdate=func.now()`).
+  - Schemas: Định nghĩa `NotebookCreate` (title bắt buộc, subject_id nullable) và `NotebookRead`.
+  - Service Layer: Cấu trúc tối ưu hàm `get_notebooks_by_owner()` thông qua LEFT OUTER JOIN với bảng `Subject` và hai bảng subquery đếm `Asset` + `NotebookSavedDocument` để trả về `source_count` chính xác, phòng tránh lỗi N+1.
+  - Endpoints: `POST /notebooks/` và `GET /notebooks/me` đi kèm bảo vệ định danh người dùng qua JWT.
+  - *Lưu ý cho sprint sau:* khi thêm các route chi tiết như `GET /notebooks/{notebook_id}`, phải khai báo route `/me` TRƯỚC `/{notebook_id}` trong router, tránh FastAPI match nhầm "me" là một path parameter ID.
 
 ## Frontend
 
@@ -87,20 +99,28 @@ Sprint 9 (UI/UX Polish & Design Consistency) đã hoàn thành: chuẩn hóa UI/
   - `AppRouter`: routes cũ commented, alias `/documents/:id` thêm vào; `/admin/taxonomy` giữ active
   - Nav links "Đóng góp tài liệu" ẩn ở `PublicLayout`, `AppLayout`, `HomePage`
   - `npm run build` ✅ exit code 0
-  - **Sprint 9 — UI/UX Polish & Design Consistency:**
-    - Tách và dọn dẹp features: đổi tên thư mục `features/resources/` thành `features/documents/` và gỡ bỏ hoàn toàn các hook/file legacy không còn sử dụng.
-    - Tạo các component UI dùng chung chuẩn hóa: `Badge`, `Breadcrumb`, `Card`, `EmptyState` tại `src/components/ui/`.
-    - Triển khai định dạng localized translations tiếng Việt (`src/utils/formatters.ts`) cho resource types, document status, và relative times.
-    - Tích hợp ô tìm kiếm môn học tức thì (`SubjectSearchInput`) được debounced vào Navbar trong `PublicLayout` và `AppLayout`.
-    - Triển khai `PdfPreviewModal` cho phép hiển thị trực tiếp file PDF bằng iframe từ CDN presigned URL (15 phút).
-    - Hoàn thiện luồng duyệt Progressive Disclosure:
-      - `HomePage`: thay TaxonomyView bằng lưới card Khoa (Department) và thanh tìm kiếm nhanh cùng nút đóng góp qua Google Form.
-      - `DepartmentDetailPage`: hiển thị danh sách Ngành trực thuộc dạng card.
-      - `MajorDetailPage`: hiển thị chuyên đề Môn học theo khối kiến thức dưới dạng accordion nhóm.
-      - `SubjectDetailPage`: thay thế card tài liệu bằng danh sách flat hàng ngang gọn nhẹ, cho phép tải/xem trực tiếp.
-      - `DocumentDetailPage`: trang chi tiết tài liệu hỗ trợ PDF preview và nút tải về.
-    - Hoàn thành responsive navbar với hamburger toggle menu cho mobile devices.
-    - `npm run build` ✅ hoạt động bình thường, không gặp lỗi import/type.
+- **Sprint 9 — UI/UX Polish & Design Consistency:**
+  - Tách và dọn dẹp features: đổi tên thư mục `features/resources/` thành `features/documents/` và gỡ bỏ hoàn toàn các hook/file legacy không còn sử dụng.
+  - Tạo các component UI dùng chung chuẩn hóa: `Badge`, `Breadcrumb`, `Card`, `EmptyState` tại `src/components/ui/`.
+  - Triển khai định dạng localized translations tiếng Việt (`src/utils/formatters.ts`) cho resource types, document status, và relative times.
+  - Tích hợp ô tìm kiếm môn học tức thì (`SubjectSearchInput`) được debounced vào Navbar trong `PublicLayout` và `AppLayout`.
+  - Triển khai `PdfPreviewModal` cho phép hiển thị trực tiếp file PDF bằng iframe từ CDN presigned URL (15 phút).
+  - Hoàn thiện luồng duyệt Progressive Disclosure:
+    - `HomePage`: thay TaxonomyView bằng lưới card Khoa (Department) và thanh tìm kiếm nhanh cùng nút đóng góp qua Google Form.
+    - `DepartmentDetailPage`: hiển thị danh sách Ngành trực thuộc dạng card.
+    - `MajorDetailPage`: hiển thị chuyên đề Môn học theo khối kiến thức dưới dạng accordion nhóm.
+    - `SubjectDetailPage`: thay thế card tài liệu bằng danh sách flat hàng ngang gọn nhẹ, cho phép tải/xem trực tiếp.
+    - `DocumentDetailPage`: trang chi tiết tài liệu hỗ trợ PDF preview và nút tải về.
+  - Hoàn thành responsive navbar với hamburger toggle menu cho mobile devices.
+  - `npm run build` ✅ hoạt động bình thường, không gặp lỗi import/type.
+- **Sprint 10 — Notebook (AI Workspace) Feature — Dashboard + Layout Redesign:**
+  - Cấu trúc thư mục mới `features/notebooks` tương tự `features/documents` bao gồm `api.ts`, `queryKeys.ts`, custom hooks (`useNotebooks`, `useCreateNotebook`).
+  - Components: `NotebookCard` (hiển thị thời gian cập nhật tương đối bằng formatRelativeTime, icon BookOpen / Sparkles tương ứng trạng thái liên kết môn học, số lượng tài liệu, không hiện tag môn học để các card luôn đồng bộ chiều cao tránh lệch khối), `CreateNotebookCard` (trigger nét đứt), `CreateNotebookModal` (sử dụng autocomplete tìm kiếm môn học).
+  - MyNotebooksPage: đón chào sinh động "Chào buổi sáng/chiều/tối" bằng giờ thực tế máy khách, lọc danh sách local không cần gọi API phụ và hỗ trợ các trạng thái rỗng `EmptyState`.
+  - Chỉnh sửa hệ thống layout: chuyển đổi toàn bộ `PublicLayout` & `AppLayout` từ Topbar ngang sang Dark Sidebar cố định trái (logo, nav, CTA đóng góp), di chuyển ô tìm kiếm môn học và cụm thông tin đăng nhập lên phần `<main>` (không nằm trong sidebar).
+  - Đã tối giản Sidebar chỉ còn "Trang chủ", "Workspace cá nhân" (+ "Quản trị" nếu là admin), lược bỏ "Khám phá Khoa/Ngành" hoàn toàn vì trùng lặp.
+  - Ẩn tự động ô tìm kiếm môn học chung tại header khi khớp `pathname.startsWith('/me/workspace')`.
+  - `npm run build` ✅ hoạt động ổn định và biên dịch hoàn toàn thành công.
 
 ## Infrastructure
 
@@ -111,11 +131,20 @@ Sprint 9 (UI/UX Polish & Design Consistency) đã hoàn thành: chuẩn hóa UI/
 
 # 5. Next Task
 
-## Ngay lúc này: Sprint 10 — Core Feature Completion & Personal Workspace
+## Ngay lúc này: Sprint 10.5 — Notebook Dashboard Actions (Rename/Delete)
 
-- **Personal Workspace (Notebook)**: Nghiên cứu, thiết kế database và APIs cho phép người dùng tạo Notebook cá nhân.
-- **Notebook Linkage**: Phát triển chức năng lưu tài liệu công cộng vào Notebook cá nhân (được liên kết logic qua `NotebookSavedDocument`, không duplicate tệp vật lý).
-- **AI/RAG Setup**: Thiết lập hạ tầng AI và chuẩn bị cho pipeline chunking/embedding (Sprint 11).
+- **Trực quan bổ sung**: Tích hợp các thao tác đổi tên (Rename) và xóa bỏ (Delete) Notebook ngay từ giao diện Dashboard.
+- **Chính sách xóa file**: ⚠️ CHƯA CHỐT: quyết định chính sách xóa file Asset trên MinIO khi xóa Notebook (có xóa vật lý ngay hay giữ soft-delete 30 ngày giống Document) — cần xác nhận trước khi viết API `delete_notebook()`.
+
+## Kế hoạch tiếp theo: Sprint 11 — Notebook Detail Page & Document Saving / Asset Upload
+
+- **Màn hình chi tiết**: Xây dựng trang chi tiết Notebook thật hỗ trợ cả FE + BE. ⚠️ CHƯA CHỐT: thiết kế cấu trúc giao diện 1 cột hay 2 cột kiểu của NotebookLM.
+- **Lưu tài liệu**: Xây dựng backend + frontend cho phép lưu tài liệu công cộng (Document) vào Notebook cá nhân với hạn định giới hạn `MAX_SAVED_DOCUMENTS_PER_NOTEBOOK = 10`.
+- **Đóng góp cá nhân**: Xây dựng tính năng upload tập tin cá nhân riêng vào Notebook với hạn định giới hạn `MAX_OWN_ASSETS_PER_NOTEBOOK = 5`.
+
+## Sprint 12+ (Dời lại): AI Features (RAG Chat, embeddings, chunking)
+
+- Phát triển pipeline chunking/embedding, lưu trữ pgvector và kết nối LLM để hỗ trợ chat, trích dẫn tài liệu trong Notebook.
 
 ---
 
@@ -280,12 +309,12 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 8. ✅ Code Structure Refactor
 8.5. ✅ **Database Architecture Refactor** — **hoàn thành**
 9. ✅ **UI/UX Polish & Design Consistency** — **hoàn thành**
-10. 🔄 **Core Feature Completion & Personal Workspace** — **đang thực hiện**
-11. AI Pipeline (chưa bắt đầu)
-12. Notebook Workspace
-13. RAG Chat
-14. Testing
-15. Deployment & Optimization
+10. ✅ **Notebook (AI Workspace) Feature — Dashboard + Layout Redesign** — **hoàn thành**
+10.5. 🔄 **Notebook Dashboard Actions (Rename/Delete)** — **đang thực hiện**
+11. 🔄 **Notebook Detail Page & Document Saving / Asset Upload** — **kế hoạch**
+12. 🔄 **AI Features (RAG Chat, embeddings, chunking)** — **dời lại**
+13. 🔄 **Testing & Deployment** — **kế hoạch**
+14. 🔄 **Deployment & Optimization** — **kế hoạch**
 
 ---
 
@@ -320,11 +349,11 @@ Commit theo Sprint hoặc feature, ví dụ `feat: implement upload module`. Tr�
 
 # 17. Current Status
 
-Current Status: **Sprint 10 — Core Feature Completion & Personal Workspace** (đang thực hiện)
+Current Status: **Sprint 10.5 — Notebook Dashboard Actions (Rename/Delete)** (đang chuẩn bị thực hiện)
 
-Last Completed: Sprint 9 — UI/UX Polish & Design Consistency (chuẩn hóa UI/UX qua Progressive Disclosure, search môn học tức thì không dấu, PDF preview modal, flat document list, đổi tên thư mục và module sang `documents`).
+Last Completed: Sprint 10 — Notebook (AI Workspace) Feature — Dashboard + Layout Redesign (triển khai đồng bộ giao diện dashboard, cấu trúc thư mục features/notebooks bám sát features/documents, card, modal tạo mới, bộ lọc local client-side, dynamic welcome header, tối ưu service/API backend đếm tài liệu và tích hợp hệ thống layout Dark Sidebar thống nhất, ẩn SubjectSearchInput khi ở trang workspace).
 
-Next Module: Sprint 10 (Core Feature Completion & Personal Workspace) → Sprint 11 (AI Pipeline & RAG Chat).
+Next Module: Sprint 10.5 (Notebook Dashboard Actions) → Sprint 11 (Notebook Detail Page & Document Saving / Asset Upload) → Sprint 12 (AI Features / RAG Chat).
 
 ---
 

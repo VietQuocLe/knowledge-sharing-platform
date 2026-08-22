@@ -3,7 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { BookOpen, Search, X } from 'lucide-react'
 import { useSearchSubjects } from '../hooks/useSearchSubjects'
 
-export function SubjectSearchInput() {
+interface SubjectSearchInputProps {
+    onSelect?: (subject: { id: number; name: string; code: string }) => void
+    placeholder?: string
+}
+
+export function SubjectSearchInput({ onSelect, placeholder = "Tìm kiếm môn học..." }: SubjectSearchInputProps) {
     const [query, setQuery] = useState('')
     const [debouncedQuery, setDebouncedQuery] = useState('')
     const [isOpen, setIsOpen] = useState(false)
@@ -38,10 +43,15 @@ export function SubjectSearchInput() {
         setActiveIndex(-1)
     }, [subjects])
 
-    const handleSelect = (subjectId: number) => {
-        setQuery('')
+    const handleSelect = (subject: { id: number; name: string; code: string }) => {
+        if (onSelect) {
+            onSelect(subject)
+            setQuery(subject.name)
+        } else {
+            setQuery('')
+            navigate(`/subjects/${subject.id}`)
+        }
         setIsOpen(false)
-        navigate(`/subjects/${subjectId}`)
     }
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -56,7 +66,7 @@ export function SubjectSearchInput() {
         } else if (e.key === 'Enter') {
             e.preventDefault()
             if (activeIndex >= 0 && activeIndex < subjects.length) {
-                handleSelect(subjects[activeIndex].id)
+                handleSelect(subjects[activeIndex])
             }
         } else if (e.key === 'Escape') {
             e.preventDefault()
@@ -95,7 +105,7 @@ export function SubjectSearchInput() {
                     }}
                     onFocus={() => setIsOpen(true)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Tìm kiếm môn học..."
+                    placeholder={placeholder}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-4 pr-10 text-xs text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition"
                 />
                 {query ? (
@@ -127,7 +137,7 @@ export function SubjectSearchInput() {
                                 return (
                                     <li
                                         key={subject.id}
-                                        onClick={() => handleSelect(subject.id)}
+                                        onClick={() => handleSelect(subject)}
                                         className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition ${isSelected ? 'bg-indigo-50/60 text-indigo-900' : 'text-slate-700 hover:bg-indigo-50/60'
                                             }`}
                                     >

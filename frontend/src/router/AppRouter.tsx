@@ -12,6 +12,8 @@ import { HomePage } from '../pages/HomePage'
 import { LoginPage } from '../pages/LoginPage'
 import { MajorDetailPage } from '../pages/MajorDetailPage'
 import { MyResourcesPage } from '../pages/MyResourcesPage'
+import { MyNotebooksPage } from '../pages/MyNotebooksPage'
+import { NotebookDetailPage } from '../pages/NotebookDetailPage'
 import { RegisterPage } from '../pages/RegisterPage'
 // import { ResourceCreatePage } from '../pages/ResourceCreatePage'  // [PAUSED - Admin branch]
 import { DocumentDetailPage } from '../pages/DocumentDetailPage'
@@ -39,6 +41,8 @@ const router = createBrowserRouter([
     ),
     children: [
       { path: '/me/resources', element: <MyResourcesPage /> },
+      { path: '/me/workspace', element: <MyNotebooksPage /> },
+      { path: '/me/workspace/:notebookId', element: <NotebookDetailPage /> },
     ],
   },
   {
