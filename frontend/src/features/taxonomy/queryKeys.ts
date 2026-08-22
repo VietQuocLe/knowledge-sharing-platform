@@ -25,5 +25,6 @@ export const taxonomyKeys = {
     majorId
       ? [...taxonomyKeys.subjects(), 'list', majorId]
       : [...taxonomyKeys.subjects(), 'list'],
+  subjectsSearch: (query: string) => [...taxonomyKeys.subjects(), 'search', query] as const,
   subjectDetail: (id: number) => [...taxonomyKeys.subjects(), id] as const,
 } as const

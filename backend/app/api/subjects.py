@@ -12,9 +12,11 @@ router = APIRouter(prefix="/subjects", tags=["Subjects"])
 @router.get("/", response_model=list[SubjectResponse])
 def list_subjects(
     major_id: int | None = Query(default=None),
+    q: str | None = Query(default=None, description="Search term for code or name"),
+    limit: int = Query(default=8, ge=1, le=50),
     db: Session = Depends(get_db),
 ):
-    return get_all(db, major_id=major_id)
+    return get_all(db, major_id=major_id, q=q, limit=limit)
 
 
 @router.get("/{subject_id}", response_model=SubjectResponse)

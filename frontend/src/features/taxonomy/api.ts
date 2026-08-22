@@ -13,11 +13,14 @@ export interface Major {
   department?: Department
 }
 
+export type SubjectCategory = 'GENERAL' | 'FOUNDATION' | 'SPECIALIZED' | 'ELECTIVE_CAPSTONE'
+
 export interface Subject {
   id: number
   code: string
   name: string
   majors: Major[]
+  category?: SubjectCategory
 }
 
 export type DepartmentPayload = { name: string }
@@ -85,6 +88,13 @@ export const taxonomyApi = {
     createJsonRequest({ method: 'DELETE', url: `/majors/${id}` }),
 
   getSubjects: async (): Promise<Subject[]> => createJsonRequest({ method: 'GET', url: '/subjects/' }),
+  searchSubjects: async (query: string, limit = 8): Promise<Subject[]> => {
+    return createJsonRequest({
+      method: 'GET',
+      url: '/subjects/',
+      params: { q: query, limit },
+    })
+  },
   createSubject: async (data: SubjectPayload): Promise<Subject> =>
     createJsonRequest({ method: 'POST', url: '/subjects/', data }),
   updateSubject: async (id: number, data: SubjectPayload): Promise<Subject> =>

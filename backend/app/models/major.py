@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Column, ForeignKey, Integer, String, Table
+from sqlalchemy import Column, ForeignKey, Integer, String, Table, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
+from app.models.enums import SubjectCategory
 
 if TYPE_CHECKING:
     from app.models.department import Department
@@ -17,6 +18,7 @@ major_subject = Table(
     Base.metadata,
     Column("major_id", Integer, ForeignKey("majors.id", ondelete="CASCADE"), primary_key=True),
     Column("subject_id", Integer, ForeignKey("subjects.id", ondelete="CASCADE"), primary_key=True),
+    Column("category", Enum(SubjectCategory), nullable=False, default=SubjectCategory.GENERAL, server_default='GENERAL'),
 )
 
 class Major(Base):

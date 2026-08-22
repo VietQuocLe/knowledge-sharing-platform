@@ -1,6 +1,8 @@
+from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.major import MajorBase
+from app.models.enums import SubjectCategory
+from app.schemas.major import MajorResponse
 
 
 class SubjectBase(BaseModel):
@@ -24,6 +26,7 @@ class SubjectUpdate(BaseModel):
 
 class SubjectResponse(SubjectBase):
     id: int
-    majors: list[MajorBase] = Field(default_factory=list)
+    majors: list[MajorResponse] = Field(default_factory=list)
+    category: Optional[SubjectCategory] = None
 
     model_config = ConfigDict(from_attributes=True)

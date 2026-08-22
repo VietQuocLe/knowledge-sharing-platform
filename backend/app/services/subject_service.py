@@ -1,6 +1,6 @@
 from fastapi import HTTPException, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.department import Department
 from app.models.major import Major, major_subject
@@ -15,24 +15,59 @@ def _get_major_or_404(db: Session, major_id: int) -> Major:
     return major
 
 
-def get_all(db: Session, *, major_id: int | None = None) -> list[Subject]:
-    query = select(Subject).order_by(Subject.id)
+def get_all(
+    db: Session,
+    *,
+    major_id: int | None = None,
+    q: str | None = None,
+    limit: int = 8,
+) -> list[Subject]:
     if major_id is not None:
         _get_major_or_404(db, major_id)
+        # Query both Subject and category from major_subject Table
         query = (
-            select(Subject)
+            select(Subject, major_subject.c.category)
+            .options(selectinload(Subject.majors))
             .join(major_subject, Subject.id == major_subject.c.subject_id)
             .where(major_subject.c.major_id == major_id)
-            .order_by(Subject.id)
         )
-    result = db.execute(query)
-    return list(result.scalars().all())
+        if q is not None:
+            query = query.where(
+                (Subject.name.ilike(f"%{q}%")) | (Subject.code.ilike(f"%{q}%"))
+            )
+        
+        query = query.order_by(Subject.id)
+        if q is not None:
+            query = query.limit(limit)
+
+        result = db.execute(query).all()
+        subjects = []
+        for subject, category in result:
+            subject.category = category
+            subjects.append(subject)
+        return subjects
+    else:
+        query = select(Subject).options(selectinload(Subject.majors))
+        if q is not None:
+            query = query.where(
+                (Subject.name.ilike(f"%{q}%")) | (Subject.code.ilike(f"%{q}%"))
+            )
+        
+        query = query.order_by(Subject.id)
+        if q is not None:
+            query = query.limit(limit)
+
+        subjects = list(db.execute(query).scalars().all())
+        for subject in subjects:
+            subject.category = None
+        return subjects
 
 
 def get_by_id(db: Session, subject_id: int) -> Subject:
     subject = db.execute(select(Subject).where(Subject.id == subject_id)).scalar_one_or_none()
     if subject is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found")
+    subject.category = None
     return subject
 
 
