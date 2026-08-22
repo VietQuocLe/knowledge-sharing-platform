@@ -24,7 +24,6 @@ class Settings(BaseSettings):
 
     # Upload System
     MAX_FILE_SIZE_MB: int = 30
-    MAX_ASSETS_PER_RESOURCE: int = 5
     ALLOWED_UPLOAD_FILE_TYPES: list[str] = ["PDF", "DOCX"]
 
     # JWT

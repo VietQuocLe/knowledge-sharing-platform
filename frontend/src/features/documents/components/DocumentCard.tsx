@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom'
 import type { Document } from '../api'
 
-type PublicDocumentCardProps = {
+type DocumentCardProps = {
   document: Document
 }
 
-export function PublicResourceCard({ document }: PublicDocumentCardProps) {
+export function DocumentCard({ document }: DocumentCardProps) {
   return (
     <Link
       to={`/documents/${document.id}`}

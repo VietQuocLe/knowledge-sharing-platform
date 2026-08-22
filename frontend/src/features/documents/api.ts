@@ -6,6 +6,9 @@ export const ResourceType = {
   EXAM: 'EXAM',
   SLIDE: 'SLIDE',
   DOCUMENT: 'DOCUMENT',
+  LECTURE: 'LECTURE',
+  REFERENCE: 'REFERENCE',
+  SYLLABUS: 'SYLLABUS',
   VIDEO: 'VIDEO',
   AUDIO: 'AUDIO',
   LINK: 'LINK',
@@ -59,13 +62,12 @@ export interface AssetDownloadResponse {
 
 export interface UploadConfig {
   max_file_size_mb: number
-  max_assets_per_resource: number
   allowed_upload_file_types: string[]
 }
 
 // ─── Active API calls ───────────────────────────────────────────────────────
 
-export const resourcesApi = {
+export const documentsApi = {
   getDocumentList: async (params?: {
     subjectId?: number
     resourceType?: string
@@ -100,26 +102,3 @@ export const resourcesApi = {
     return createJsonRequest({ method: 'GET', url: '/config/upload' })
   },
 }
-
-// ─── [PAUSED - Admin branch] ─────────────────────────────────────────────────
-// The following types and API calls belong to the Admin/contribution flow.
-// They are kept here for when the Admin branch is re-activated.
-//
-// export const VisibilityEnum = { PRIVATE, PENDING_REVIEW, PUBLIC } as const
-// export type VisibilityEnum = ...
-// export const ResourceStatus = { PROCESSING, READY, FAILED, DELETED } as const
-// export type ResourceStatus = ...
-// export interface Resource { id, title, description, resource_type, owner_id,
-//   subject_id, visibility, status, created_at, rejection_reason,
-//   metadata_json, assets }
-// export interface ResourceCreatePayload { title, description?, subject_id, resource_type }
-//
-// resourcesApi.getMyResources        → GET /resources/me
-// resourcesApi.getMyResourceById     → GET /resources/me/:id
-// resourcesApi.createResource        → POST /resources/
-// resourcesApi.uploadResourceAsset   → POST /resources/:id/assets
-// resourcesApi.submitResourceForReview → POST /resources/:id/submit-review
-// resourcesApi.getAdminResources     → GET /resources/admin
-// resourcesApi.approveResource       → POST /resources/:id/approve
-// resourcesApi.rejectResource        → POST /resources/:id/reject
-// resourcesApi.deleteResource        → DELETE /resources/:id

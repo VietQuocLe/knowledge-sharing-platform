@@ -16,17 +16,4 @@ export const documentsKeys = {
   // Document details
   detail: () => [...documentsKeys.all, 'detail'] as const,
   detailById: (id: number) => [...documentsKeys.detail(), id] as const,
-
-  // [PAUSED - Admin branch] me / adminList keys removed until re-activated
-  // me: () => [...documentsKeys.all, 'me'] as const,
-  // myList: () => [...documentsKeys.me(), 'list'] as const,
-  // myListPaginated: (params?) => ...
-  // myDetail: () => [...documentsKeys.me(), 'detail'] as const,
-  // myDetailById: (id: number) => ...
-  // adminList: () => [...documentsKeys.all, 'adminList'] as const,
-  // adminListFiltered: (params?) => ...
 } as const
-
-// Backwards-compat alias — existing code using `resourcesKeys` still compiles
-/** @deprecated Use documentsKeys instead */
-export const resourcesKeys = documentsKeys

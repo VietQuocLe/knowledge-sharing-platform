@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { resourcesApi } from '../api'
+import { documentsApi } from '../api'
 import { documentsKeys } from '../queryKeys'
 
 export function useDocuments(params?: {
@@ -14,6 +14,6 @@ export function useDocuments(params?: {
             page: params?.page,
             type: params?.resourceType,
         }),
-        queryFn: () => resourcesApi.getDocumentList(params),
+        queryFn: () => documentsApi.getDocumentList(params),
     })
 }
