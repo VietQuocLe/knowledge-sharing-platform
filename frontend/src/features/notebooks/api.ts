@@ -27,4 +27,19 @@ export const notebooksApi = {
             data,
         })
     },
+
+    renameNotebook: async (id: number, title: string): Promise<Notebook> => {
+        return createJsonRequest({
+            method: 'PATCH',
+            url: `/notebooks/${id}`,
+            data: { title },
+        })
+    },
+
+    deleteNotebook: async (id: number): Promise<void> => {
+        return createJsonRequest({
+            method: 'DELETE',
+            url: `/notebooks/${id}`,
+        })
+    },
 }

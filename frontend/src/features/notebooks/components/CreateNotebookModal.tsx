@@ -61,12 +61,12 @@ export function CreateNotebookModal({ isOpen, onClose }: CreateNotebookModalProp
                         type="text"
                         {...register('title', {
                             required: 'Tên sổ ghi chú không được để trống',
-                            maxLength: { value: 100, message: 'Tên không được vượt quá 100 ký tự' },
+                            maxLength: { value: 500, message: 'Tên không được vượt quá 500 ký tự' },
                         })}
                         placeholder="Nhập tên sổ ghi chú (ví dụ: Học phần Đại Số, ôn thi cuối kỳ...)"
                         className={`w-full rounded-xl border py-2.5 px-4 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 transition ${errors.title
-                                ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/20'
-                                : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20'
+                            ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/20'
+                            : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20'
                             }`}
                     />
                     {errors.title && (
