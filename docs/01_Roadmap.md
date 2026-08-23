@@ -60,34 +60,35 @@ UI/UX Polish & Design Consistency — ✅ done
 
 Sprint 10
 
-Core Feature Completion & Personal Workspace — 🔄 in progress
+Notebook (AI Workspace) Feature — Dashboard + Layout Redesign — ✅ done
+
+↓
+
+Sprint 10.5
+
+Notebook Dashboard Actions (Rename/Delete) — ✅ done
 
 ↓
 
 Sprint 11
 
-AI Pipeline
+Notebook Detail Page & Document Saving / Asset Upload — 🔄 in progress
 
 ↓
 
 Sprint 12
 
-Notebook Workspace
+AI Features (RAG Chat, embeddings, chunking) — 🔄 kế hoạch
 
 ↓
 
 Sprint 13
 
-RAG Chat
+Testing & Deployment — 🔄 kế hoạch
 
 ↓
 
 Sprint 14
 
-Testing
+Deployment & Optimization — 🔄 kế hoạch
 
-↓
-
-Sprint 15
-
-Deployment & Optimization

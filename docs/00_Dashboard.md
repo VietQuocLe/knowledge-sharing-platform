@@ -2,13 +2,13 @@
 
 ## Current Sprint
 
-Sprint 10 — Core Feature Completion & Personal Workspace 📒
+Sprint 11 — Notebook Detail Page & Document Saving / Asset Upload 🔄
 
 ---
 
 ## Last Completed
 
-Sprint 9 — UI/UX Polish & Design Consistency ✅
+Sprint 10.5 — Notebook Dashboard Actions (Rename/Delete) ✅
 
 ---
 
@@ -16,26 +16,26 @@ Sprint 9 — UI/UX Polish & Design Consistency ✅
 
 Overall
 
-75%
+85%
 
-█████████░░░░░░░░
+███████████░░░░░░
 
 Backend
 
-90%
+95%
 
 Frontend
 
-98%
+99%
 
 ---
 
 ## Next Task
 
-Khởi dựng Sprint 10: Thiết kế và triển khai Personal Workspace (Notebook), tạo liên kết các Document học liệu vào Notebook cá nhân, và chuẩn bị tích hợp RAG pipeline.
+Khởi dựng Sprint 11: Thiết kế trang chi tiết Notebook, phát triển API lưu tài liệu (Document) và upload asset cá nhân vào Notebook.
 
 ---
 
 ## Current Problem
 
-Không có blocker. Toàn bộ luồng browse học liệu theo Progressive Disclosure đã chạy ổn định và được tối ưu hóa giao diện.
+Không có blocker. Toàn bộ luồng thao tác đổi tên và xóa Notebook đã chạy ổn định trên cả Backend & Frontend.

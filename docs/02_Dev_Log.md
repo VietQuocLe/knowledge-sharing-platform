@@ -342,7 +342,59 @@ UI/UX Polish & Design Consistency: Chuẩn hóa, cải thiện UI/UX toàn bộ 
 
 ## Next Sprint
 
-Core Feature Completion & Personal Workspace
+Sprint 10 — Notebook (AI Workspace) Feature — Dashboard + Layout Redesign
+
+---
+
+# Sprint 10
+
+## Goal
+
+Notebook (AI Workspace) Feature — Dashboard + Layout Redesign
+
+## Completed
+
+- **Backend**:
+  - Defined schemas `NotebookCreate` and `NotebookRead`.
+  - Service query optimizing count functions via subqueries for `source_count`.
+  - Added protection/guards to key CRUD endpoints under `/notebooks/me` and `/notebooks/`.
+- **Frontend**:
+  - Implemented features under `src/features/notebooks/`.
+  - Created `NotebookCard` component and `CreateNotebookModal` supporting debounced `SubjectSearchInput`.
+  - Redesigned vertical dark sidebar layout, hiding global search when navigating inside workspace.
+  - Implemented custom greeting titles using dynamic time formatters.
+
+## Next Sprint
+
+Notebook Dashboard Actions (Rename/Delete)
+
+---
+
+# Sprint 10.5
+
+## Goal
+
+Notebook Dashboard Actions (Rename/Delete)
+
+## Completed
+
+- **Backend**:
+  - Enforced `@field_validator` on `title` schema (required, trimmed, max 500 characters).
+  - Implemented `PATCH /notebooks/{notebook_id}` to rename and `DELETE /notebooks/{notebook_id}` to hard delete.
+  - Set DB-level cascade mapping for auto-sweeping `Asset` and `NotebookSavedDocument` on deletions.
+  - Loaded background task (`BackgroundTasks`) to physically remove MinIO objects asynchronously (best-effort).
+  - Wrote and passed python integration tests verifying constraints and ownership controls.
+- **Frontend**:
+  - Integrated `renameNotebook` and `deleteNotebook` in `notebooksApi`.
+  - Created mutations `useRenameNotebook` and `useDeleteNotebook` with query invalidation.
+  - Implemented custom React utility hook `useClickOutside` on dropdowns.
+  - Embedded kebab menu (⋮) inside `NotebookCard` along with click propagation blockers (`e.stopPropagation()`).
+  - Created `RenameNotebookModal` and `DeleteNotebookConfirmModal`.
+  - Standardized title length limit to 500 characters on both Create/Rename client forms.
+
+## Next Sprint
+
+Sprint 11 — Notebook Detail Page & Document Saving / Asset Upload
 
 
 

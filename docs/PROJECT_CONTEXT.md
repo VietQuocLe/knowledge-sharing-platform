@@ -21,11 +21,11 @@ Hệ thống đang chuyển đổi triệt để sang mô hình sprint "vertical
 
 Current Sprint
 
-> Sprint 10.5 — Notebook Dashboard Actions (Rename/Delete)
+> Sprint 11 — Notebook Detail Page & Document Saving / Asset Upload
 
 Overall Progress
 
-80%
+85%
 
 Status
 
@@ -36,7 +36,8 @@ Status
 ✅ Sprint 8.5 — Database Architecture Refactor — **hoàn thành**
 ✅ Sprint 9 — UI/UX Polish & Design Consistency — **hoàn thành**
 ✅ Sprint 10 — Notebook (AI Workspace) Feature — Dashboard + Layout Redesign — **hoàn thành**
-🔄 Sprint 10.5 — Notebook Dashboard Actions (Rename/Delete) — **đang thực hiện**
+✅ Sprint 10.5 — Notebook Dashboard Actions (Rename/Delete) — **hoàn thành**
+🔄 Sprint 11 — Notebook Detail Page & Document Saving / Asset Upload — **đang thực hiện**
 
 ---
 
@@ -46,7 +47,9 @@ Sprint 9 (UI/UX Polish & Design Consistency) đã hoàn thành: chuẩn hóa UI/
 
 **Sprint 10 — Notebook (AI Workspace) Feature — Dashboard + Layout Redesign:** Thiết kế và hoàn thiện toàn bộ giao diện dashboard, cấu trúc thư mục `features/notebooks` bám sát `features/documents`, triển khai card, modal tạo mới, bộ lọc local client-side, dynamic welcome header, tối ưu service/API backend đếm tài liệu và tích hợp hệ thống layout Dark Sidebar thống nhất, ẩn `SubjectSearchInput` khi ở trang workspace.
 
-**Sprint 10.5 — Notebook Dashboard Actions (Rename/Delete):** Triển khai các API và tương tác giao diện chỉnh sửa tên và xóa bỏ Notebook, giải quyết các vướng mắc về chính sách đồng bộ quản lý tài liệu.
+**Sprint 10.5 — Notebook Dashboard Actions (Rename/Delete):** Triển khai các API và tương tác giao diện chỉnh sửa tên và xóa bỏ Notebook, giải quyết các vướng mắc về chính sách đồng bộ quản lý tài liệu. (Hoàn thành hoàn toàn cả API Backend và UI Frontend với Kebab menu + Modals).
+
+**Sprint 11 — Notebook Detail Page & Document Saving / Asset Upload:** Xây dựng trang chi tiết Notebook thật hỗ trợ cả FE + BE. Xây dựng backend + frontend cho phép lưu tài liệu công cộng (Document) vào Notebook cá nhân với giới hạn `MAX_SAVED_DOCUMENTS_PER_NOTEBOOK = 10`. Xây dựng tính năng upload tập tin cá nhân riêng vào Notebook với giới hạn `MAX_OWN_ASSETS_PER_NOTEBOOK = 5`.
 
 ---
 
@@ -81,6 +84,11 @@ Sprint 9 (UI/UX Polish & Design Consistency) đã hoàn thành: chuẩn hóa UI/
   - Service Layer: Cấu trúc tối ưu hàm `get_notebooks_by_owner()` thông qua LEFT OUTER JOIN với bảng `Subject` và hai bảng subquery đếm `Asset` + `NotebookSavedDocument` để trả về `source_count` chính xác, phòng tránh lỗi N+1.
   - Endpoints: `POST /notebooks/` và `GET /notebooks/me` đi kèm bảo vệ định danh người dùng qua JWT.
   - *Lưu ý cho sprint sau:* khi thêm các route chi tiết như `GET /notebooks/{notebook_id}`, phải khai báo route `/me` TRƯỚC `/{notebook_id}` trong router, tránh FastAPI match nhầm "me" là một path parameter ID.
+- **Sprint 10.5 — Notebook Dashboard Actions (Rename/Delete):**
+  - Tích hợp schema `NotebookUpdate` hỗ trợ PATCH/đổi tên, validation tiêu đề với Pydantic `@field_validator` (trim đầu cuối, required, maxLength 500 ký tự).
+  - API endpoints: `PATCH /notebooks/{notebook_id}` và `DELETE /notebooks/{notebook_id}` được bảo vệ qua JWT và kiểm định ownership (403/404 handling).
+  - Deletion logic: Sử dụng SQLAlchemy/Postgres `CASCADE` tự động làm sạch các bản ghi trong bảng `Asset` và `NotebookSavedDocument`.
+  - Storage sweep: Tận dụng FastAPI `BackgroundTasks` để thực thi việc xóa vật lý các tập tin Asset MinIO ngầm một cách không cản trở (best-effort).
 
 ## Frontend
 
@@ -121,6 +129,13 @@ Sprint 9 (UI/UX Polish & Design Consistency) đã hoàn thành: chuẩn hóa UI/
   - Đã tối giản Sidebar chỉ còn "Trang chủ", "Workspace cá nhân" (+ "Quản trị" nếu là admin), lược bỏ "Khám phá Khoa/Ngành" hoàn toàn vì trùng lặp.
   - Ẩn tự động ô tìm kiếm môn học chung tại header khi khớp `pathname.startsWith('/me/workspace')`.
   - `npm run build` ✅ hoạt động ổn định và biên dịch hoàn toàn thành công.
+- **Sprint 10.5 — Notebook Dashboard Actions (Rename/Delete):**
+  - API Client: Thêm cuộc gọi API `renameNotebook` và `deleteNotebook` trong `notebooksApi`.
+  - Mutations Hook: Tạo các custom hooks `useRenameNotebook` và `useDeleteNotebook` hỗ trợ invalidate query-cache.
+  - Dropdown Menu: Thiết kế Kebab menu (⋮) ở góc phải của `NotebookCard`, ngăn chặn hiện tượng nổi bọt sự kiện (`e.stopPropagation()`) để không kích hoạt điều hướng trang của card Link.
+  - Custom Hook: Tự biên soạn `useClickOutside` bằng React/hooks thuần để auto-close dropdown khi click ra ngoài.
+  - Modals: Tạo `RenameNotebookModal` và `DeleteNotebookConfirmModal` tách biệt, đồng bộ hóa giới hạn tối đa 500 ký tự cho tiêu đề ở cả hai modal Create/Rename nhằm thống nhất với Backend.
+  - `npm run build` ✅ hoạt động ổn định không lỗi type/import.
 
 ## Infrastructure
 
@@ -131,12 +146,7 @@ Sprint 9 (UI/UX Polish & Design Consistency) đã hoàn thành: chuẩn hóa UI/
 
 # 5. Next Task
 
-## Ngay lúc này: Sprint 10.5 — Notebook Dashboard Actions (Rename/Delete)
-
-- **Trực quan bổ sung**: Tích hợp các thao tác đổi tên (Rename) và xóa bỏ (Delete) Notebook ngay từ giao diện Dashboard.
-- **Chính sách xóa file**: ⚠️ CHƯA CHỐT: quyết định chính sách xóa file Asset trên MinIO khi xóa Notebook (có xóa vật lý ngay hay giữ soft-delete 30 ngày giống Document) — cần xác nhận trước khi viết API `delete_notebook()`.
-
-## Kế hoạch tiếp theo: Sprint 11 — Notebook Detail Page & Document Saving / Asset Upload
+## Ngay lúc này: Sprint 11 — Notebook Detail Page & Document Saving / Asset Upload
 
 - **Màn hình chi tiết**: Xây dựng trang chi tiết Notebook thật hỗ trợ cả FE + BE. ⚠️ CHƯA CHỐT: thiết kế cấu trúc giao diện 1 cột hay 2 cột kiểu của NotebookLM.
 - **Lưu tài liệu**: Xây dựng backend + frontend cho phép lưu tài liệu công cộng (Document) vào Notebook cá nhân với hạn định giới hạn `MAX_SAVED_DOCUMENTS_PER_NOTEBOOK = 10`.
@@ -253,6 +263,8 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 - `GET /config/upload`
 - `POST /notebooks/` (JWT protected)
 - `GET /notebooks/me` (JWT protected)
+- `PATCH /notebooks/{notebook_id}` (JWT protected)
+- `DELETE /notebooks/{notebook_id}` (JWT protected)
 
 ### Frontend routes (Sprint 10)
 
@@ -314,8 +326,8 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 8.5. ✅ **Database Architecture Refactor** — **hoàn thành**
 9. ✅ **UI/UX Polish & Design Consistency** — **hoàn thành**
 10. ✅ **Notebook (AI Workspace) Feature — Dashboard + Layout Redesign** — **hoàn thành**
-10.5. 🔄 **Notebook Dashboard Actions (Rename/Delete)** — **đang thực hiện**
-11. 🔄 **Notebook Detail Page & Document Saving / Asset Upload** — **kế hoạch**
+10.5. ✅ **Notebook Dashboard Actions (Rename/Delete)** — **hoàn thành**
+11. 🔄 **Notebook Detail Page & Document Saving / Asset Upload** — **đang thực hiện**
 12. 🔄 **AI Features (RAG Chat, embeddings, chunking)** — **dời lại**
 13. 🔄 **Testing & Deployment** — **kế hoạch**
 14. 🔄 **Deployment & Optimization** — **kế hoạch**
@@ -353,11 +365,11 @@ Commit theo Sprint hoặc feature, ví dụ `feat: implement upload module`. Tr�
 
 # 17. Current Status
 
-Current Status: **Sprint 10.5 — Notebook Dashboard Actions (Rename/Delete)** (đang chuẩn bị thực hiện)
+Current Status: **Sprint 11 — Notebook Detail Page & Document Saving / Asset Upload** (đang thực hiện)
 
-Last Completed: Sprint 10 — Notebook (AI Workspace) Feature — Dashboard + Layout Redesign (triển khai đồng bộ giao diện dashboard, cấu trúc thư mục features/notebooks bám sát features/documents, card, modal tạo mới, bộ lọc local client-side, dynamic welcome header, tối ưu service/API backend đếm tài liệu và tích hợp hệ thống layout Dark Sidebar thống nhất, ẩn SubjectSearchInput khi ở trang workspace).
+Last Completed: Sprint 10.5 — Notebook Dashboard Actions (Rename/Delete) (hoàn thành các API Backend cập nhật tên/xóa notebook đi kèm background worker dọn dẹp MinIO, các UI component Kebab menu dropdown ngăn nổi bọt sự kiện, modal đổi tên và xác nhận xóa, nâng hạn mức 500 ký tự).
 
-Next Module: Sprint 10.5 (Notebook Dashboard Actions) → Sprint 11 (Notebook Detail Page & Document Saving / Asset Upload) → Sprint 12 (AI Features / RAG Chat).
+Next Module: Sprint 11 (Notebook Detail Page & Document Saving / Asset Upload) → Sprint 12 (AI Features / RAG Chat).
 
 ---
 
