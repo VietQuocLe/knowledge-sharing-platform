@@ -9,6 +9,7 @@ import {
   Menu,
   X,
   PanelLeftClose,
+  ArrowLeft,
 } from 'lucide-react'
 import { useAuth } from '../features/auth/context/AuthContext'
 import { type AuthUser } from '../features/auth/api'
@@ -38,6 +39,7 @@ export function AppLayout() {
   const { user, logout } = useAuth()
   const location = useLocation()
   const hideSearch = location.pathname.startsWith('/me/workspace')
+  const isWorkspaceEditor = location.pathname.startsWith('/me/workspace/') && location.pathname !== '/me/workspace'
   const isAdmin = user?.role === 'ADMIN'
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { isCollapsed, setIsCollapsed } = useSidebar()
@@ -171,13 +173,13 @@ export function AppLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex font-sans antialiased text-slate-800">
+    <div className="h-screen bg-slate-50 flex font-sans antialiased text-slate-800 overflow-hidden">
       {/* ======================================================== */}
       {/* 1. DESKTOP LEFT SIDEBAR                                   */}
       {/* ======================================================== */}
       <aside
         className={`
-          hidden md:flex flex-col bg-slate-900 sticky top-0 h-screen z-30
+          hidden md:flex flex-col bg-slate-900 h-full z-30
           transition-all duration-300
           ${isCollapsed ? 'w-20 cursor-col-resize' : 'w-64'}
         `}
@@ -205,7 +207,7 @@ export function AppLayout() {
       {/* ======================================================== */}
       {/* 3. MAIN CONTENT AREA                                      */}
       {/* ======================================================== */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {/* Mobile sticky bar */}
         <div className="md:hidden sticky top-0 z-20 flex items-center gap-2 bg-white px-3 h-14">
           <button
@@ -216,7 +218,16 @@ export function AppLayout() {
           >
             {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 flex items-center gap-2">
+            {isWorkspaceEditor && (
+              <Link
+                to="/me/workspace"
+                className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-slate-800 transition shrink-0"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Quay lại</span>
+              </Link>
+            )}
             {!hideSearch && <SubjectSearchInput />}
           </div>
           <AuthControls user={user} onLogout={handleLogout} />
@@ -224,13 +235,26 @@ export function AppLayout() {
 
         {/* Desktop top bar */}
         <div className="hidden md:flex items-center justify-between gap-4 px-8 pt-6 pb-4">
-          <div className="flex-1 max-w-md">
+          <div className="flex-1 max-w-md flex items-center gap-4">
+            {isWorkspaceEditor && (
+              <Link
+                to="/me/workspace"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 px-3 py-1.5 rounded-lg transition shrink-0"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Quay lại Workspace
+              </Link>
+            )}
             {!hideSearch && <SubjectSearchInput />}
           </div>
           <AuthControls user={user} onLogout={handleLogout} />
         </div>
 
-        <main className="flex-1 px-6 pb-8 md:px-8 md:pb-10 max-w-7xl w-full mx-auto">
+        <main className={
+          isWorkspaceEditor
+            ? "flex-1 overflow-hidden w-full h-full p-0"
+            : "flex-1 overflow-y-auto px-6 pb-8 md:px-8 md:pb-10 max-w-7xl w-full mx-auto"
+        }>
           <Outlet />
         </main>
       </div>
