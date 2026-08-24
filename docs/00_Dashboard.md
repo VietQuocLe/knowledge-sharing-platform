@@ -2,13 +2,13 @@
 
 ## Current Sprint
 
-Sprint 11 — Notebook Detail Page & Document Saving / Asset Upload 🔄
+Sprint 12 — AI Features (RAG Chatbot, Embeddings, Ingestion Pipeline) 🔄
 
 ---
 
 ## Last Completed
 
-Sprint 10.5 — Notebook Dashboard Actions (Rename/Delete) ✅
+Sprint 11 — Notebook Detail Page & Document Saving / Asset Upload ✅
 
 ---
 
@@ -16,26 +16,26 @@ Sprint 10.5 — Notebook Dashboard Actions (Rename/Delete) ✅
 
 Overall
 
-85%
+92%
 
-███████████░░░░░░
+█████████████░░░░
 
 Backend
 
-95%
+92%
 
 Frontend
 
-99%
+95%
 
 ---
 
 ## Next Task
 
-Khởi dựng Sprint 11: Thiết kế trang chi tiết Notebook, phát triển API lưu tài liệu (Document) và upload asset cá nhân vào Notebook.
+Khởi dựng Sprint 12: Thiết kế pipeline chunking/embedding, lưu trữ pgvector và kết nối LLM phục vụ chat RAG nguồn tài liệu Sổ ghi chú.
 
 ---
 
 ## Current Problem
 
-Không có blocker. Toàn bộ luồng thao tác đổi tên và xóa Notebook đã chạy ổn định trên cả Backend & Frontend.
+Không có blocker. Giao diện trang Workspace chi tiết chia cột, Quick Actions, quota, và các API lưu public document / upload tệp đã hoạt động ổn định và kiểm hợp thành công.

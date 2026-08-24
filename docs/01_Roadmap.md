@@ -72,13 +72,13 @@ Notebook Dashboard Actions (Rename/Delete) — ✅ done
 
 Sprint 11
 
-Notebook Detail Page & Document Saving / Asset Upload — 🔄 in progress
+Notebook Detail Page & Document Saving / Asset Upload — ✅ done
 
 ↓
 
 Sprint 12
 
-AI Features (RAG Chat, embeddings, chunking) — 🔄 kế hoạch
+AI Features (RAG Chatbot, Embeddings, Ingestion Pipeline) — 🔄 in progress
 
 ↓
 

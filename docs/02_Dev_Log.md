@@ -396,5 +396,46 @@ Notebook Dashboard Actions (Rename/Delete)
 
 Sprint 11 — Notebook Detail Page & Document Saving / Asset Upload
 
+---
+
+# Sprint 11
+
+## Goal
+
+Notebook Detail Page & Document Saving / Asset Upload: Xây dựng trang chi tiết Sổ ghi chú học tập, tích hợp giới hạn nguồn gộp chung MAX_SOURCES_PER_NOTEBOOK = 10, hỗ trợ lưu học liệu công cộng và tải lên nhiều tệp cá nhân đồng thời kèm dọn dẹp vật lý file trong MinIO ngầm.
+
+## Completed
+
+- **Backend**:
+  - Tích hợp cấu hình `MAX_SOURCES_PER_NOTEBOOK = 10` bảo vệ dung lượng lưu trữ của Notebook.
+  - Xây dựng API `GET /notebooks/{notebook_id}` trả về đầy đủ định dạng chi tiết, số lượng nguồn và danh sách liên kết.
+  - Triển khai API liên kết tài liệu thư viện công cộng (`POST /saved-documents` và `DELETE /saved-documents/{document_id}`) đi kèm validation trùng lặp và phân quyền sở hữu.
+  - Triển khai API tải tệp cá nhân (`POST /assets` và `DELETE /assets/{asset_id}`) đi kèm kiểm định định dạng magic bytes (chặn giả mạo tập tin PDF/DOCX) và giới hạn 30MB.
+  - Sử dụng FastAPI `BackgroundTasks` để dọn dẹp bất đồng bộ file vật lý trên MinIO khi tệp tin cá nhân bị xóa.
+  - Endpoint `GET /assets/{asset_id}/download` lấy presigned URL tải tệp tin MinIO trực tiếp.
+- **Frontend**:
+  - Điều chỉnh `AppLayout.tsx` phân tách rõ rệt vùng làm việc workspace tràn 100% viewport và các trang tĩnh cuộn/giới hạn container chuẩn.
+  - Xây dựng trang `NotebookDetailPage.tsx` cấu trúc Flex dòng đôi split view: Left Pane cuộn chung toàn cột tiện lợi, thanh Quick Actions "Bắt đầu học tập", Compact Quota Indicator chỉ hiển thị thông báo text, và Right Pane chat AI đầy đủ chiều cao màn hình cùng nút floating toggle bật/tắt an toàn.
+  - Thiết kế `AddDocumentModal.tsx` cấu trúc 2 tab: Tìm kiếm & liên kết tài liệu từ thư viện công cộng (có phân trang) và Kéo thả tải tệp tin cá nhân (chọn nhiều tệp, mutate song song concurrent dùng TanStack Query).
+  - Tích hợp Kebab menu dropdown (dùng click outside auto close) xử lý các hành động: xem trước PDF (`PdfPreviewModal`), tải về máy khách, liên kết thư viện, và xóa/hủy lưu.
+  - Khóa xem trước đối với DOCX (`isPreviewable` block) ngăn trắng trang tải ngầm.
+  - Đẩy các modals tương tác ra ngoài thẻ `<Link>` đè trong `NotebookCard` kết thúc lỗi trắng trang chuyển tiếp khi invalidate cache.
+  - Di chuyển liên kết "Quay lại Workspace" lên Top Bar toàn cục.
+
+## Decisions
+
+- Sử dụng cơ chế cuộn toàn trang cột trái (`NotebookDetailPage` Left Pane) thay thế cho cuộn độc lập phân vùng tài liệu để mang lại trải nghiệm tương đồng với StudyFetch.
+- Loại bỏ thanh tiến độ ProgressBar trên indicator giới hạn quota, tối giản thành thông tin text `sources_count / max_sources` để sạch sẽ giao diện.
+- Xác thực magic bytes trực tiếp phía backend thay vì dựa vào file extension nhằm loại bỏ rủi ro tải tệp tin mã độc.
+
+## Learned
+
+- Tránh lồng quá nhiều vùng cuộn (nested scroll containers) dễ gây trải nghiệm cuộn đứt gãy và khó chịu cho người dùng.
+- Sự kiện bubbling của React Router `<Link>` có thể làm gián đoạn cập nhật cache layout trong khi invalidate Cache; tách modal làm node anh em thay vì con của link xử lý dứt điểm vấn đề này.
+
+## Next Sprint
+
+Sprint 12 — AI Features (RAG Chatbot, Embeddings, Ingestion Pipeline)
+
 
 
