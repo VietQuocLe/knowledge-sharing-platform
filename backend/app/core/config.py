@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     MAX_FILE_SIZE_MB: int = 30
     ALLOWED_UPLOAD_FILE_TYPES: list[str] = ["PDF", "DOCX"]
 
+    # Notebooks
+    MAX_SOURCES_PER_NOTEBOOK: int = 10
+
     # JWT
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"

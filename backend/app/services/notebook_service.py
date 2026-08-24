@@ -5,12 +5,16 @@ from sqlalchemy.orm import Session
 import logging
 
 from app.models.asset import Asset
+from app.models.document import Document
+from app.models.enums import DocumentStatus
 from app.models.notebook import Notebook, NotebookSavedDocument
 from app.models.subject import Subject
 from app.models.user import User
 from app.schemas.notebook import NotebookCreate, NotebookUpdate
 
 logger = logging.getLogger(__name__)
+
+PRESIGNED_URL_EXPIRES_SECONDS = 900
 
 
 def delete_minio_objects_background(file_paths: list[str]) -> None:
@@ -140,4 +144,365 @@ def delete_notebook(db: Session, user: User, notebook_id: int, background_tasks:
     # Trigger background tasks to delete files from MinIO
     if file_paths:
         background_tasks.add_task(delete_minio_objects_background, file_paths)
+
+
+def get_notebook_source_count(db: Session, notebook_id: int) -> int:
+    """
+    Helper to count the total sources of a notebook.
+    A source is either an Asset or a NotebookSavedDocument.
+    """
+    asset_count = db.scalar(
+        select(func.count(Asset.id)).where(Asset.notebook_id == notebook_id)
+    ) or 0
+    saved_count = db.scalar(
+        select(func.count(NotebookSavedDocument.document_id)).where(NotebookSavedDocument.notebook_id == notebook_id)
+    ) or 0
+    return int(asset_count + saved_count)
+
+
+def get_notebook_by_id(db: Session, user: User, notebook_id: int) -> dict:
+    """
+    Fetch the detailed view of a notebook including its sources and quota status.
+    """
+    notebook = db.execute(
+        select(Notebook).where(Notebook.id == notebook_id)
+    ).scalar_one_or_none()
+
+    if notebook is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notebook not found",
+        )
+    if notebook.owner_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to access/modify this notebook",
+        )
+
+    # Get local assets
+    local_assets = db.execute(
+        select(Asset).where(Asset.notebook_id == notebook_id)
+    ).scalars().all()
+
+    # Get saved documents
+    saved_docs = db.execute(
+        select(NotebookSavedDocument)
+        .where(NotebookSavedDocument.notebook_id == notebook_id)
+    ).scalars().all()
+
+    # Combine sources
+    sources = []
+    for asset in local_assets:
+        sources.append({
+            "id": asset.id,
+            "type": "local",
+            "title": asset.file_name,
+            "file_type": asset.file_type,
+            "size": asset.size,
+            "created_at": asset.created_at,
+        })
+
+    for sd in saved_docs:
+        doc = sd.document
+        doc_asset_size = doc.assets[0].size if doc.assets else None
+        doc_asset_type = doc.assets[0].file_type if doc.assets else doc.resource_type.value
+
+        sources.append({
+            "id": doc.id,
+            "type": "saved",
+            "title": doc.title,
+            "file_type": doc_asset_type,
+            "size": doc_asset_size,
+            "created_at": sd.created_at,
+        })
+
+    # Sort sources by created_at descending (newest first)
+    sources.sort(key=lambda s: s["created_at"], reverse=True)
+
+    from app.core.config import settings
+
+    return {
+        "id": notebook.id,
+        "title": notebook.title,
+        "subject_id": notebook.subject_id,
+        "subject_name": notebook.subject.name if notebook.subject else None,
+        "sources_count": len(sources),
+        "max_sources": settings.MAX_SOURCES_PER_NOTEBOOK,
+        "sources": sources,
+        "created_at": notebook.created_at,
+        "updated_at": notebook.updated_at,
+    }
+
+
+def save_document(db: Session, user: User, notebook_id: int, document_id: int) -> NotebookSavedDocument:
+    # 1. Notebook existence & ownership validation
+    notebook = db.execute(select(Notebook).where(Notebook.id == notebook_id)).scalar_one_or_none()
+    if notebook is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notebook not found",
+        )
+    if notebook.owner_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to access/modify this notebook",
+        )
+
+    # 2. Document existence & PUBLIC status check
+    document = db.execute(select(Document).where(Document.id == document_id)).scalar_one_or_none()
+    if document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        )
+    if document.status != DocumentStatus.PUBLIC:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot save document that is not public",
+        )
+
+    # 3. Check for duplicates
+    existing_link = db.execute(
+        select(NotebookSavedDocument).where(
+            NotebookSavedDocument.notebook_id == notebook_id,
+            NotebookSavedDocument.document_id == document_id,
+        )
+    ).scalar_one_or_none()
+    if existing_link is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Document is already saved in this notebook",
+        )
+
+    # 4. Check unified sources limit
+    from app.core.config import settings
+    total_sources = get_notebook_source_count(db, notebook_id)
+    if total_sources >= settings.MAX_SOURCES_PER_NOTEBOOK:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Notebook source limit reached ({settings.MAX_SOURCES_PER_NOTEBOOK} sources maximum)",
+        )
+
+    # 5. Insert association link
+    saved_doc = NotebookSavedDocument(
+        notebook_id=notebook_id,
+        document_id=document_id,
+    )
+    db.add(saved_doc)
+    db.commit()
+    db.refresh(saved_doc)
+    return saved_doc
+
+
+def remove_saved_document(db: Session, user: User, notebook_id: int, document_id: int) -> None:
+    # 1. Notebook existence & ownership validation
+    notebook = db.execute(select(Notebook).where(Notebook.id == notebook_id)).scalar_one_or_none()
+    if notebook is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notebook not found",
+        )
+    if notebook.owner_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to access/modify this notebook",
+        )
+
+    # 2. Check if link exists
+    link = db.execute(
+        select(NotebookSavedDocument).where(
+            NotebookSavedDocument.notebook_id == notebook_id,
+            NotebookSavedDocument.document_id == document_id,
+        )
+    ).scalar_one_or_none()
+
+    if link is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document is not saved in this notebook",
+        )
+
+    db.delete(link)
+    db.commit()
+
+
+def validate_file_content(file_bytes: bytes, file_name: str) -> str:
+    import zipfile
+    import io
+    from app.core.config import settings
+
+    size_mb = len(file_bytes) / (1024 * 1024)
+    if size_mb > settings.MAX_FILE_SIZE_MB:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Dung lượng tệp vượt quá giới hạn cho phép ({settings.MAX_FILE_SIZE_MB}MB)",
+        )
+
+    # Check PDF magic bytes
+    if file_bytes.startswith(b"%PDF"):
+        return "application/pdf"
+
+    # Check DOCX (ZIP archive containing structural XMLs)
+    if file_bytes.startswith(b"PK\x03\x04"):
+        try:
+            with zipfile.ZipFile(io.BytesIO(file_bytes)) as zf:
+                namelist = zf.namelist()
+                if "word/document.xml" in namelist or "[Content_Types].xml" in namelist:
+                    return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        except zipfile.BadZipFile:
+            pass
+
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Định dạng tệp không được hỗ trợ. Chỉ chấp nhận tệp tin PDF hoặc DOCX.",
+    )
+
+
+def upload_notebook_asset(
+    db: Session,
+    user: User,
+    notebook_id: int,
+    file_name: str,
+    file_bytes: bytes,
+) -> Asset:
+    # 1. Notebook ownership & existence checks
+    notebook = db.execute(select(Notebook).where(Notebook.id == notebook_id)).scalar_one_or_none()
+    if notebook is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notebook not found",
+        )
+    if notebook.owner_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to access/modify this notebook",
+        )
+
+    # 2. Check quota limit using get_notebook_source_count()
+    from app.core.config import settings
+    current_sources = get_notebook_source_count(db, notebook_id)
+    if current_sources >= settings.MAX_SOURCES_PER_NOTEBOOK:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Notebook source limit reached ({settings.MAX_SOURCES_PER_NOTEBOOK} sources maximum)",
+        )
+
+    # 3. Content-based validate file type and size limit
+    content_type = validate_file_content(file_bytes, file_name)
+
+    # 4. Generate unique storage path and upload to MinIO
+    import uuid
+    import os
+    file_ext = os.path.splitext(file_name)[1]
+    unique_filename = f"{uuid.uuid4()}{file_ext}"
+    object_path = f"notebooks/{notebook_id}/{unique_filename}"
+
+    # Perform upload
+    from app.services import storage_service
+    storage_service.upload_object(
+        object_path=object_path,
+        data=file_bytes,
+        content_type=content_type,
+    )
+
+    # 5. Insert Asset database record
+    asset = Asset(
+        notebook_id=notebook_id,
+        document_id=None,
+        file_name=file_name,
+        file_path=object_path,
+        file_type=content_type,
+        size=len(file_bytes),
+    )
+    db.add(asset)
+    db.commit()
+    db.refresh(asset)
+    return asset
+
+
+def delete_notebook_asset(
+    db: Session,
+    user: User,
+    notebook_id: int,
+    asset_id: int,
+    background_tasks: BackgroundTasks,
+) -> None:
+    # 1. Notebook ownership & existence checks
+    notebook = db.execute(select(Notebook).where(Notebook.id == notebook_id)).scalar_one_or_none()
+    if notebook is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notebook not found",
+        )
+    if notebook.owner_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to access/modify this notebook",
+        )
+
+    # 2. Check if asset exists and belongs to this notebook
+    asset = db.execute(
+        select(Asset).where(
+            Asset.id == asset_id,
+            Asset.notebook_id == notebook_id,
+        )
+    ).scalar_one_or_none()
+
+    if asset is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Asset not found in this notebook",
+        )
+
+    # Get path for background deletion
+    file_path = asset.file_path
+
+    # Delete from postgres first
+    db.delete(asset)
+    db.commit()
+
+    # Deletion from storage (best-effort async background task)
+    if file_path:
+        background_tasks.add_task(delete_minio_objects_background, [file_path])
+
+
+def get_notebook_asset_download_url(
+    db: Session,
+    user: User,
+    notebook_id: int,
+    asset_id: int,
+) -> tuple[str, str]:
+    # 1. Notebook ownership & existence checks
+    notebook = db.execute(select(Notebook).where(Notebook.id == notebook_id)).scalar_one_or_none()
+    if notebook is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notebook not found",
+        )
+    if notebook.owner_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to access/modify this notebook",
+        )
+
+    # 2. Get asset
+    asset = db.execute(
+        select(Asset).where(
+            Asset.id == asset_id,
+            Asset.notebook_id == notebook_id,
+        )
+    ).scalar_one_or_none()
+
+    if asset is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Asset not found in this notebook",
+        )
+
+    from app.services import storage_service
+    download_url = storage_service.get_presigned_download_url(
+        object_path=asset.file_path,
+        expires_seconds=PRESIGNED_URL_EXPIRES_SECONDS,
+    )
+    return download_url, asset.file_name
 

@@ -77,6 +77,12 @@ class NotebookSavedDocument(Base):
         primary_key=True,
     )
 
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
     notebook: Mapped["Notebook"] = relationship(back_populates="saved_documents")
 
     document: Mapped["Document"] = relationship(back_populates="saved_in_notebooks")
