@@ -206,7 +206,7 @@ Sprint 12 **chỉ làm backend**, không đụng tới UI, và phải tự kiể
 
 ## Backend
 
-- FastAPI, SQLAlchemy 2.0, PostgreSQL/JSONB và pgvector
+- FastAPI, SQLAlchemy 2.0, PostgreSQL 16 (JSONB) và pgvector
 - MinIO Python SDK
 - pwdlib (Argon2id), PyJWT, Pydantic Settings
 - `python-multipart` cho multipart upload
@@ -217,11 +217,25 @@ Sprint 12 **chỉ làm backend**, không đụng tới UI, và phải tự kiể
 - React Router v7, Axios, react-hook-form
 - TanStack Query v5, react-hot-toast
 
-## AI (planned, chưa triển khai)
+## AI Stack (chốt từ Sprint 11.5, triển khai dần từ Sprint 12)
 
-- Google Gemini Native SDK (`google-genai`) cho AI pipeline: `gemini-embedding-001` (MRL 768d) cho embedding, `gemini-3.5-flash-lite` / `gemini-3.1-flash-lite` cho LLM
-- `pypdfium2` cho trích xuất text; `libreoffice-writer` (headless) cho chuyển đổi DOCX → PDF
-- Không dùng LangChain và không dùng Sentence Transformers
+- **SDK:** Native SDK Google GenAI (`google-genai`) — gọi thẳng API, **không dùng LangChain** và **không dùng Sentence Transformers**. Lý do: tránh lớp abstraction thừa, dễ kiểm soát prompt/token/chi phí, ít dependency phải bảo trì cho đồ án cá nhân.
+- **Embedding model:** `gemini-embedding-001` với `output_dimensionality=768` (Matryoshka Representation Learning) — khớp đúng kiểu cột `VECTOR(768)` trong PostgreSQL.
+- **LLM Chat model:** `gemini-3.5-flash-lite` hoặc `gemini-3.1-flash-lite` (chọn theo hạn mức free-tier và độ trễ thực tế) cho chat RAG, intent routing / query condensation và Native Tool Calling sinh quiz/flashcards.
+- **Resilience:** Tenacity Retry (exponential backoff) bọc mọi lời gọi embedding/LLM.
+
+## Document Processing
+
+- `libreoffice-writer` (headless) trong Docker image backend: chuyển đổi DOCX → PDF phái sinh ngay khi upload.
+- `pypdfium2`: trích xuất text theo từng trang từ PDF — **một pipeline duy nhất** cho cả PDF gốc lẫn DOCX đã convert, nên không cần `python-docx`.
+
+## Database & Search
+
+- PostgreSQL 16 + extension `pgvector` (dense vector) + extension `unaccent` (bỏ dấu tiếng Việt).
+- Wrapper `immutable_unaccent(text)` — bọc `unaccent()` thành hàm IMMUTABLE để dùng được trong Generated Column và index.
+- Cột `tsv_content` là **Generated Column** (`GENERATED ALWAYS AS (to_tsvector('simple', immutable_unaccent(content))) STORED`) — tsvector không dấu tự sinh, luôn đồng bộ với `content`.
+- Index: HNSW (`vector_cosine_ops`) cho vector search và GIN cho full-text search.
+- Truy vấn RAG dùng **Hybrid Search RRF** kết hợp Dense (HNSW) + Sparse (GIN).
 
 ---
 
@@ -338,15 +352,31 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 
 # 10. Technology Decisions
 
+## Nền tảng hiện có
+
 - ORM: SQLAlchemy 2.0, không dùng SQLModel.
-- Database: PostgreSQL; Resource metadata dùng JSONB. pgvector đã có dependency/infrastructure nhưng AI schema/pipeline chưa có.
-- Storage: MinIO; backend proxy upload, chưa dùng presigned URL.
-- Migration runtime hiện dùng `Base.metadata.create_all()`; Alembic scaffold có mặt nhưng chưa có migration version.
+- Database: PostgreSQL 16; metadata tài liệu dùng JSONB.
+- Storage: MinIO; upload qua backend proxy, download qua presigned URL (15 phút).
+- Migration runtime hiện dùng `Base.metadata.create_all()`; Alembic scaffold có mặt và sẽ được dùng thật từ Sprint 12 (tạo extension, generated column, index vector).
 - Primary key: integer.
 - API chưa versioned (`/api/v1` chưa có).
 - JWT là single access token HS256, expiry mặc định 24 giờ; chưa có refresh token.
-- Centralized configurations: Upload limit configurations được quản lý tập trung ở settings backend và cung cấp cho frontend qua API GET `/config/upload` để đảm bảo duy nhất nguồn dữ liệu (single source of truth).
-- Action-Based Hooks Pattern: Toàn bộ data fetching và state mutation được đóng gói thành các custom hook riêng trong feature layer (ví dụ: client-side CRUD và actions), giúp pages chỉ làm nhiệm vụ lắp ghép giao diện (UI layout composition).
+- Centralized configurations: upload limits quản lý tập trung ở settings backend, cấp cho frontend qua `GET /config/upload` (single source of truth).
+- Action-Based Hooks Pattern: data fetching và mutation đóng gói thành custom hooks ở feature layer; pages chỉ lắp ghép giao diện.
+
+## Quyết định AI / RAG
+
+- **Native SDK thay vì framework:** dùng `google-genai` trực tiếp, loại bỏ hoàn toàn LangChain và Sentence Transformers — giảm dependency, kiểm soát được prompt và chi phí token, không phải chạy model embedding local (không có GPU).
+- **Embedding 768 chiều:** `gemini-embedding-001` hỗ trợ MRL nên cắt xuống `output_dimensionality=768` mà vẫn giữ chất lượng — vừa khớp `VECTOR(768)`, vừa giảm dung lượng index HNSW và chi phí lưu trữ so với chiều mặc định.
+- **Model chat rẻ trước, mạnh sau:** mặc định `gemini-3.5-flash-lite` / `gemini-3.1-flash-lite` cho cả routing lẫn trả lời; chỉ cân nhắc model lớn hơn nếu chất lượng thực đo không đạt.
+- **Hybrid Search RRF thay vì chỉ vector search:** tiếng Việt nhiều thuật ngữ/mã môn học và viết tắt mà vector thuần dễ trượt; kết hợp Dense (HNSW cosine) + Sparse (GIN full-text) rồi hợp nhất bằng Reciprocal Rank Fusion để ổn định thứ hạng mà không cần tinh chỉnh trọng số theo từng truy vấn.
+- **Không dấu ở tầng database:** `unaccent` + wrapper `immutable_unaccent` + Generated Column `tsv_content` đảm bảo người dùng gõ có dấu hay không dấu đều khớp, và không cần code Python đồng bộ lại tsvector mỗi lần ghi.
+- **Convert DOCX → PDF thay vì parse DOCX riêng:** LibreOffice headless sinh PDF phái sinh dùng chung cho cả preview trên UI và trích xuất text bằng `pypdfium2` — một định dạng đầu vào duy nhất cho pipeline AI, đồng thời số trang trong citation khớp đúng với bản người dùng đang xem.
+- **Page-aware chunking:** cắt chunk trong phạm vi từng trang, **không overlap xuyên trang**; `page_number` lưu ở cột riêng chứ không nhúng vào nội dung đem đi embedding. Đổi lại một chút ngữ cảnh ở ranh giới trang để citation click-to-jump luôn nhảy đúng trang.
+- **Embed một lần cho mỗi Asset:** vector gắn theo `asset_id`, nên một Document công khai được nhiều Notebook lưu chỉ tốn chi phí embedding một lần.
+- **Xử lý nền, không chặn request:** convert và ingest chạy qua FastAPI `BackgroundTasks` với `db_session` độc lập; trạng thái theo dõi bằng `ingestion_status` (PENDING/PROCESSING/COMPLETED/FAILED) và frontend polling.
+- **Local-First & Cloud-Ready:** toàn bộ hạ tầng chạy local bằng Docker Compose (PostgreSQL + pgvector, MinIO), nhưng mọi endpoint/credential đều đọc từ `.env` — đổi sang cloud (Vercel cho FE, Render cho BE, Supabase cho Postgres, Cloudflare R2 cho object storage tương thích S3) chỉ bằng cách đổi biến môi trường, không sửa code.
+- **Kiểm thử theo sprint:** mỗi sprint backend (11.5, 12, 13) phải có script test độc lập chạy xanh trước khi mở sprint kế tiếp.
 
 ---
 
@@ -392,11 +422,63 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 
 ---
 
-# 13. AI Features (Planned)
+# 13. AI Architecture
 
-Document upload → text extraction → chunking → embedding → pgvector → retriever/LLM → notebook chat, citation, summary; flashcards và quiz là optional.
+## Pipeline tổng thể
 
-*(Đề xuất sơ bộ về bảng embedding — `AssetEmbedding`, gắn theo `asset_id` để tránh embed trùng file Public được nhiều Notebook lưu — xem mục 19c. Đây mới là ý tưởng logic, chưa có thiết kế kỹ thuật chi tiết về chunking/dimension/index.)*
+```text
+Upload (PDF/DOCX)
+  → [Sprint 11.5] LibreOffice headless: DOCX → PDF phái sinh (converted_pdf_path, MinIO)
+  → [Sprint 12] pypdfium2: trích xuất text theo từng trang
+  → [Sprint 12] Page-aware chunking (không overlap xuyên trang)
+  → [Sprint 12] google-genai: gemini-embedding-001 (768d) → AssetEmbedding (pgvector)
+  → [Sprint 13] Hybrid Search RRF: Dense HNSW + Sparse GIN
+  → [Sprint 13] gemini-3.5-flash-lite: intent routing / condensation + trả lời kèm citation (SSE streaming)
+  → [Sprint 14] Chat UI + CitationBadge (#page=X)
+  → [Sprint 15] Native Tool Calling: quiz & flashcards
+```
+
+## Tầng lưu trữ vector
+
+Bảng `AssetEmbedding` gắn theo `asset_id` (không phải `notebook_id`) vì `Asset` đã là tầng file dùng chung — xem mục 19c:
+
+- `id`, `asset_id` (FK CASCADE), `chunk_index`, `content`, `page_number`, `metadata` JSONB, `created_at`
+- `embedding VECTOR(768)` — khớp `output_dimensionality=768` (MRL) của `gemini-embedding-001`
+- `tsv_content` — Generated Column: `GENERATED ALWAYS AS (to_tsvector('simple', immutable_unaccent(content))) STORED`
+- Index: HNSW `vector_cosine_ops` trên `embedding`, GIN trên `tsv_content`
+- Extension bắt buộc: `vector`, `unaccent` + wrapper `immutable_unaccent(text)` (IMMUTABLE để dùng được trong generated column/index)
+
+Bảng `assets` bổ sung: `converted_pdf_path` (Sprint 11.5), `file_hash`, `ingestion_status` (PENDING/PROCESSING/COMPLETED/FAILED), `ingestion_error`, `chunk_count` (Sprint 12).
+
+## Chuẩn hóa & trích xuất
+
+- DOCX luôn được convert sang PDF trước, nên pipeline AI chỉ phải xử lý **một định dạng duy nhất**; file gốc vẫn giữ nguyên cho nút "Tải về".
+- `pypdfium2` đọc text theo từng trang, giữ được `page_number` thật khớp với bản PDF người dùng xem trên UI.
+- Guard tài liệu scan: tổng số ký tự trích xuất < 100 → đánh dấu `FAILED` với mã `SCANNED_DOCUMENT_UNSUPPORTED` (chưa làm OCR trong phạm vi đồ án).
+
+## Chunking
+
+- **Page-aware:** duyệt từng trang độc lập, chunk không bao giờ vắt qua ranh giới trang.
+- Kích thước 500–700 tokens (~1500–2000 ký tự), overlap 100 tokens **trong phạm vi cùng một trang**.
+- `page_number` lưu ở cột riêng, không chèn vào nội dung đem đi embedding để tránh nhiễu vector.
+- Mục tiêu: citation trả về luôn nhảy đúng trang PDF (`#page=X`) 100%, không lệch trang.
+
+## Truy hồi (Retrieval) — Hybrid Search RRF
+
+- **Dense:** cosine similarity trên HNSW index của `embedding` — bắt được câu hỏi diễn đạt tự do, khác từ ngữ với tài liệu.
+- **Sparse:** full-text search trên GIN index của `tsv_content` (tsvector không dấu) — bắt chính xác thuật ngữ, mã môn học, tên riêng, và không phụ thuộc người dùng gõ dấu.
+- **RRF (Reciprocal Rank Fusion):** hợp nhất hai bảng xếp hạng theo thứ hạng thay vì theo điểm số, nên không cần chuẩn hóa/tinh chỉnh trọng số giữa hai hệ đo khác nhau.
+- Phạm vi truy vấn của một Notebook gồm 2 nguồn: (a) Asset thuộc chính Notebook, (b) Asset của Document đã lưu qua `Notebook_Saved_Documents`.
+
+## Sinh câu trả lời
+
+- Intent routing / query condensation bằng `gemini-3.5-flash-lite` để rút gọn câu hỏi theo lịch sử hội thoại trước khi truy hồi.
+- Trả lời dạng SSE streaming, kèm trích dẫn nguồn (tên tài liệu + số trang) để frontend render `CitationBadge`.
+- Quiz và flashcards dùng Native Tool Calling trên tập `selected_asset_ids` do người dùng chọn (Sprint 15).
+
+## Local-First & Cloud-Ready
+
+Toàn bộ pipeline chạy được hoàn toàn ở local (Docker Compose: PostgreSQL 16 + pgvector, MinIO, backend có LibreOffice headless), chỉ cần một API key Gemini trong `.env`. Khi deploy, đổi các biến môi trường sang dịch vụ cloud tương ứng (Postgres managed, object storage S3-compatible) — không phải sửa code.
 
 ---
 
