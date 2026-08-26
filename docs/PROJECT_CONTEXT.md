@@ -17,15 +17,18 @@ Knowledge Sharing Platform là hệ thống chia sẻ học liệu kết hợp A
 # 2. Current Progress
 
 **Top of mind / Định hướng phát triển gần:**
-Hệ thống đang chuyển đổi triệt để sang mô hình sprint "vertical slice" (triển khai hoàn chỉnh cả Frontend + Backend trong cùng một sprint thay vì tách rời lẻ tẻ). Sprint 11 đã hoàn thiện chi tiết Notebook, lưu tài liệu và tải tệp cá nhân. Hệ thống chuẩn bị tiến sang Sprint 12 để tích hợp các tính năng AI (RAG Chatbot, Embeddings, Ingestion Pipeline).
+Hệ thống tiếp tục theo mô hình sprint "vertical slice" (hoàn thiện cả Frontend + Backend trong cùng một sprint), nhưng từ giai đoạn AI/RAG trở đi sẽ **tách lộ trình thành các sprint độc lập nhỏ hơn**. Sprint 11 đã hoàn thiện trang chi tiết Notebook, lưu tài liệu công khai và upload tệp cá nhân. Trước khi bước vào pipeline AI, hệ thống dừng lại một nhịp ở **Sprint 11.5 — Document Conversion & Preview Debt Cleanup** để trả nợ kỹ thuật phần xem trước tài liệu (DOCX chưa preview được, luồng preview/download chưa thống nhất), chuẩn hóa mọi tài liệu DOCX sang PDF phái sinh để làm đầu vào đồng nhất cho Ingestion Pipeline ở Sprint 12.
+
+**Lý do tách nhỏ lộ trình AI/RAG:**
+Theo đúng pattern đã áp dụng thành công ở Sprint 11 (phase backend có script test riêng, chạy xanh trước rồi mới làm UI), mỗi sprint AI sẽ **tự kiểm thử độc lập trước khi chuyển sang sprint kế tiếp**. Cách này tránh việc chồng nhiều tầng (ingestion + retrieval + LLM + UI) trong cùng một sprint, vốn rất khó debug, khó xác định tầng nào gây lỗi và gần như không thể rollback từng phần.
 
 Current Sprint
 
-> Sprint 12 — AI Features (RAG Chatbot, Embeddings, Ingestion Pipeline)
+> Sprint 11.5 — Document Conversion & Preview Debt Cleanup
 
 Overall Progress
 
-92%
+93%
 
 Status
 
@@ -38,18 +41,29 @@ Status
 ✅ Sprint 10 — Notebook (AI Workspace) Feature — Dashboard + Layout Redesign — **hoàn thành**
 ✅ Sprint 10.5 — Notebook Dashboard Actions (Rename/Delete) — **hoàn thành**
 ✅ Sprint 11 — Notebook Detail Page & Document Saving / Asset Upload — **hoàn thành**
+🔄 Sprint 11.5 — Document Conversion & Preview Debt Cleanup — **đang thực hiện**
+⏳ Sprint 12 — Ingestion Pipeline (Backend only) — **kế hoạch**
+⏳ Sprint 13 — Retrieval Engine & Chat API (Backend only) — **kế hoạch**
+⏳ Sprint 14 — Chat Frontend & Citation UI — **kế hoạch**
+⏳ Sprint 15 — Quiz & Flashcards Studio — **kế hoạch**
+⏳ Sprint 16 — Testing — **kế hoạch**
+⏳ Sprint 17 — Deployment & Optimization — **kế hoạch**
 
 ---
 
 # 3. Current Sprint Goal
 
-Sprint 9 (UI/UX Polish & Design Consistency) đã hoàn thành: chuẩn hóa UI/UX, áp dụng luồng Progressive Disclosure, tích hợp tìm kiếm môn học tức thì không dấu và PDF preview modal, tối giản hóa Flat Document List, đổi tên và cấu trúc thư mục sang `documents`.
+**Sprint 11.5 — Document Conversion & Preview Debt Cleanup (đang thực hiện):**
+Trả hết nợ kỹ thuật phát sinh từ Sprint 11 quanh việc xem trước và chuẩn hóa tài liệu, chuẩn hóa toàn bộ file DOCX thành PDF để phục vụ preview tức thì và làm đầu vào đồng nhất cho Ingestion Pipeline ở Sprint 12.
 
-**Sprint 10 — Notebook (AI Workspace) Feature — Dashboard + Layout Redesign:** Thiết kế và hoàn thiện toàn bộ giao diện dashboard, cấu trúc thư mục `features/notebooks` bám sát `features/documents`, triển khai card, modal tạo mới, bộ lọc local client-side, dynamic welcome header, tối ưu service/API backend đếm tài liệu và tích hợp hệ thống layout Dark Sidebar thống nhất, ẩn `SubjectSearchInput` khi ở trang workspace.
+Mục tiêu chi tiết:
 
-**Sprint 10.5 — Notebook Dashboard Actions (Rename/Delete):** Triển khai các API và tương tác giao diện chỉnh sửa tên và xóa bỏ Notebook, giải quyết các vướng mắc về chính sách đồng bộ quản lý tài liệu. (Hoàn thành hoàn toàn cả API Backend và UI Frontend với Kebab menu + Modals).
-
-**Sprint 11 — Notebook Detail Page & Document Saving / Asset Upload:** Xây dựng trang chi tiết Notebook thật hỗ trợ cả FE + BE. Xây dựng backend + frontend cho phép lưu tài liệu công cộng (Document) và upload tập tin cá nhân vào Notebook với giới hạn gộp chung `MAX_SOURCES_PER_NOTEBOOK = 10`.
+- **Chuẩn hóa định dạng xem trước:** Thêm `libreoffice-writer` (headless) vào Dockerfile backend để chuyển đổi DOCX → PDF ngay khi upload.
+- **Cập nhật Schema Asset:** Thêm cột `converted_pdf_path` (nullable) vào bảng `assets`. File DOCX gốc vẫn được giữ nguyên cho mục đích tải về, bản PDF phái sinh được lưu trên MinIO để phục vụ preview và AI chunking.
+- **Service chuyển đổi tách biệt:** Tạo `conversion_service.py` ở tầng Service Layer, xử lý lỗi convert an toàn (file hỏng không gây sập upload), thực thi ngầm qua FastAPI `BackgroundTasks`.
+- **Cập nhật Presigned URL & Preview Modal:** `PdfPreviewModal` và endpoint download ưu tiên lấy `converted_pdf_path` nếu có.
+- **Mở khóa Preview Frontend:** Bật lại nút "Xem trước" cho tài liệu DOCX ở cả 2 nơi: Thẻ nguồn Notebook cá nhân và Thư viện tài liệu Public.
+- **Kiểm thử độc lập:** Script test backend kiểm tra luồng upload DOCX → có PDF phái sinh trong MinIO, preview mở đúng PDF, nút "Tải về" trả đúng DOCX gốc.
 
 ---
 
@@ -162,13 +176,29 @@ Sprint 9 (UI/UX Polish & Design Consistency) đã hoàn thành: chuẩn hóa UI/
 
 # 5. Next Task
 
-## Ngay lúc này: Sprint 12 — AI Features (RAG Chatbot, Embeddings, Ingestion Pipeline)
+## Ngay lúc này: Hoàn tất Sprint 11.5 — Document Conversion & Preview Debt Cleanup
 
-- Xây dựng pipeline xử lý trích xuất văn bản (Text Extraction), cắt đoạn thông minh (Chunking), tạo Vector Embeddings bằng mô hình ngôn ngữ và lưu trữ trong bảng `AssetEmbedding` (sử dụng PostgreSQL pgvector).
-- Tích hợp LLM API (OpenAI/LangChain) để triển khai chat thông minh trong Notebook, cho phép chat dựa trên nguồn tài liệu kèm trích dẫn (citations).
-- Xây dựng giao diện chat hoàn chỉnh tại Cột phải của `NotebookDetailPage.tsx`.
+## Kế tiếp: Sprint 12 — Ingestion Pipeline (Backend only)
 
-- Phát triển pipeline chunking/embedding, lưu trữ pgvector và kết nối LLM để hỗ trợ chat, trích dẫn tài liệu trong Notebook.
+Sprint 12 **chỉ làm backend**, không đụng tới UI, và phải tự kiểm thử xong bằng script trước khi mở sang Sprint 13.
+
+- **Schema & Database:**
+  - Thiết kế bảng `AssetEmbedding` (`id`, `asset_id` FK CASCADE, `chunk_index`, `content`, `embedding VECTOR(768)`, `tsv_content`, `page_number`, `metadata` JSONB, `created_at`).
+  - Cài đặt extension PostgreSQL `unaccent` và tạo wrapper `immutable_unaccent(text)`.
+  - Cột `tsv_content` dùng **Generated Column** (`GENERATED ALWAYS AS (to_tsvector('simple', immutable_unaccent(content))) STORED`).
+  - Index HNSW (`vector_cosine_ops`) trên `embedding` và GIN trên `tsv_content`.
+  - Bảng `assets` bổ sung: `file_hash`, `ingestion_status` (PENDING/PROCESSING/COMPLETED/FAILED), `ingestion_error`, `chunk_count`.
+- **Trích xuất & Chunking:**
+  - Trích xuất text bằng `pypdfium2` (DOCX đã convert sang PDF từ Sprint 11.5 nên dùng chung 1 pipeline duy nhất, không cần `python-docx`).
+  - Validation guard: tổng ký tự < 100 → đánh dấu `FAILED` với mã `SCANNED_DOCUMENT_UNSUPPORTED`.
+  - **Page-aware chunking:** duyệt từng trang độc lập, KHÔNG overlap xuyên trang (đảm bảo citation click-to-jump đúng 100% trang). Kích thước 500-700 tokens (~1500-2000 ký tự), overlap 100 tokens. Lưu `page_number` ở cột riêng, không chèn vào nội dung vector.
+- **Embedding Service:**
+  - Gọi Native SDK Google GenAI với mô hình **`gemini-embedding-001`** (dùng `output_dimensionality=768` MRL), bọc Tenacity Retry.
+  - Chạy ingestion ngầm qua `BackgroundTasks` với `db_session` độc lập.
+- **Endpoint & Seed:**
+  - Endpoint polling trạng thái: `GET /notebooks/{id}/assets/{asset_id}/status`.
+  - Cập nhật `seed.py` để tự động ingest tài liệu mẫu.
+- **Script kiểm thử độc lập:** Đảm bảo test backend chạy xanh (kiểm tra số chunk, chiều vector 768, trạng thái lifecycle) trước khi làm Sprint 13.
 
 ---
 
@@ -348,9 +378,15 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 10. ✅ **Notebook (AI Workspace) Feature — Dashboard + Layout Redesign** — **hoàn thành**
 10.5. ✅ **Notebook Dashboard Actions (Rename/Delete)** — **hoàn thành**
 11. ✅ **Notebook Detail Page & Document Saving / Asset Upload** — **hoàn thành**
-12. 🔄 **AI Features (RAG Chatbot, Embeddings, Ingestion Pipeline)** — **đang thực hiện**
-13. 🔄 **Testing & Deployment** — **kế hoạch**
-14. 🔄 **Deployment & Optimization** — **kế hoạch**
+11.5. 🔄 **Document Conversion & Preview Debt Cleanup** — **đang thực hiện** — chuyển đổi DOCX → PDF bằng LibreOffice headless, `converted_pdf_path`, mở khóa preview DOCX trên FE
+12. ⏳ **Ingestion Pipeline (Backend only)** — **kế hoạch** — bảng `AssetEmbedding`, `pypdfium2` page-aware chunking, `gemini-embedding-001` (768d), HNSW/GIN index, generated `tsv_content`
+13. ⏳ **Retrieval Engine & Chat API (Backend only)** — **kế hoạch** — Hybrid Search RRF (Dense + Sparse), Intent Routing/Condensation qua `gemini-3.5-flash-lite`, SSE streaming chat API kèm trích dẫn trang
+14. ⏳ **Chat Frontend & Citation UI** — **kế hoạch** — giao diện chat ở cột phải `NotebookDetailPage`, streaming câu trả lời, `CitationBadge` click nhảy thẳng trang PDF (`#page=X`)
+15. ⏳ **Quiz & Flashcards Studio** — **kế hoạch** — Native Tool Calling sinh trắc nghiệm/flashcards từ tài liệu đã chọn (`selected_asset_ids`)
+16. ⏳ **Testing** — **kế hoạch** — unit/integration test backend, test luồng chính frontend, hoàn thiện seed/fixture cho demo
+17. ⏳ **Deployment & Optimization** — **kế hoạch** — Docker hóa production, chuyển Cloud (Vercel/Render/Supabase/R2) qua `.env`, tối ưu chi phí token
+
+> **Lý do tách sprint AI/RAG:** mỗi sprint từ 11.5 đến 17 phải tự kiểm thử độc lập (backend có script test riêng chạy xanh) trước khi bắt đầu sprint kế tiếp — đúng pattern đã áp dụng ở Sprint 11. Việc này tránh gom nhiều tầng vào một sprint gây quá tải, khó debug và khó rollback từng phần.
 
 ---
 
@@ -385,11 +421,15 @@ Commit theo Sprint hoặc feature, ví dụ `feat: implement upload module`. Tr�
 
 # 17. Current Status
 
-Current Status: **Sprint 12 — AI Features (RAG Chatbot, Embeddings, Ingestion Pipeline)** (đang thực hiện)
+Current Status: **Sprint 11.5 — Document Conversion & Preview Debt Cleanup** (đang thực hiện)
 
-Last Completed: Sprint 11 — Notebook Detail Page & Document Saving / Asset Upload (hoàn thành cấu hình nguồn quota = 10, endpoint chi tiết, endpoint liên kết tài liệu, endpoint upload asset xác thực magic bytes chạy worker xóa ngầm; giao diện workspace phân chia 2 cột cuộn mượt mà, modal tab kép, custom click outside kebab action menu, xử lý preview an toàn).
+Đang làm: tích hợp LibreOffice headless vào Dockerfile backend để tự động convert DOCX → PDF khi upload, lưu đường dẫn `converted_pdf_path` trên MinIO, tối ưu logic lấy Presigned URL và mở khóa tính năng Preview cho tài liệu DOCX ở cả Notebook cá nhân và Thư viện công cộng.
 
-Next Module: Sprint 12 (AI Features / RAG Chatbot).
+Last Completed: Sprint 11 — Notebook Detail Page & Document Saving / Asset Upload (quota nguồn = 10, endpoint chi tiết, endpoint liên kết tài liệu, endpoint upload asset xác thực magic bytes + worker xóa ngầm; workspace 2 cột, modal tab kép, click-outside kebab menu, xử lý preview an toàn).
+
+Next Module: Sprint 12 — Ingestion Pipeline (Backend only).
+
+Nguyên tắc vận hành từ Sprint 11.5 trở đi: mỗi sprint phải tự kiểm thử độc lập và chạy xanh trước khi mở sprint kế tiếp; các sprint backend (11.5, 12, 13) có script test độc lập, phần giao diện chat tách hẳn sang Sprint 14 và 15.
 
 ---
 
