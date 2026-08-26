@@ -65,6 +65,39 @@ Mục tiêu chi tiết:
 - **Mở khóa Preview Frontend:** Bật lại nút "Xem trước" cho tài liệu DOCX ở cả 2 nơi: Thẻ nguồn Notebook cá nhân và Thư viện tài liệu Public.
 - **Kiểm thử độc lập:** Script test backend kiểm tra luồng upload DOCX → có PDF phái sinh trong MinIO, preview mở đúng PDF, nút "Tải về" trả đúng DOCX gốc.
 
+## Đặc tả kỹ thuật Sprint 11.5
+
+### 1. Hạ tầng Docker
+
+- Cài `libreoffice-writer` (và font tiếng Việt) trong `backend/Dockerfile` để có binary `soffice` chạy headless.
+- Lệnh convert chạy trong thư mục tạm, có timeout, không dùng `shell=True`:
+
+```text
+soffice --headless --norestore --convert-to pdf --outdir <tmpdir> <input.docx>
+```
+
+- Mỗi lần convert dùng một `-env:UserInstallation` riêng trong thư mục tạm để tránh xung đột profile khi có nhiều request đồng thời.
+
+### 2. Model & Schema
+
+- `Asset` thêm cột `converted_pdf_path: Mapped[str | None]` (nullable) — object key của bản PDF phái sinh trên MinIO.
+- File gốc (`file_path`) **không bị thay thế**: DOCX gốc vẫn là bản dùng để tải về; PDF phái sinh chỉ phục vụ preview và (từ Sprint 12) trích xuất text.
+- Bản PDF phái sinh lưu cùng bucket, theo quy ước key `derived/{asset_id}.pdf`, không tạo thêm bản ghi `Asset` nên **không tính vào quota** `MAX_SOURCES_PER_NOTEBOOK = 10`.
+- Schema trả về cho frontend bổ sung cờ suy ra từ dữ liệu (ví dụ `is_previewable = file_type == PDF or converted_pdf_path is not None`) thay vì hardcode theo đuôi file.
+
+### 3. `conversion_service.py`
+
+- Vị trí: `backend/app/services/conversion_service.py`, chỉ nhận `asset_id` và tự mở `db_session` riêng khi chạy nền.
+- Luồng: tải file gốc từ MinIO → ghi ra thư mục tạm → gọi `soffice` → upload PDF kết quả lên MinIO → cập nhật `converted_pdf_path` → dọn thư mục tạm (`finally`).
+- Bọc toàn bộ trong `try/except`: convert lỗi (file hỏng, timeout, `soffice` trả non-zero) chỉ log lại và để `converted_pdf_path = NULL`, **không làm hỏng upload** đã thành công.
+- Kích hoạt qua FastAPI `BackgroundTasks` ngay sau khi upload trả `201`, giữ đúng triết lý best-effort đã dùng ở Sprint 10.5/11.
+
+### 4. Preview & Download
+
+- Endpoint preview trả presigned URL của `converted_pdf_path` nếu có, ngược lại trả `file_path` (PDF gốc).
+- Endpoint download **luôn** trả file gốc để giữ đúng định dạng người dùng đã tải lên.
+- Frontend: bỏ điều kiện chặn cứng theo đuôi file, bật nút "Xem trước" cho DOCX ở cả thẻ nguồn trong `NotebookDetailPage` lẫn thư viện tài liệu Public; khi PDF phái sinh chưa sẵn sàng thì hiển thị trạng thái đang xử lý thay vì lỗi.
+
 ---
 
 # 4. Completed
@@ -199,6 +232,80 @@ Sprint 12 **chỉ làm backend**, không đụng tới UI, và phải tự kiể
   - Endpoint polling trạng thái: `GET /notebooks/{id}/assets/{asset_id}/status`.
   - Cập nhật `seed.py` để tự động ingest tài liệu mẫu.
 - **Script kiểm thử độc lập:** Đảm bảo test backend chạy xanh (kiểm tra số chunk, chiều vector 768, trạng thái lifecycle) trước khi làm Sprint 13.
+
+### Đặc tả kỹ thuật Sprint 12
+
+#### 1. Schema `AssetEmbedding`
+
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS unaccent;
+
+CREATE FUNCTION immutable_unaccent(text) RETURNS text
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+  AS $$ SELECT unaccent('unaccent', $1) $$;
+
+CREATE TABLE asset_embeddings (
+    id           SERIAL PRIMARY KEY,
+    asset_id     INTEGER NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+    chunk_index  INTEGER NOT NULL,
+    content      TEXT    NOT NULL,
+    embedding    VECTOR(768) NOT NULL,
+    tsv_content  TSVECTOR GENERATED ALWAYS AS
+                 (to_tsvector('simple', immutable_unaccent(content))) STORED,
+    page_number  INTEGER NOT NULL,
+    metadata     JSONB   NOT NULL DEFAULT '{}'::jsonb,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX ix_asset_embeddings_embedding
+    ON asset_embeddings USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX ix_asset_embeddings_tsv
+    ON asset_embeddings USING gin (tsv_content);
+CREATE UNIQUE INDEX uq_asset_embeddings_chunk
+    ON asset_embeddings (asset_id, chunk_index);
+```
+
+- Gắn theo `asset_id` (không phải `notebook_id`): một Document public được nhiều Notebook lưu chỉ embed **một lần** — xem mục 19c.
+- `ON DELETE CASCADE`: xóa Asset là xóa sạch chunk, không để rác vector.
+- `tsv_content` là Generated Column nên luôn đồng bộ với `content`, không cần trigger; `immutable_unaccent` phải IMMUTABLE mới dùng được trong generated column/index.
+
+#### 2. Bổ sung bảng `assets`
+
+- `file_hash` (SHA-256 nội dung file) — tính và lưu ngay từ Sprint 12 để phục vụ deduplication sau này.
+- `ingestion_status`: `PENDING` → `PROCESSING` → `COMPLETED` / `FAILED`.
+- `ingestion_error`: mã/thông điệp lỗi gần nhất (ví dụ `SCANNED_DOCUMENT_UNSUPPORTED`).
+- `chunk_count`: số chunk đã tạo, dùng cho polling và kiểm thử.
+- **Hoãn sang backlog:** logic deduplication theo SHA-256 (tái sử dụng embedding của file trùng nội dung) chưa làm ở Sprint 12; sprint này chỉ lưu `file_hash`.
+
+#### 3. Trích xuất text
+
+- Dùng `pypdfium2` cho **cả PDF gốc lẫn PDF converted** từ Sprint 11.5 → một pipeline duy nhất, không cần `python-docx`.
+- Đọc theo từng trang, giữ `page_number` thật (1-based) khớp với bản PDF hiển thị trên UI.
+- Guard tài liệu scan ảnh: tổng ký tự trích xuất được `< 100` → `ingestion_status = FAILED`, `ingestion_error = SCANNED_DOCUMENT_UNSUPPORTED` (không làm OCR trong phạm vi đồ án).
+
+#### 4. Page-aware chunking
+
+- Cắt chunk **trong phạm vi từng trang**, không bao giờ vắt qua ranh giới trang.
+- Kích thước 500–700 tokens (~1500–2000 ký tự), overlap 100 tokens và overlap cũng chỉ nằm trong cùng một trang.
+- `page_number` lưu ở cột riêng, **không chèn** vào text đem đi embedding để tránh nhiễu vector.
+- Đánh đổi: mất một chút ngữ cảnh ở ranh giới trang, đổi lại citation click-to-jump (`#page=X`) luôn đúng trang.
+
+#### 5. Embedding service
+
+- Native SDK `google-genai`, model `gemini-embedding-001` với `output_dimensionality=768` (MRL) — khớp `VECTOR(768)`.
+- Gọi theo batch, bọc **Tenacity Retry** (exponential backoff) cho lỗi mạng/rate-limit.
+- `task_type` phân biệt `RETRIEVAL_DOCUMENT` khi ingest và `RETRIEVAL_QUERY` khi truy vấn (Sprint 13).
+
+#### 6. Chạy nền & lifecycle
+
+- Ingestion chạy qua `BackgroundTasks` với **`db_session` độc lập** (không tái dùng session của request đã đóng).
+- Ghi trạng thái từng bước; re-ingest xóa chunk cũ theo `asset_id` rồi tạo lại để giữ tính idempotent.
+
+#### 7. Endpoint & Seed
+
+- `GET /notebooks/{id}/assets/{asset_id}/status` — polling trả `ingestion_status`, `chunk_count`, `ingestion_error`.
+- Cập nhật `seed.py` để tự động ingest tài liệu mẫu, phục vụ demo và test Sprint 13.
 
 ---
 
@@ -530,6 +637,7 @@ Nguyên tắc vận hành từ Sprint 11.5 trở đi: mỗi sprint phải tự k
 - Virus scanning và presigned upload/download URL.
 - AI artifact layer (summary, flashcards, mindmap) có thể được lưu thành metadata hoặc Asset mới khi pipeline đã có.
 - Quản lý chi phí API Gemini: giới hạn token/request, cache và quota theo user/session.
+- **Deduplication theo SHA-256:** Sprint 12 chỉ lưu `file_hash`, chưa dùng để tái sử dụng embedding của file trùng nội dung. Logic dedup (upload file đã có hash → trỏ sang chunk sẵn có thay vì embed lại) hoãn sang backlog để giữ Sprint 12 gọn và dễ kiểm thử.
 
 ## 19b. Quan sát UI/UX & cấu trúc code (sẽ xử lý ở Sprint 9, sau khi hoàn tất Sprint 8.5)
 
