@@ -583,6 +583,61 @@ Bảng `assets` bổ sung: `converted_pdf_path` (Sprint 11.5), `file_hash`, `ing
 - Trả lời dạng SSE streaming, kèm trích dẫn nguồn (tên tài liệu + số trang) để frontend render `CitationBadge`.
 - Quiz và flashcards dùng Native Tool Calling trên tập `selected_asset_ids` do người dùng chọn (Sprint 15).
 
+## Đặc tả kỹ thuật Sprint 13 — Retrieval Engine & Chat API (Backend only)
+
+### 1. Database models
+
+- **`NotebookChatSession`:** `id`, `notebook_id` (FK CASCADE), `user_id` (FK CASCADE), `title` (mặc định `"Phiên trò chuyện mới"`), `created_at`, `updated_at`.
+- **`NotebookChatMessage`:** `id`, `session_id` (FK CASCADE), `role` (`user` / `assistant`), `content`, `citations` JSONB, `created_at`.
+- CASCADE hai tầng: xóa Notebook → xóa session → xóa message, không để lại lịch sử mồ côi.
+- `citations` lưu ngay trong message (denormalize) để render lại lịch sử chat mà không phải truy vấn lại vector store.
+
+### 2. `rag_service.py`
+
+- **Sliding window:** chỉ nạp **6 tin nhắn gần nhất** vào ngữ cảnh — đủ để hiểu câu hỏi nối tiếp mà không phình token.
+- **Condensation + Intent Router gộp làm một lời gọi LLM** (`gemini-3.5-flash-lite` / `gemini-3.1-flash-lite`) dùng **Structured JSON Output** (Pydantic schema) để tiết kiệm một vòng round-trip:
+
+```json
+{ "standalone_query": "...", "needs_rag": true }
+```
+
+  `needs_rag = false` (chào hỏi, cảm ơn, hỏi meta) → bỏ qua truy hồi, trả lời thẳng.
+
+- **Scoped Retrieval:** tập chunk hợp lệ = Asset thuộc chính Notebook `UNION` Asset của Document đã lưu qua `Notebook_Saved_Documents`, và **chỉ lấy Asset có `ingestion_status = COMPLETED`**.
+- **Hybrid Search RRF:**
+  - Dense: `embedding <=> :query_embedding` (cosine, HNSW index).
+  - Sparse: `ts_rank_cd(tsv_content, plainto_tsquery('simple', immutable_unaccent(:query)))` (GIN index) — khớp được cả khi người dùng gõ không dấu.
+  - Hợp nhất theo công thức RRF `score = Σ 1 / (60 + rank)` trên từng bảng xếp hạng, lấy **Top-5 chunk** theo `rrf_score`.
+- **Strict Grounding Prompt:** bắt buộc LLM chỉ trả lời dựa trên context được cấp, đánh số trích dẫn dạng `[1]`, `[2]` theo thứ tự chunk; nếu context không chứa thông tin thì từ chối theo mẫu cố định thay vì suy đoán.
+
+### 3. `chat_router.py` — SSE streaming
+
+- Endpoint: `POST /notebooks/{id}/sessions/{session_id}/chat`.
+- Thứ tự SSE event:
+
+```text
+citations   # bắn Top-K chunk (tên tài liệu, page_number, asset_id) ngay sau khi search xong
+delta       # stream từng token câu trả lời
+done        # kết thúc, kèm message_id đã lưu
+error       # lỗi LLM/DB, frontend hiển thị và dừng stream
+```
+
+  Bắn `citations` **trước** phần `delta` để frontend dựng sẵn map trích dẫn, render `CitationBadge` ngay khi token `[1]` xuất hiện.
+
+- **Stream cancellation:** kiểm tra `request.is_disconnected()` trong vòng lặp stream để hủy lời gọi LLM khi người dùng bấm "Dừng tạo" — tránh đốt token vô ích.
+- **Regex cleaning:** sau khi stream xong, quét `\[(\d+)\]` trên câu trả lời và **chỉ lưu metadata của chunk thực sự được trích dẫn** vào cột `citations`, bỏ các chunk lấy về nhưng LLM không dùng.
+- **CRUD Sessions:** tạo / liệt kê / đổi tên / xóa phiên; **auto-title** tự sinh tiêu đề 3–5 từ bằng LLM sau tin nhắn đầu tiên.
+- **Kiểm thử độc lập:** script test backend gọi thẳng chat API (câu hỏi có trong tài liệu, câu hỏi ngoài tài liệu, câu chào hỏi `needs_rag = false`, hủy giữa chừng) phải chạy xanh trước khi sang Sprint 14.
+
+## Đặc tả kỹ thuật Sprint 14 — Chat Frontend & Citation UI
+
+- **`useNotebookChatStream`:** hook quản lý kết nối SSE qua `ReadableStream`, parse từng event (`citations` / `delta` / `done` / `error`), tích lũy nội dung để render dần; tích hợp `AbortController` cho nút "Dừng tạo" và tự hủy khi unmount.
+- **`NotebookChatPanel.tsx`:** cột chat hoàn chỉnh trong `NotebookDetailPage` — danh sách message (user/assistant), auto-scroll, ô input đổi nút **Gửi ⇄ Dừng** theo cờ `isStreaming`, chặn gửi khi đang stream.
+- **`ChatSessionHistoryPopover.tsx`:** popover lịch sử chat — tìm kiếm theo tiêu đề session, rename / delete, tái dùng hook `useClickOutside` đã có từ Sprint 11.
+- **`CitationBadge.tsx`:** parse tag `[X]` trong markdown câu trả lời; nếu `X` khớp một mục trong metadata `citations` thì render badge bấm được, mở `PdfPreviewModal` nhảy đúng `#page=X`; nếu LLM **bịa số** không khớp thì render như text thường (không tạo link chết).
+- **Render nội dung:** tích hợp **KaTeX** cho công thức toán và nút copy cho code block.
+- Sprint 14 không đổi backend: mọi hành vi chat đã được Sprint 13 chốt và test độc lập.
+
 ## Local-First & Cloud-Ready
 
 Toàn bộ pipeline chạy được hoàn toàn ở local (Docker Compose: PostgreSQL 16 + pgvector, MinIO, backend có LibreOffice headless), chỉ cần một API key Gemini trong `.env`. Khi deploy, đổi các biến môi trường sang dịch vụ cloud tương ứng (Postgres managed, object storage S3-compatible) — không phải sửa code.
