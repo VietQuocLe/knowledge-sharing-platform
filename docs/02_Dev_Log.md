@@ -435,7 +435,36 @@ Notebook Detail Page & Document Saving / Asset Upload: Xây dựng trang chi ti�
 
 ## Next Sprint
 
-Sprint 12 — AI Features (RAG Chatbot, Embeddings, Ingestion Pipeline)
+Sprint 11.5 — Document Conversion & Preview Debt Cleanup
 
+---
 
+# Sprint 11.5 🔄 (đang thực hiện)
+
+## Goal
+
+Document Conversion & Preview Debt Cleanup: trả nợ kỹ thuật preview phát sinh từ Sprint 11 bằng cách chuyển đổi mọi tài liệu DOCX sang PDF phái sinh (LibreOffice headless), thống nhất luồng preview/download và mở khóa nút "Xem trước" cho DOCX.
+
+## Planned
+
+- **Backend**:
+  - Thêm `libreoffice-writer` (headless) vào Dockerfile backend để chuyển đổi DOCX → PDF ngay khi upload.
+  - Thêm cột `converted_pdf_path` (nullable) vào bảng `assets`; giữ nguyên file DOCX gốc cho mục đích tải về, bản PDF phái sinh lưu trên MinIO phục vụ preview và AI chunking ở Sprint 12.
+  - Tạo `conversion_service.py` ở tầng Service Layer, xử lý lỗi convert an toàn (file hỏng không làm sập luồng upload), thực thi ngầm qua FastAPI `BackgroundTasks`.
+  - Endpoint lấy presigned URL ưu tiên `converted_pdf_path` khi có, fallback về file gốc.
+- **Frontend**:
+  - `PdfPreviewModal` dùng presigned URL của bản PDF phái sinh.
+  - Bật lại nút "Xem trước" cho DOCX ở cả thẻ nguồn Notebook cá nhân và thư viện tài liệu Public (gỡ chặn `isPreviewable` của Sprint 11).
+- **Testing**: script test backend độc lập kiểm tra luồng upload DOCX → sinh PDF phái sinh trong MinIO, preview mở đúng PDF, nút "Tải về" trả đúng DOCX gốc.
+
+## Decisions
+
+- Sprint 11.5 **chỉ** làm conversion + preview/download; tầng Text Extraction dời sang Sprint 12 để dùng chung một pipeline `pypdfium2` duy nhất trên PDF (không cần `python-docx`).
+- Giữ file gốc và bản PDF phái sinh song song: bản phái sinh không tạo `Asset` mới nên không tính vào quota `MAX_SOURCES_PER_NOTEBOOK = 10`.
+- Từ Sprint 11.5 trở đi, mỗi sprint backend (11.5, 12, 13) phải có script test độc lập chạy xanh trước khi mở sprint kế tiếp — theo pattern đã áp dụng ở Sprint 11.
+- AI stack chốt: Google Gemini Native SDK (`google-genai`), `gemini-embedding-001` (MRL 768d) cho embedding và `gemini-3.5-flash-lite` / `gemini-3.1-flash-lite` cho LLM — **không dùng LangChain, không dùng Sentence Transformers**.
+
+## Next Sprint
+
+Sprint 12 — Ingestion Pipeline (Backend only)
 

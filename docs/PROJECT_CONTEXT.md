@@ -219,7 +219,9 @@ Sprint 12 **chỉ làm backend**, không đụng tới UI, và phải tự kiể
 
 ## AI (planned, chưa triển khai)
 
-- LangChain/OpenAI API/Sentence Transformers cho AI pipeline
+- Google Gemini Native SDK (`google-genai`) cho AI pipeline: `gemini-embedding-001` (MRL 768d) cho embedding, `gemini-3.5-flash-lite` / `gemini-3.1-flash-lite` cho LLM
+- `pypdfium2` cho trích xuất text; `libreoffice-writer` (headless) cho chuyển đổi DOCX → PDF
+- Không dùng LangChain và không dùng Sentence Transformers
 
 ---
 
@@ -358,7 +360,7 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 
 ## Known Risks / Constraints
 
-- Đồ án solo trong một học kỳ; ngân sách OpenAI API và GPU free-tier hạn chế.
+- Đồ án solo trong một học kỳ; ngân sách API Gemini và GPU free-tier hạn chế.
 - AI Pipeline/RAG chưa triển khai, nên không mô tả như tính năng đã có.
 
 ---
@@ -445,7 +447,7 @@ Nguyên tắc vận hành từ Sprint 11.5 trở đi: mỗi sprint phải tự k
 
 - Virus scanning và presigned upload/download URL.
 - AI artifact layer (summary, flashcards, mindmap) có thể được lưu thành metadata hoặc Asset mới khi pipeline đã có.
-- Quản lý chi phí OpenAI: giới hạn token/request, cache và quota theo user/session.
+- Quản lý chi phí API Gemini: giới hạn token/request, cache và quota theo user/session.
 
 ## 19b. Quan sát UI/UX & cấu trúc code (sẽ xử lý ở Sprint 9, sau khi hoàn tất Sprint 8.5)
 
