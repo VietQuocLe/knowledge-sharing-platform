@@ -37,14 +37,14 @@ Dự án tập trung vào **Độ sâu Kiến trúc (Architecture Depth)** và *
 * **Backend:** FastAPI (Python)
 * **Database:** PostgreSQL + `pgvector` extension (lưu cả dữ liệu quan hệ lẫn embeddings)
 * **Storage:** MinIO (local dev qua Docker Compose)
-* **AI Integration:** LangChain, OpenAI API, Sentence Transformers, pgvector (mô hình cụ thể — ví dụ embedding model, LLM model — chưa chốt, sẽ quyết định ở Sprint 8)
+* **AI Integration:** Google Gemini Native SDK (`google-genai`) + pgvector — embedding `gemini-embedding-001` (MRL 768d), LLM `gemini-3.5-flash-lite` / `gemini-3.1-flash-lite`; trích xuất text bằng `pypdfium2`, chuyển đổi DOCX → PDF bằng `libreoffice-writer` headless. Không dùng LangChain và không dùng Sentence Transformers.
 
 ### Tham khảo cho tương lai — chưa quyết định, chưa áp dụng
 
 Đây là các khuyến nghị công nghệ chung từ tài liệu gợi ý đề tài của GVHD (không phải quyết định riêng đã chốt cho project này), giữ lại làm tham khảo cho các sprint chưa tới:
 
-* **Testing:** `pytest` (BE), `Jest`/`Playwright` (FE) — cân nhắc áp dụng ở Sprint 11 Testing
-* **DevOps:** GitHub Actions (CI), Vercel (FE Deployment), Railway/Render (BE Deployment) — cân nhắc áp dụng ở Sprint 12 Deployment & Optimization
+* **Testing:** `pytest` (BE), `Jest`/`Playwright` (FE) — cân nhắc áp dụng ở Sprint 16 Testing
+* **DevOps:** GitHub Actions (CI), Vercel (FE Deployment), Railway/Render (BE Deployment) — cân nhắc áp dụng ở Sprint 17 Deployment & Optimization
 
 ### Quy trình & chuẩn deliverable theo GVHD
 
