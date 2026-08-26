@@ -439,30 +439,29 @@ Sprint 11.5 — Document Conversion & Preview Debt Cleanup
 
 ---
 
-# Sprint 11.5 🔄 (đang thực hiện)
+# Sprint 11.5
 
 ## Goal
 
 Document Conversion & Preview Debt Cleanup: trả nợ kỹ thuật preview phát sinh từ Sprint 11 bằng cách chuyển đổi mọi tài liệu DOCX sang PDF phái sinh (LibreOffice headless), thống nhất luồng preview/download và mở khóa nút "Xem trước" cho DOCX.
 
-## Planned
+## Completed
 
-- **Backend**:
-  - Thêm `libreoffice-writer` (headless) vào Dockerfile backend để chuyển đổi DOCX → PDF ngay khi upload.
-  - Thêm cột `converted_pdf_path` (nullable) vào bảng `assets`; giữ nguyên file DOCX gốc cho mục đích tải về, bản PDF phái sinh lưu trên MinIO phục vụ preview và AI chunking ở Sprint 12.
-  - Tạo `conversion_service.py` ở tầng Service Layer, xử lý lỗi convert an toàn (file hỏng không làm sập luồng upload), thực thi ngầm qua FastAPI `BackgroundTasks`.
-  - Endpoint lấy presigned URL ưu tiên `converted_pdf_path` khi có, fallback về file gốc.
-- **Frontend**:
-  - `PdfPreviewModal` dùng presigned URL của bản PDF phái sinh.
-  - Bật lại nút "Xem trước" cho DOCX ở cả thẻ nguồn Notebook cá nhân và thư viện tài liệu Public (gỡ chặn `isPreviewable` của Sprint 11).
-- **Testing**: script test backend độc lập kiểm tra luồng upload DOCX → sinh PDF phái sinh trong MinIO, preview mở đúng PDF, nút "Tải về" trả đúng DOCX gốc.
+- **Hạ tầng & Setup Docker**: Thêm `libreoffice-writer` và font tiếng Việt vào Dockerfile của Backend để hỗ trợ `soffice` ở chế độ headless.
+- **Asset Model & Schema**: Thêm cột `converted_pdf_path` và `conversion_status` (enums: PENDING, COMPLETED, FAILED) vào model `Asset` và Pydantic schemas.
+- **Conversion Service (Background Worker)**: Triển khai `conversion_service.py` xử lý việc convert ngầm qua FastAPI `BackgroundTasks`. Chạy an toàn với thư mục tạm và profile độc lập, tự dọn dẹp file vật lý tự động và ghi nhận chi tiết lỗi.
+- **Chống lỗi SignatureDoesNotMatch (MinIO)**: Khai báo một `get_public_minio_client` chuyên để sinh presigned URL với host chính xác, triệt tiêu lỗi hỏng chữ ký (Signature Host Misalignment) khi trình duyệt client truy cập từ host máy.
+- **Frontend & Preview Badge**: Gỡ bỏ chặn cấm `.docx` xem trước tại `NotebookDetailPage.tsx`. Hiển thị badge pulsing "Đang xử lý..." nếu tài liệu đang chuyển đổi, và "Lỗi xử lý PDF" nếu thất bại. Khóa nút "Xem trước" tương ứng và mở toast cảnh báo hợp lý. Nút "Tải về máy" nguyên bản hoạt động bình thường trong mọi tình huống.
 
 ## Decisions
 
-- Sprint 11.5 **chỉ** làm conversion + preview/download; tầng Text Extraction dời sang Sprint 12 để dùng chung một pipeline `pypdfium2` duy nhất trên PDF (không cần `python-docx`).
-- Giữ file gốc và bản PDF phái sinh song song: bản phái sinh không tạo `Asset` mới nên không tính vào quota `MAX_SOURCES_PER_NOTEBOOK = 10`.
-- Từ Sprint 11.5 trở đi, mỗi sprint backend (11.5, 12, 13) phải có script test độc lập chạy xanh trước khi mở sprint kế tiếp — theo pattern đã áp dụng ở Sprint 11.
-- AI stack chốt: Google Gemini Native SDK (`google-genai`), `gemini-embedding-001` (MRL 768d) cho embedding và `gemini-3.5-flash-lite` / `gemini-3.1-flash-lite` cho LLM — **không dùng LangChain, không dùng Sentence Transformers**.
+- Chạy LibreOffice với một thư mục profile độc lập (`-env:UserInstallation`) để triệt tiêu tình trạng concurrency lock giữa các background worker.
+- Sinh URL ký thông qua public client thay vì string replace hậu ký để chữ ký HMAC khớp chính xác domain client gọi lên S3.
+
+## Learned
+
+- Presigned URL của MinIO mã hóa cả Host header vào chữ ký HMAC. Thay đổi Host sau khi ký sẽ gây ra lỗi `SignatureDoesNotMatch`.
+- Client Minio khi gọi `presigned_get_object` sẽ dò bucket location trên server, gây lỗi Connection Refused khi cấu hình endpoint không hợp lệ trong docker. Bản public client cần chỉ định cứng `region="us-east-1"` để ngăn truy vấn động này.
 
 ## Next Sprint
 

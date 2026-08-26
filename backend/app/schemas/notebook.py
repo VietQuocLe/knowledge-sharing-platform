@@ -2,6 +2,8 @@ from datetime import datetime
 from typing import Any
 from pydantic import BaseModel, ConfigDict, field_validator
 
+from app.models.enums import AssetConversionStatus
+
 
 class NotebookBase(BaseModel):
     title: str
@@ -59,6 +61,7 @@ class NotebookSourceRead(BaseModel):
     file_type: str
     size: int | None = None
     created_at: datetime
+    conversion_status: AssetConversionStatus | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

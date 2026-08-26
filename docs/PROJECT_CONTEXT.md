@@ -24,11 +24,11 @@ Theo đúng pattern đã áp dụng thành công ở Sprint 11 (phase backend c�
 
 Current Sprint
 
-> Sprint 11.5 — Document Conversion & Preview Debt Cleanup
+> Sprint 12 — Ingestion Pipeline (Backend only)
 
 Overall Progress
 
-93%
+95%
 
 Status
 
@@ -41,8 +41,8 @@ Status
 ✅ Sprint 10 — Notebook (AI Workspace) Feature — Dashboard + Layout Redesign — **hoàn thành**
 ✅ Sprint 10.5 — Notebook Dashboard Actions (Rename/Delete) — **hoàn thành**
 ✅ Sprint 11 — Notebook Detail Page & Document Saving / Asset Upload — **hoàn thành**
-🔄 Sprint 11.5 — Document Conversion & Preview Debt Cleanup — **đang thực hiện**
-⏳ Sprint 12 — Ingestion Pipeline (Backend only) — **kế hoạch**
+✅ Sprint 11.5 — Document Conversion & Preview Debt Cleanup — **hoàn thành**
+🔄 Sprint 12 — Ingestion Pipeline (Backend only) — **đang thực hiện**
 ⏳ Sprint 13 — Retrieval Engine & Chat API (Backend only) — **kế hoạch**
 ⏳ Sprint 14 — Chat Frontend & Citation UI — **kế hoạch**
 ⏳ Sprint 15 — Quiz & Flashcards Studio — **kế hoạch**
@@ -53,17 +53,14 @@ Status
 
 # 3. Current Sprint Goal
 
-**Sprint 11.5 — Document Conversion & Preview Debt Cleanup (đang thực hiện):**
-Trả hết nợ kỹ thuật phát sinh từ Sprint 11 quanh việc xem trước và chuẩn hóa tài liệu, chuẩn hóa toàn bộ file DOCX thành PDF để phục vụ preview tức thì và làm đầu vào đồng nhất cho Ingestion Pipeline ở Sprint 12.
+**Sprint 12 — Ingestion Pipeline (Backend only) (đang thực hiện):**
+Triển khai trọn vẹn hạ tầng Chunking & Vector Ingestion trên Backend (chưa ghép UI).
 
 Mục tiêu chi tiết:
-
-- **Chuẩn hóa định dạng xem trước:** Thêm `libreoffice-writer` (headless) vào Dockerfile backend để chuyển đổi DOCX → PDF ngay khi upload.
-- **Cập nhật Schema Asset:** Thêm cột `converted_pdf_path` (nullable) vào bảng `assets`. File DOCX gốc vẫn được giữ nguyên cho mục đích tải về, bản PDF phái sinh được lưu trên MinIO để phục vụ preview và AI chunking.
-- **Service chuyển đổi tách biệt:** Tạo `conversion_service.py` ở tầng Service Layer, xử lý lỗi convert an toàn (file hỏng không gây sập upload), thực thi ngầm qua FastAPI `BackgroundTasks`.
-- **Cập nhật Presigned URL & Preview Modal:** `PdfPreviewModal` và endpoint download ưu tiên lấy `converted_pdf_path` nếu có.
-- **Mở khóa Preview Frontend:** Bật lại nút "Xem trước" cho tài liệu DOCX ở cả 2 nơi: Thẻ nguồn Notebook cá nhân và Thư viện tài liệu Public.
-- **Kiểm thử độc lập:** Script test backend kiểm tra luồng upload DOCX → có PDF phái sinh trong MinIO, preview mở đúng PDF, nút "Tải về" trả đúng DOCX gốc.
+- **Schema & Database:** Thiết kế bảng `AssetEmbedding`, helper `immutable_unaccent()`, Generated Column `tsv_content` không dấu cho Hybrid Search và index HNSW + GIN.
+- **Trích xuất & Chunking:** Dùng `pypdfium2` trích xuất văn bản từ PDF (cả PDF gốc và PDF converted từ DOCX), chunking giới hạn trong phạm vi từng trang (chạy độc lập, không overlap xuyên trang để trích dẫn trang luôn chính xác).
+- **Embedding Service:** Tích hợp trực tiếp Google GenAI SDK (`google-genai`), sử dụng mô hình embedding `gemini-embedding-001` (co ngắn chiều xuống 768d để khớp pgvector).
+- **Chạy nền ngầm:** Chạy Ingestion ngầm thông qua FastAPI `BackgroundTasks` bọc Tenacity Retry, hỗ trợ API endpoint polling để frontend truy vấn trạng thái.
 
 ## Đặc tả kỹ thuật Sprint 11.5
 
@@ -136,13 +133,22 @@ soffice --headless --norestore --convert-to pdf --outdir <tmpdir> <input.docx>
   - API endpoints: `PATCH /notebooks/{notebook_id}` và `DELETE /notebooks/{notebook_id}` được bảo vệ qua JWT và kiểm định ownership (403/404 handling).
   - Deletion logic: Sử dụng SQLAlchemy/Postgres `CASCADE` tự động làm sạch các bản ghi trong bảng `Asset` và `NotebookSavedDocument`.
   - Storage sweep: Tận dụng FastAPI `BackgroundTasks` để thực thi việc xóa vật lý các tập tin Asset MinIO ngầm một cách không cản trở (best-effort).
-- **Sprint 11 — Notebook Detail Page & Document Saving / Asset Upload:**
+  - API `GET /notebooks/{notebook_id}/assets/{asset_id}/download` để cấp presigned URL tải tệp tin MinIO trực tiếp.
+
+- **Sprint 11 — Notebook Detail Page & Document Saving / Asset Upload — hoàn thành:**
   - Cấu hình hạn mức số lượng nguồn gộp chung `MAX_SOURCES_PER_NOTEBOOK = 10` trong project settings.
   - API `GET /notebooks/{notebook_id}` để trả về cấu trúc chi tiết của Sổ ghi chú bao gồm thông số đếm và danh sách nguồn tài liệu.
   - API liên kết tài liệu `POST /notebooks/{notebook_id}/saved-documents` và hủy liên kết `DELETE /notebooks/{notebook_id}/saved-documents/{document_id}` bảo vệ bằng JWT và xác thực sở hữu.
   - API tải tập tin cá nhân `POST /notebooks/{notebook_id}/assets` và xóa tập tin `DELETE /notebooks/{notebook_id}/assets/{asset_id}` với kiểm định nội dung file (magic bytes để chặn file giả mạo PDF/DOCX) và giới hạn 30MB.
   - Khởi động dọn dẹp vật lý file trong MinIO ngầm thông qua FastAPI `BackgroundTasks` khi xóa Asset.
   - API `GET /notebooks/{notebook_id}/assets/{asset_id}/download` để cấp presigned URL tải tệp tin MinIO trực tiếp.
+
+- **Sprint 11.5 — Document Conversion & Preview Debt Cleanup:**
+  - Cài đặt `libreoffice-writer` và bộ fonts tiếng Việt trong Dockerfile của Backend.
+  - Thêm cột `converted_pdf_path` và `conversion_status` (PENDING, COMPLETED, FAILED) vào bảng `assets`.
+  - Triển khai `conversion_service.py` xử lý chuyển đổi DOCX sang PDF thông qua headless `soffice` ở chế độ lập profile riêng biệt độc lập, chạy trên background worker của FastAPI.
+  - Cho phép các route download/preview tự động ưu tiên PDF phái sinh, giải quyết triệt để lỗi `SignatureDoesNotMatch` của MinIO nhờ dùng một client MinIO public chuyên biệt ký presigned URL trực tiếp.
+  - Cập nhật frontend mở khóa xem trước cho định dạng `.docx`, hiển thị huy hiệu dynamic trạng thái xử lý/lỗi và nút "Tải về" file gốc luôn hoạt động.
 
 ## Frontend
 
@@ -517,8 +523,8 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 10. ✅ **Notebook (AI Workspace) Feature — Dashboard + Layout Redesign** — **hoàn thành**
 10.5. ✅ **Notebook Dashboard Actions (Rename/Delete)** — **hoàn thành**
 11. ✅ **Notebook Detail Page & Document Saving / Asset Upload** — **hoàn thành**
-11.5. 🔄 **Document Conversion & Preview Debt Cleanup** — **đang thực hiện** — chuyển đổi DOCX → PDF bằng LibreOffice headless, `converted_pdf_path`, mở khóa preview DOCX trên FE
-12. ⏳ **Ingestion Pipeline (Backend only)** — **kế hoạch** — bảng `AssetEmbedding`, `pypdfium2` page-aware chunking, `gemini-embedding-001` (768d), HNSW/GIN index, generated `tsv_content`
+11.5. ✅ **Document Conversion & Preview Debt Cleanup** — **hoàn thành** — chuyển đổi DOCX → PDF bằng LibreOffice headless, `converted_pdf_path`, mở khóa preview DOCX
+12. 🔄 **Ingestion Pipeline (Backend only)** — **đang thực hiện** — bảng `AssetEmbedding`, `pypdfium2` page-aware chunking, `gemini-embedding-001` (768d), index HNSW/GIN index, generated `tsv_content`
 13. ⏳ **Retrieval Engine & Chat API (Backend only)** — **kế hoạch** — Hybrid Search RRF (Dense + Sparse), Intent Routing/Condensation qua `gemini-3.5-flash-lite`, SSE streaming chat API kèm trích dẫn trang
 14. ⏳ **Chat Frontend & Citation UI** — **kế hoạch** — giao diện chat ở cột phải `NotebookDetailPage`, streaming câu trả lời, `CitationBadge` click nhảy thẳng trang PDF (`#page=X`)
 15. ⏳ **Quiz & Flashcards Studio** — **kế hoạch** — Native Tool Calling sinh trắc nghiệm/flashcards từ tài liệu đã chọn (`selected_asset_ids`)
@@ -679,13 +685,13 @@ Commit theo Sprint hoặc feature, ví dụ `feat: implement upload module`. Tr�
 
 # 17. Current Status
 
-Current Status: **Sprint 11.5 — Document Conversion & Preview Debt Cleanup** (đang thực hiện)
+Current Status: **Sprint 12 — Ingestion Pipeline (Backend only)** (đang thực hiện)
 
-Đang làm: tích hợp LibreOffice headless vào Dockerfile backend để tự động convert DOCX → PDF khi upload, lưu đường dẫn `converted_pdf_path` trên MinIO, tối ưu logic lấy Presigned URL và mở khóa tính năng Preview cho tài liệu DOCX ở cả Notebook cá nhân và Thư viện công cộng.
+Đang làm: Thiết kế bảng `AssetEmbedding`, `immutable_unaccent()` function và Generated Column `tsv_content` không dấu. Viết log trích xuất text PDF trang-độc-lập qua `pypdfium2` và chunking token, embedding qua Google GenAI SDK `gemini-embedding-001` (768d), cài đặt chỉ mục HNSW/GIN và script test backend.
 
-Last Completed: Sprint 11 — Notebook Detail Page & Document Saving / Asset Upload (quota nguồn = 10, endpoint chi tiết, endpoint liên kết tài liệu, endpoint upload asset xác thực magic bytes + worker xóa ngầm; workspace 2 cột, modal tab kép, click-outside kebab menu, xử lý preview an toàn).
+Last Completed: Sprint 11.5 — Document Conversion & Preview Debt Cleanup (tích hợp LibreOffice headless, `converted_pdf_path`, public MinIO signing client chống lỗi SignatureDoesNotMatch, mở khóa preview DOCX và trạng thái badges).
 
-Next Module: Sprint 12 — Ingestion Pipeline (Backend only).
+Next Module: Sprint 13 — Retrieval Engine & Chat API (Backend only).
 
 Nguyên tắc vận hành từ Sprint 11.5 trở đi: mỗi sprint phải tự kiểm thử độc lập và chạy xanh trước khi mở sprint kế tiếp; các sprint backend (11.5, 12, 13) có script test độc lập, phần giao diện chat tách hẳn sang Sprint 14 và 15.
 

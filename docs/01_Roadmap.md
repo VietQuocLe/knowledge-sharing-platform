@@ -78,13 +78,13 @@ Notebook Detail Page & Document Saving / Asset Upload — ✅ done
 
 Sprint 11.5
 
-Document Conversion & Preview Debt Cleanup (LibreOffice headless DOCX → PDF, `converted_pdf_path`, mở khóa preview DOCX) — 🔄 in progress
+Document Conversion & Preview Debt Cleanup (LibreOffice headless DOCX → PDF, `converted_pdf_path`, mở khóa preview DOCX) — ✅ done
 
 ↓
 
 Sprint 12
 
-Ingestion Pipeline (Backend only) — bảng `AssetEmbedding`, `pypdfium2` page-aware chunking, `gemini-embedding-001` (768d), index HNSW/GIN — ⏳ kế hoạch
+Ingestion Pipeline (Backend only) — bảng `AssetEmbedding`, `pypdfium2` page-aware chunking, `gemini-embedding-001` (768d), index HNSW/GIN — 🔄 in progress
 
 ↓
 

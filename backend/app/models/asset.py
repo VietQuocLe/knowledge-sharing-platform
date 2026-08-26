@@ -3,10 +3,11 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Integer, String, func, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
+from app.models.enums import AssetConversionStatus
 
 if TYPE_CHECKING:
     from app.models.document import Document
@@ -42,6 +43,13 @@ class Asset(Base):
     file_type: Mapped[str] = mapped_column(String(100), nullable=False)
 
     size: Mapped[int] = mapped_column(BigInteger, nullable=False)
+
+    converted_pdf_path: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+
+    conversion_status: Mapped[AssetConversionStatus | None] = mapped_column(
+        SQLEnum(AssetConversionStatus, name="asset_conversion_status"),
+        nullable=True,
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

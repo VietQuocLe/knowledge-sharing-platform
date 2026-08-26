@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     MINIO_CONSOLE_PORT: int
     MINIO_BUCKET_NAME: str = "resources"
     MINIO_SECURE: bool = False
+    MINIO_PUBLIC_ENDPOINT: str | None = None
 
     # Upload System
     MAX_FILE_SIZE_MB: int = 30

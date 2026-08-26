@@ -95,7 +95,7 @@ SEED_DOCUMENTS = [
             }
         ],
     },
-    # ITEC2502 (Cơ sở dữ liệu)
+# ITEC2502 (Cơ sở dữ liệu)
     {
         "subject_code": "ITEC2502",
         "title": "Slide chuẩn hóa cơ sở dữ liệu và đại số quan hệ",
@@ -117,9 +117,9 @@ SEED_DOCUMENTS = [
         "resource_type": ResourceType.REFERENCE,
         "assets": [
             {
-                "file_name": "BTL_ThietKeERD_BenhVien.docx",
-                "file_path": "documents/itec2502/BTL_ThietKeERD_BenhVien.docx",
-                "file_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "file_name": "BTL_ThietKeERD_BenhVien.pdf",
+                "file_path": "documents/itec2502/BTL_ThietKeERD_BenhVien.pdf",
+                "file_type": "application/pdf",
                 "size": 1050000,
             }
         ],
@@ -132,9 +132,9 @@ SEED_DOCUMENTS = [
         "resource_type": ResourceType.REFERENCE,
         "assets": [
             {
-                "file_name": "ThucHanh_C_Tuan1_5.docx",
-                "file_path": "documents/itec1505/ThucHanh_C_Tuan1_5.docx",
-                "file_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "file_name": "ThucHanh_C_Tuan1_5.pdf",
+                "file_path": "documents/itec1505/ThucHanh_C_Tuan1_5.pdf",
+                "file_type": "application/pdf",
                 "size": 950000,
             }
         ],

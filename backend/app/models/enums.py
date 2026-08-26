@@ -31,3 +31,10 @@ class SubjectCategory(str, Enum):
     FOUNDATION = "FOUNDATION"
     SPECIALIZED = "SPECIALIZED"
     ELECTIVE_CAPSTONE = "ELECTIVE_CAPSTONE"
+
+
+class AssetConversionStatus(str, Enum):
+    PENDING = "PENDING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+

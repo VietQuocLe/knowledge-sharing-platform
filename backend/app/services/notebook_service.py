@@ -6,7 +6,7 @@ import logging
 
 from app.models.asset import Asset
 from app.models.document import Document
-from app.models.enums import DocumentStatus
+from app.models.enums import DocumentStatus, AssetConversionStatus
 from app.models.notebook import Notebook, NotebookSavedDocument
 from app.models.subject import Subject
 from app.models.user import User
@@ -200,6 +200,7 @@ def get_notebook_by_id(db: Session, user: User, notebook_id: int) -> dict:
             "file_type": asset.file_type,
             "size": asset.size,
             "created_at": asset.created_at,
+            "conversion_status": asset.conversion_status,
         })
 
     for sd in saved_docs:
@@ -364,6 +365,7 @@ def upload_notebook_asset(
     notebook_id: int,
     file_name: str,
     file_bytes: bytes,
+    background_tasks: BackgroundTasks,
 ) -> Asset:
     # 1. Notebook ownership & existence checks
     notebook = db.execute(select(Notebook).where(Notebook.id == notebook_id)).scalar_one_or_none()
@@ -406,6 +408,9 @@ def upload_notebook_asset(
     )
 
     # 5. Insert Asset database record
+    is_docx = content_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    conversion_status = AssetConversionStatus.PENDING if is_docx else None
+
     asset = Asset(
         notebook_id=notebook_id,
         document_id=None,
@@ -413,10 +418,17 @@ def upload_notebook_asset(
         file_path=object_path,
         file_type=content_type,
         size=len(file_bytes),
+        conversion_status=conversion_status,
+        converted_pdf_path=None,
     )
     db.add(asset)
     db.commit()
     db.refresh(asset)
+
+    if is_docx:
+        from app.services.conversion_service import convert_docx_to_pdf_task
+        background_tasks.add_task(convert_docx_to_pdf_task, asset.id)
+
     return asset
 
 
@@ -499,10 +511,20 @@ def get_notebook_asset_download_url(
             detail="Asset not found in this notebook",
         )
 
+    import os
     from app.services import storage_service
+
+    if asset.converted_pdf_path:
+        object_path = asset.converted_pdf_path
+        base_name, _ = os.path.splitext(asset.file_name)
+        file_name = f"{base_name}.pdf"
+    else:
+        object_path = asset.file_path
+        file_name = asset.file_name
+
     download_url = storage_service.get_presigned_download_url(
-        object_path=asset.file_path,
+        object_path=object_path,
         expires_seconds=PRESIGNED_URL_EXPIRES_SECONDS,
     )
-    return download_url, asset.file_name
+    return download_url, file_name
 

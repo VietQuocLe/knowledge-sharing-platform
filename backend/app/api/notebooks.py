@@ -88,6 +88,7 @@ def remove_saved_document(
 @router.post("/{notebook_id}/assets", response_model=AssetResponse, status_code=status.HTTP_201_CREATED)
 async def upload_asset(
     notebook_id: int,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -99,6 +100,7 @@ async def upload_asset(
         notebook_id,
         file.filename or "unnamed_file",
         file_bytes,
+        background_tasks,
     )
 
 

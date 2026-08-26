@@ -125,15 +125,30 @@ function SourceCard({ source, notebookId, onPreview, onActionSuccess }: SourceCa
         return <File className="h-5 w-5 text-slate-500" />
     }
 
-    const isPreviewable = (fileName: string, fileType?: string) => {
-        const nameLower = fileName.toLowerCase()
-        const typeLower = (fileType || '').toLowerCase()
-        return nameLower.endsWith('.pdf') || typeLower.includes('pdf')
-    }
+    const docxTypes = ['docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const isDocx = docxTypes.some(t =>
+        source.title.toLowerCase().endsWith('.docx') ||
+        (source.file_type || '').toLowerCase().includes(t)
+    );
+    const isPdf = source.title.toLowerCase().endsWith('.pdf') || (source.file_type || '').toLowerCase().includes('pdf');
 
-    const canPreview = isPreviewable(source.title, source.file_type)
+    const isConverting = source.type === 'local' && isDocx && source.conversion_status === 'PENDING';
+    const isFailed = source.type === 'local' && isDocx && source.conversion_status === 'FAILED';
+    const isCompleted = source.type === 'local' && isDocx && source.conversion_status === 'COMPLETED';
+
+    const canPreview = source.type === 'saved'
+        ? isPdf
+        : (isPdf || isCompleted);
 
     const handleTitleClick = () => {
+        if (isConverting) {
+            toast.loading('Tài liệu đang được chuyển đổi sang PDF. Vui lòng đợi trong giây lát!', { id: 'converting', duration: 2000 })
+            return
+        }
+        if (isFailed) {
+            toast.error('Chuyển đổi sang PDF thất bại. Vui lòng tải tệp gốc về để xem.')
+            return
+        }
         if (canPreview) {
             handlePreview()
         } else {
@@ -153,7 +168,11 @@ function SourceCard({ source, notebookId, onPreview, onActionSuccess }: SourceCa
                 <div className="min-w-0 flex-1">
                     <h4
                         onClick={handleTitleClick}
-                        className={`text-xs font-bold text-slate-800 break-all leading-snug line-clamp-2 hover:text-indigo-650 transition ${canPreview ? 'hover:underline cursor-pointer' : 'cursor-default'
+                        className={`text-xs font-bold text-slate-800 break-all leading-snug line-clamp-2 hover:text-indigo-650 transition ${canPreview
+                                ? 'hover:underline cursor-pointer'
+                                : isConverting
+                                    ? 'cursor-wait opacity-80'
+                                    : 'cursor-default'
                             }`}
                         title={source.title}
                     >
@@ -167,6 +186,16 @@ function SourceCard({ source, notebookId, onPreview, onActionSuccess }: SourceCa
                         ) : (
                             <Badge variant="primary" className="text-[9px] px-1.5 py-0 font-bold">
                                 Thư viện
+                            </Badge>
+                        )}
+                        {isConverting && (
+                            <Badge variant="primary" className="text-[9px] px-1.5 py-0 border-indigo-200 bg-indigo-50 text-indigo-700 font-bold animate-pulse">
+                                Đang xử lý...
+                            </Badge>
+                        )}
+                        {isFailed && (
+                            <Badge variant="danger" className="text-[9px] px-1.5 py-0 border-rose-200 bg-rose-50 text-rose-700 font-bold">
+                                Lỗi xử lý PDF
                             </Badge>
                         )}
                         <span className="text-[10px] text-slate-455 font-medium">
@@ -196,11 +225,21 @@ function SourceCard({ source, notebookId, onPreview, onActionSuccess }: SourceCa
 
                 {isMenuOpen && (
                     <div className="absolute right-0 mt-1 w-40 bg-white border border-slate-150 rounded-xl shadow-lg py-1 z-30 font-sans">
-                        {canPreview && (
+                        {isConverting && (
+                            <button
+                                type="button"
+                                disabled
+                                className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-400 bg-slate-50 flex items-center gap-2 cursor-not-allowed opacity-60"
+                            >
+                                <Eye className="h-3.5 w-3.5 text-slate-400" />
+                                Đang xử lý...
+                            </button>
+                        )}
+                        {canPreview && !isConverting && (
                             <button
                                 type="button"
                                 onClick={handlePreview}
-                                className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-650 flex items-center gap-2 transition cursor-pointer"
+                                className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-655 flex items-center gap-2 transition cursor-pointer"
                             >
                                 <Eye className="h-3.5 w-3.5 text-slate-455" />
                                 Xem trước
