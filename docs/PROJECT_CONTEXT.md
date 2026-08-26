@@ -638,6 +638,18 @@ error       # lỗi LLM/DB, frontend hiển thị và dừng stream
 - **Render nội dung:** tích hợp **KaTeX** cho công thức toán và nút copy cho code block.
 - Sprint 14 không đổi backend: mọi hành vi chat đã được Sprint 13 chốt và test độc lập.
 
+## Đặc tả kỹ thuật Sprint 15 — Quiz & Flashcards Studio
+
+Sprint 15 **kế thừa nguyên vẹn RAG Engine của Sprint 13**, không dựng pipeline truy hồi riêng.
+
+- **`QuizService` dùng chung cho 2 luồng kích hoạt:**
+  1. Bấm nút Quick Action trên UI (người dùng chọn số câu, loại artifact).
+  2. Ra lệnh bằng ngôn ngữ tự nhiên trong chat (ví dụ *"Tạo 5 câu trắc nghiệm ôn tập"*).
+  Cả hai đều đi vào cùng một service để tránh hai nhánh logic sinh đề lệch nhau.
+- **Native Tool Calling:** khai báo tool (`generate_quiz`, `generate_flashcards`) trực tiếp bằng Function Calling của Google GenAI SDK — **không dùng LangChain**. LLM tự nhận diện ý định trong câu chat và trả về **schema JSON** (câu hỏi, các lựa chọn, đáp án đúng, giải thích / mặt trước – mặt sau flashcard) để frontend render thành component tương tác thay vì text thô.
+- **Quản lý phạm vi (`selected_asset_ids`):** người dùng tự chọn danh sách tài liệu cụ thể muốn ra đề — khác với chat thường vốn luôn quét toàn bộ nguồn của Notebook. Truy hồi chỉ chạy trên tập Asset đã chọn (vẫn phải `ingestion_status = COMPLETED`), giúp đề bám đúng phạm vi ôn tập và giảm token.
+- **Lưu trữ artifact:** kết quả quiz/flashcard lưu dưới dạng AI artifact gắn với Notebook để mở lại ôn tập, không sinh lại mỗi lần xem.
+
 ## Local-First & Cloud-Ready
 
 Toàn bộ pipeline chạy được hoàn toàn ở local (Docker Compose: PostgreSQL 16 + pgvector, MinIO, backend có LibreOffice headless), chỉ cần một API key Gemini trong `.env`. Khi deploy, đổi các biến môi trường sang dịch vụ cloud tương ứng (Postgres managed, object storage S3-compatible) — không phải sửa code.
@@ -687,12 +699,27 @@ Nguyên tắc vận hành từ Sprint 11.5 trở đi: mỗi sprint phải tự k
 
 # 19. Idea Backlog / Future Considerations
 
-## 19a. Backlog kỹ thuật (đã có từ trước)
+## 19a. Backlog kỹ thuật & Nợ kỹ thuật đang mở
 
+### Hoãn vô thời hạn
+
+- **Deduplication theo SHA-256:** Sprint 12 chỉ tính và lưu `file_hash`, **không** dùng để tái sử dụng embedding của file trùng nội dung. Logic dedup (upload file đã có hash → trỏ sang chunk sẵn có thay vì embed lại) hoãn lại để giữ Sprint 12 gọn và dễ kiểm thử.
+
+### Nợ kỹ thuật tồn đọng từ audit Sprint 7
+
+> Nhóm này **xử lý riêng ở một giai đoạn sau**, cố ý **không gộp vào các sprint RAG (11.5 → 15)** để không làm loãng phạm vi và giữ nguyên khả năng kiểm thử độc lập từng sprint.
+
+- **C6:** xử lý `id` không hợp lệ (route param không phải số / không tồn tại) — hiện chưa trả lỗi nhất quán.
+- **K5 / K7 / E9:** còn `id` hardcode và một số bộ lọc đang thực hiện phía client thay vì đẩy xuống query backend.
+- **H1–H5:** dead code và đoạn logic trùng lặp cần dọn.
+- **Chuẩn hóa i18n EN/VI:** vẫn còn chỗ hiển thị raw enum tiếng Anh xen với label tiếng Việt.
+
+### Dự phòng mở rộng
+
+- Hỗ trợ thêm định dạng **PPTX / EPUB** (LibreOffice headless đã convert được PPTX → PDF nên chi phí mở rộng thấp).
+- **Quản lý chi phí token:** giới hạn token/request, cache câu trả lời và quota theo user/session.
 - Virus scanning và presigned upload/download URL.
-- AI artifact layer (summary, flashcards, mindmap) có thể được lưu thành metadata hoặc Asset mới khi pipeline đã có.
-- Quản lý chi phí API Gemini: giới hạn token/request, cache và quota theo user/session.
-- **Deduplication theo SHA-256:** Sprint 12 chỉ lưu `file_hash`, chưa dùng để tái sử dụng embedding của file trùng nội dung. Logic dedup (upload file đã có hash → trỏ sang chunk sẵn có thay vì embed lại) hoãn sang backlog để giữ Sprint 12 gọn và dễ kiểm thử.
+- AI artifact layer (summary, mindmap) mở rộng từ nền tảng quiz/flashcards của Sprint 15.
 
 ## 19b. Quan sát UI/UX & cấu trúc code (sẽ xử lý ở Sprint 9, sau khi hoàn tất Sprint 8.5)
 
