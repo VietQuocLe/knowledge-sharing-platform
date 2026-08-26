@@ -66,80 +66,7 @@ SEED_USER_PASSWORD = "User12345!"
 SEED_USER_FULL_NAME = "Test User"
 
 SEED_DOCUMENTS = [
-    # MISY2501 (Cấu trúc dữ liệu và thuật giải)
-    {
-        "subject_code": "MISY2501",
-        "title": "Slide bài giảng Cấu trúc dữ liệu và giải thuật (Đại học Khoa học Tự nhiên)",
-        "description": "Bộ bài giảng chi tiết bao gồm danh sách liên kết, ngăn xếp, hàng đợi, cây nhị phân và các giải thuật sắp xếp.",
-        "resource_type": ResourceType.LECTURE,
-        "assets": [
-            {
-                "file_name": "Slide_CTDL_GT.pdf",
-                "file_path": "documents/misy2501/Slide_CTDL_GT.pdf",
-                "file_type": "application/pdf",
-                "size": 2450000,
-            }
-        ],
-    },
-    {
-        "subject_code": "MISY2501",
-        "title": "Đề thi cấu trúc dữ liệu và thuật giải cuối kỳ 2024",
-        "description": "Bộ câu hỏi thi cuối kì kèm đáp án tham khảo dạng viết code và lý thuyết.",
-        "resource_type": ResourceType.EXAM,
-        "assets": [
-            {
-                "file_name": "DeThi_CTDL_CuoiKy_2024.pdf",
-                "file_path": "documents/misy2501/DeThi_CTDL_CuoiKy_2024.pdf",
-                "file_type": "application/pdf",
-                "size": 1820000,
-            }
-        ],
-    },
-# ITEC2502 (Cơ sở dữ liệu)
-    {
-        "subject_code": "ITEC2502",
-        "title": "Slide chuẩn hóa cơ sở dữ liệu và đại số quan hệ",
-        "description": "Bài học về chuẩn hóa cơ sở dữ liệu (1NF-3NF, BCNF) cùng đại số quan hệ toán học.",
-        "resource_type": ResourceType.LECTURE,
-        "assets": [
-            {
-                "file_name": "Slide_ChuanHoaCSDL.pdf",
-                "file_path": "documents/itec2502/Slide_ChuanHoaCSDL.pdf",
-                "file_type": "application/pdf",
-                "size": 3120000,
-            }
-        ],
-    },
-    {
-        "subject_code": "ITEC2502",
-        "title": "Bài tập lớn lập trình thiết kế ERD bệnh viện",
-        "description": "Yêu cầu thiết kế thực thể liên kết ERD và chuyển sang mô hình quan hệ cho bài toán quản lý bệnh viện.",
-        "resource_type": ResourceType.REFERENCE,
-        "assets": [
-            {
-                "file_name": "BTL_ThietKeERD_BenhVien.pdf",
-                "file_path": "documents/itec2502/BTL_ThietKeERD_BenhVien.pdf",
-                "file_type": "application/pdf",
-                "size": 1050000,
-            }
-        ],
-    },
-    # ITEC1505 (Cơ sở lập trình)
-    {
-        "subject_code": "ITEC1505",
-        "title": "Bài tập thực hành tuần 1 - 5 nhập môn lập trình C/C++",
-        "description": "Đề bài tập thực hành nhập môn gồm cấu trúc điều kiện, vòng lặp và xử lý mảng cơ bản.",
-        "resource_type": ResourceType.REFERENCE,
-        "assets": [
-            {
-                "file_name": "ThucHanh_C_Tuan1_5.pdf",
-                "file_path": "documents/itec1505/ThucHanh_C_Tuan1_5.pdf",
-                "file_type": "application/pdf",
-                "size": 950000,
-            }
-        ],
-    },
-    # ITEC1504 (Kỹ thuật lập trình)
+    # ITEC1504 (Kỹ thuật lập trình) - Tài liệu PDF thật
     {
         "subject_code": "ITEC1504",
         "title": "Tài liệu mẫu môn Kỹ thuật lập trình C/C++",
@@ -151,7 +78,7 @@ SEED_DOCUMENTS = [
                 "file_path": "documents/itec1504/ky_thuat_lap_trinh_sample.pdf",
                 "file_type": "application/pdf",
                 "size": 0,
-                "seed_asset_source": "app/seed_assets/ky_thuat_lap_trinh_sample.pdf",
+                "seed_asset_source": "app/seed_assets/KTLT_Chapter1_nDArray.pdf",
             }
         ],
     },
@@ -333,7 +260,7 @@ def seed_documents(db, admin_user: User) -> list[Document]:
     return seeded_documents
 
 
-def seed() -> None:
+def seed(ingest_all: bool = False) -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     
     # 1. MinIO connection check
@@ -364,9 +291,25 @@ def seed() -> None:
         seed_documents(db, admin_user)
         db.commit()
         logger.info("Seed completed successfully.")
+
+        if ingest_all:
+            logger.info("Running embedding ingestion for seeded assets (--ingest flag provided)...")
+            from app.models.asset import Asset
+            from app.services.ingestion_service import ingest_asset
+            stmt = select(Asset)
+            assets = db.execute(stmt).scalars().all()
+            for asset in assets:
+                logger.info(f"Ingesting asset {asset.id} (name: {asset.file_name})")
+                success = ingest_asset(asset.id, db)
+                logger.info(f"Asset {asset.id} ingestion status: {success}")
     finally:
         db.close()
 
 
 if __name__ == "__main__":
-    seed()
+    import argparse
+    parser = argparse.ArgumentParser(description="Seed database and upload assets.")
+    parser.add_argument("--ingest", action="store_true", help="Run embedding ingestion for seeded assets.")
+    args = parser.parse_args()
+    seed(ingest_all=args.ingest)
+

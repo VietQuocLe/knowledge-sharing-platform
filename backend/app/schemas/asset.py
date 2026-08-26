@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict
-from app.models.enums import AssetConversionStatus
+from app.models.enums import AssetConversionStatus, AssetIngestionStatus
 
 
 class AssetBase(BaseModel):
@@ -24,5 +24,15 @@ class AssetResponse(AssetBase):
     notebook_id: int | None = None
     converted_pdf_path: str | None = None
     conversion_status: AssetConversionStatus | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AssetIngestionStatusResponse(BaseModel):
+    asset_id: int
+    file_name: str
+    ingestion_status: AssetIngestionStatus
+    chunk_count: int
+    ingestion_error: str | None = None
 
     model_config = ConfigDict(from_attributes=True)

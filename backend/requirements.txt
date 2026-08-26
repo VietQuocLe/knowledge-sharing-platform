@@ -15,3 +15,7 @@ minio
 pwdlib[argon2]
 pyjwt
 pydantic[email]
+
+google-genai>=0.1.0
+tenacity>=8.2.0
+pypdfium2>=4.30.0

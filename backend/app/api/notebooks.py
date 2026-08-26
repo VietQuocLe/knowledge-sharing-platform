@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.api.auth import get_current_user
 from app.core.database import get_db
 from app.models.user import User
-from app.schemas.asset import AssetResponse
+from app.schemas.asset import AssetResponse, AssetIngestionStatusResponse
 from app.schemas.document import AssetDownloadResponse
 from app.schemas.notebook import (
     NotebookCreate,
@@ -128,5 +128,51 @@ def get_download_url(
         file_name=file_name,
         expires_in_seconds=notebook_service.PRESIGNED_URL_EXPIRES_SECONDS,
     )
+
+
+@router.get("/{notebook_id}/assets/{asset_id}/status", response_model=AssetIngestionStatusResponse)
+def get_asset_ingestion_status(
+    notebook_id: int,
+    asset_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    from app.models.notebook import Notebook
+    from app.models.asset import Asset
+    from fastapi import HTTPException
+    from sqlalchemy import select
+
+    notebook = db.execute(select(Notebook).where(Notebook.id == notebook_id)).scalar_one_or_none()
+    if notebook is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notebook not found",
+        )
+    if notebook.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to access/modify this notebook",
+        )
+
+    asset = db.execute(
+        select(Asset).where(
+            Asset.id == asset_id,
+            Asset.notebook_id == notebook_id,
+        )
+    ).scalar_one_or_none()
+    if asset is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Asset not found in this notebook",
+        )
+
+    return AssetIngestionStatusResponse(
+        asset_id=asset.id,
+        file_name=asset.file_name,
+        ingestion_status=asset.ingestion_status,
+        chunk_count=asset.chunk_count,
+        ingestion_error=asset.ingestion_error,
+    )
+
 
 

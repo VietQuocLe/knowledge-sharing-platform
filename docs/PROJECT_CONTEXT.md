@@ -24,7 +24,7 @@ Theo đúng pattern đã áp dụng thành công ở Sprint 11 (phase backend c�
 
 Current Sprint
 
-> Sprint 12 — Ingestion Pipeline (Backend only)
+> 🔄 Sprint 13 — Retrieval Engine & Chat API (Backend only) — chuẩn bị thực hiện
 
 Overall Progress
 
@@ -42,7 +42,7 @@ Status
 ✅ Sprint 10.5 — Notebook Dashboard Actions (Rename/Delete) — **hoàn thành**
 ✅ Sprint 11 — Notebook Detail Page & Document Saving / Asset Upload — **hoàn thành**
 ✅ Sprint 11.5 — Document Conversion & Preview Debt Cleanup — **hoàn thành**
-🔄 Sprint 12 — Ingestion Pipeline (Backend only) — **đang thực hiện**
+✅ Sprint 12 — Ingestion Pipeline (Backend only) — hoàn thành
 ⏳ Sprint 13 — Retrieval Engine & Chat API (Backend only) — **kế hoạch**
 ⏳ Sprint 14 — Chat Frontend & Citation UI — **kế hoạch**
 ⏳ Sprint 15 — Quiz & Flashcards Studio — **kế hoạch**
@@ -53,14 +53,14 @@ Status
 
 # 3. Current Sprint Goal
 
-**Sprint 12 — Ingestion Pipeline (Backend only) (đang thực hiện):**
-Triển khai trọn vẹn hạ tầng Chunking & Vector Ingestion trên Backend (chưa ghép UI).
+**Sprint 13 — Retrieval Engine & Chat API (Backend only) (chuẩn bị thực hiện):**
+Xây dựng động cơ truy hồi thông tin (Hybrid Search RRF) và API hội thoại cá nhân.
 
 Mục tiêu chi tiết:
-- **Schema & Database:** Thiết kế bảng `AssetEmbedding`, helper `immutable_unaccent()`, Generated Column `tsv_content` không dấu cho Hybrid Search và index HNSW + GIN.
-- **Trích xuất & Chunking:** Dùng `pypdfium2` trích xuất văn bản từ PDF (cả PDF gốc và PDF converted từ DOCX), chunking giới hạn trong phạm vi từng trang (chạy độc lập, không overlap xuyên trang để trích dẫn trang luôn chính xác).
-- **Embedding Service:** Tích hợp trực tiếp Google GenAI SDK (`google-genai`), sử dụng mô hình embedding `gemini-embedding-001` (co ngắn chiều xuống 768d để khớp pgvector).
-- **Chạy nền ngầm:** Chạy Ingestion ngầm thông qua FastAPI `BackgroundTasks` bọc Tenacity Retry, hỗ trợ API endpoint polling để frontend truy vấn trạng thái.
+- **Database & Session:** Thiết kế bảng lưu trữ phiên chat `NotebookChatSession` và tin nhắn `NotebookChatMessage` có CASCADE.
+- **Hybrid Search RRF:** Tích hợp truy hồi kết hợp Dense (pgvector HNSW) và Sparse (GIN tsvector không dấu), xếp hạng bằng Reciprocal Rank Fusion (RRF).
+- **Intent Routing & Condensation:** Tối ưu hóa câu hỏi thông qua lịch sử tin nhắn cùng `gemini-3.5-flash-lite`, trích xuất ý định để bỏ qua RAG khi không cần thiết.
+- **SSE Streaming API:** Phát triển API `/chat` trả dữ liệu dạng Server-Sent Events, hỗ trợ gửi danh sách trích dẫn (`citations`) trước để tối ưu hóa render UI, tự động hủy stream khi client ngắt kết nối.
 
 ## Đặc tả kỹ thuật Sprint 11.5
 
@@ -150,6 +150,13 @@ soffice --headless --norestore --convert-to pdf --outdir <tmpdir> <input.docx>
   - Cho phép các route download/preview tự động ưu tiên PDF phái sinh, giải quyết triệt để lỗi `SignatureDoesNotMatch` của MinIO nhờ dùng một client MinIO public chuyên biệt ký presigned URL trực tiếp.
   - Cập nhật frontend mở khóa xem trước cho định dạng `.docx`, hiển thị huy hiệu dynamic trạng thái xử lý/lỗi và nút "Tải về" file gốc luôn hoạt động.
 
+- **Sprint 12 — Ingestion Pipeline (Backend only):**
+  - Schema & DB: Bổ sung extension `unaccent` và wrapper `immutable_unaccent()`; tạo bảng `asset_embeddings` (`id`, `asset_id` CASCADE, `chunk_index`, `content`, `embedding VECTOR(768)`, `tsv_content` Generated Column TSVECTOR không dấu, `page_number`, `metadata_`); thiết lập index HNSW (`vector_cosine_ops`) và index GIN trên `tsv_content`; cập nhật bảng `assets` với `file_hash`, `ingestion_status`, `ingestion_error`, `chunk_count`.
+  - Ingestion Core: Xây dựng `ingestion_service.py` tích hợp `pypdfium2` trích xuất text độc lập từng trang (page-aware chunking 500-700 tokens, 100 tokens overlap trong cùng trang); Scanned Guard (< 100 ký tự -> `SCANNED_DOCUMENT_UNSUPPORTED`); cơ chế idempotent tự dọn chunk cũ; batch embedding qua Google GenAI SDK (`google-genai`, `gemini-embedding-001`, 768d, `RETRIEVAL_DOCUMENT`) bọc Tenacity retry.
+  - Wiring: Tự động kích hoạt tác vụ ngầm qua FastAPI `BackgroundTasks` khi upload PDF; nối chuỗi đồng bộ sau khi convert DOCX thành công trong `conversion_service.py` (chuyển `FAILED`/`CONVERSION_FAILED` nếu lỗi).
+  - API & Seeding: Cung cấp endpoint polling `GET /notebooks/{notebook_id}/assets/{asset_id}/status` có JWT & Ownership Guard; cập nhật `seed.py` với cờ `--ingest` (mặc định bỏ qua để tiết kiệm quota API).
+  - Kiểm thử: Bộ test độc lập `test_ingestion_pipeline.py` và các script verify chạy xanh 100% trên Docker.
+
 ## Frontend
 
 - **Sprint 6 — FE Foundation:** Vite/React/TS/Tailwind, routing, API client, AuthContext, layout/navigation, login/register, ProtectedRoute/AdminRoute
@@ -215,103 +222,7 @@ soffice --headless --norestore --convert-to pdf --outdir <tmpdir> <input.docx>
 
 # 5. Next Task
 
-## Ngay lúc này: Hoàn tất Sprint 11.5 — Document Conversion & Preview Debt Cleanup
-
-## Kế tiếp: Sprint 12 — Ingestion Pipeline (Backend only)
-
-Sprint 12 **chỉ làm backend**, không đụng tới UI, và phải tự kiểm thử xong bằng script trước khi mở sang Sprint 13.
-
-- **Schema & Database:**
-  - Thiết kế bảng `AssetEmbedding` (`id`, `asset_id` FK CASCADE, `chunk_index`, `content`, `embedding VECTOR(768)`, `tsv_content`, `page_number`, `metadata` JSONB, `created_at`).
-  - Cài đặt extension PostgreSQL `unaccent` và tạo wrapper `immutable_unaccent(text)`.
-  - Cột `tsv_content` dùng **Generated Column** (`GENERATED ALWAYS AS (to_tsvector('simple', immutable_unaccent(content))) STORED`).
-  - Index HNSW (`vector_cosine_ops`) trên `embedding` và GIN trên `tsv_content`.
-  - Bảng `assets` bổ sung: `file_hash`, `ingestion_status` (PENDING/PROCESSING/COMPLETED/FAILED), `ingestion_error`, `chunk_count`.
-- **Trích xuất & Chunking:**
-  - Trích xuất text bằng `pypdfium2` (DOCX đã convert sang PDF từ Sprint 11.5 nên dùng chung 1 pipeline duy nhất, không cần `python-docx`).
-  - Validation guard: tổng ký tự < 100 → đánh dấu `FAILED` với mã `SCANNED_DOCUMENT_UNSUPPORTED`.
-  - **Page-aware chunking:** duyệt từng trang độc lập, KHÔNG overlap xuyên trang (đảm bảo citation click-to-jump đúng 100% trang). Kích thước 500-700 tokens (~1500-2000 ký tự), overlap 100 tokens. Lưu `page_number` ở cột riêng, không chèn vào nội dung vector.
-- **Embedding Service:**
-  - Gọi Native SDK Google GenAI với mô hình **`gemini-embedding-001`** (dùng `output_dimensionality=768` MRL), bọc Tenacity Retry.
-  - Chạy ingestion ngầm qua `BackgroundTasks` với `db_session` độc lập.
-- **Endpoint & Seed:**
-  - Endpoint polling trạng thái: `GET /notebooks/{id}/assets/{asset_id}/status`.
-  - Cập nhật `seed.py` để tự động ingest tài liệu mẫu.
-- **Script kiểm thử độc lập:** Đảm bảo test backend chạy xanh (kiểm tra số chunk, chiều vector 768, trạng thái lifecycle) trước khi làm Sprint 13.
-
-### Đặc tả kỹ thuật Sprint 12
-
-#### 1. Schema `AssetEmbedding`
-
-```sql
-CREATE EXTENSION IF NOT EXISTS vector;
-CREATE EXTENSION IF NOT EXISTS unaccent;
-
-CREATE FUNCTION immutable_unaccent(text) RETURNS text
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-  AS $$ SELECT unaccent('unaccent', $1) $$;
-
-CREATE TABLE asset_embeddings (
-    id           SERIAL PRIMARY KEY,
-    asset_id     INTEGER NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
-    chunk_index  INTEGER NOT NULL,
-    content      TEXT    NOT NULL,
-    embedding    VECTOR(768) NOT NULL,
-    tsv_content  TSVECTOR GENERATED ALWAYS AS
-                 (to_tsvector('simple', immutable_unaccent(content))) STORED,
-    page_number  INTEGER NOT NULL,
-    metadata     JSONB   NOT NULL DEFAULT '{}'::jsonb,
-    created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX ix_asset_embeddings_embedding
-    ON asset_embeddings USING hnsw (embedding vector_cosine_ops);
-CREATE INDEX ix_asset_embeddings_tsv
-    ON asset_embeddings USING gin (tsv_content);
-CREATE UNIQUE INDEX uq_asset_embeddings_chunk
-    ON asset_embeddings (asset_id, chunk_index);
-```
-
-- Gắn theo `asset_id` (không phải `notebook_id`): một Document public được nhiều Notebook lưu chỉ embed **một lần** — xem mục 19c.
-- `ON DELETE CASCADE`: xóa Asset là xóa sạch chunk, không để rác vector.
-- `tsv_content` là Generated Column nên luôn đồng bộ với `content`, không cần trigger; `immutable_unaccent` phải IMMUTABLE mới dùng được trong generated column/index.
-
-#### 2. Bổ sung bảng `assets`
-
-- `file_hash` (SHA-256 nội dung file) — tính và lưu ngay từ Sprint 12 để phục vụ deduplication sau này.
-- `ingestion_status`: `PENDING` → `PROCESSING` → `COMPLETED` / `FAILED`.
-- `ingestion_error`: mã/thông điệp lỗi gần nhất (ví dụ `SCANNED_DOCUMENT_UNSUPPORTED`).
-- `chunk_count`: số chunk đã tạo, dùng cho polling và kiểm thử.
-- **Hoãn sang backlog:** logic deduplication theo SHA-256 (tái sử dụng embedding của file trùng nội dung) chưa làm ở Sprint 12; sprint này chỉ lưu `file_hash`.
-
-#### 3. Trích xuất text
-
-- Dùng `pypdfium2` cho **cả PDF gốc lẫn PDF converted** từ Sprint 11.5 → một pipeline duy nhất, không cần `python-docx`.
-- Đọc theo từng trang, giữ `page_number` thật (1-based) khớp với bản PDF hiển thị trên UI.
-- Guard tài liệu scan ảnh: tổng ký tự trích xuất được `< 100` → `ingestion_status = FAILED`, `ingestion_error = SCANNED_DOCUMENT_UNSUPPORTED` (không làm OCR trong phạm vi đồ án).
-
-#### 4. Page-aware chunking
-
-- Cắt chunk **trong phạm vi từng trang**, không bao giờ vắt qua ranh giới trang.
-- Kích thước 500–700 tokens (~1500–2000 ký tự), overlap 100 tokens và overlap cũng chỉ nằm trong cùng một trang.
-- `page_number` lưu ở cột riêng, **không chèn** vào text đem đi embedding để tránh nhiễu vector.
-- Đánh đổi: mất một chút ngữ cảnh ở ranh giới trang, đổi lại citation click-to-jump (`#page=X`) luôn đúng trang.
-
-#### 5. Embedding service
-
-- Native SDK `google-genai`, model `gemini-embedding-001` với `output_dimensionality=768` (MRL) — khớp `VECTOR(768)`.
-- Gọi theo batch, bọc **Tenacity Retry** (exponential backoff) cho lỗi mạng/rate-limit.
-- `task_type` phân biệt `RETRIEVAL_DOCUMENT` khi ingest và `RETRIEVAL_QUERY` khi truy vấn (Sprint 13).
-
-#### 6. Chạy nền & lifecycle
-
-- Ingestion chạy qua `BackgroundTasks` với **`db_session` độc lập** (không tái dùng session của request đã đóng).
-- Ghi trạng thái từng bước; re-ingest xóa chunk cũ theo `asset_id` rồi tạo lại để giữ tính idempotent.
-
-#### 7. Endpoint & Seed
-
-- `GET /notebooks/{id}/assets/{asset_id}/status` — polling trả `ingestion_status`, `chunk_count`, `ingestion_error`.
-- Cập nhật `seed.py` để tự động ingest tài liệu mẫu, phục vụ demo và test Sprint 13.
+## Ngay lúc này: Sprint 13 — Retrieval Engine & Chat API (Backend only)
 
 ---
 
@@ -366,7 +277,7 @@ knowledge-sharing-platform/
 │   │   │              # document, notebook, asset
 │   │   ├── schemas/   # auth, department, major, subject, document, asset, notebook
 │   │   ├── services/  # auth, department, major, subject, document, asset,
-│   │   │              # storage, startup, notebook_service
+│   │   │              # storage, startup, notebook_service, conversion_service
 │   │   ├── main.py, seed.py
 │   ├── alembic/
 │   ├── Dockerfile, requirements.txt, .env.example
@@ -470,6 +381,7 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 - ORM: SQLAlchemy 2.0, không dùng SQLModel.
 - Database: PostgreSQL 16; metadata tài liệu dùng JSONB.
 - Storage: MinIO; upload qua backend proxy, download qua presigned URL (15 phút).
+- Dual MinIO Client: Tách biệt client gọi nội bộ Docker (MINIO_ENDPOINT=minio:9000) để upload/download ngầm và client ký Presigned URL (MINIO_PUBLIC_ENDPOINT=localhost:9000) để chữ ký HMAC khớp với Host của trình duyệt bên ngoài.
 - Migration runtime hiện dùng `Base.metadata.create_all()`; Alembic scaffold có mặt và sẽ được dùng thật từ Sprint 12 (tạo extension, generated column, index vector).
 - Primary key: integer.
 - API chưa versioned (`/api/v1` chưa có).
@@ -524,7 +436,7 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 10.5. ✅ **Notebook Dashboard Actions (Rename/Delete)** — **hoàn thành**
 11. ✅ **Notebook Detail Page & Document Saving / Asset Upload** — **hoàn thành**
 11.5. ✅ **Document Conversion & Preview Debt Cleanup** — **hoàn thành** — chuyển đổi DOCX → PDF bằng LibreOffice headless, `converted_pdf_path`, mở khóa preview DOCX
-12. 🔄 **Ingestion Pipeline (Backend only)** — **đang thực hiện** — bảng `AssetEmbedding`, `pypdfium2` page-aware chunking, `gemini-embedding-001` (768d), index HNSW/GIN index, generated `tsv_content`
+12. ✅ **Ingestion Pipeline (Backend only)** — **hoàn thành**
 13. ⏳ **Retrieval Engine & Chat API (Backend only)** — **kế hoạch** — Hybrid Search RRF (Dense + Sparse), Intent Routing/Condensation qua `gemini-3.5-flash-lite`, SSE streaming chat API kèm trích dẫn trang
 14. ⏳ **Chat Frontend & Citation UI** — **kế hoạch** — giao diện chat ở cột phải `NotebookDetailPage`, streaming câu trả lời, `CitationBadge` click nhảy thẳng trang PDF (`#page=X`)
 15. ⏳ **Quiz & Flashcards Studio** — **kế hoạch** — Native Tool Calling sinh trắc nghiệm/flashcards từ tài liệu đã chọn (`selected_asset_ids`)
@@ -685,11 +597,9 @@ Commit theo Sprint hoặc feature, ví dụ `feat: implement upload module`. Tr�
 
 # 17. Current Status
 
-Current Status: **Sprint 12 — Ingestion Pipeline (Backend only)** (đang thực hiện)
+Current Status: **Sprint 13 — Retrieval Engine & Chat API (Backend only)** (chuẩn bị thực hiện)
 
-Đang làm: Thiết kế bảng `AssetEmbedding`, `immutable_unaccent()` function và Generated Column `tsv_content` không dấu. Viết log trích xuất text PDF trang-độc-lập qua `pypdfium2` và chunking token, embedding qua Google GenAI SDK `gemini-embedding-001` (768d), cài đặt chỉ mục HNSW/GIN và script test backend.
-
-Last Completed: Sprint 11.5 — Document Conversion & Preview Debt Cleanup (tích hợp LibreOffice headless, `converted_pdf_path`, public MinIO signing client chống lỗi SignatureDoesNotMatch, mở khóa preview DOCX và trạng thái badges).
+Last Completed: Sprint 12 — Ingestion Pipeline (Backend only).
 
 Next Module: Sprint 13 — Retrieval Engine & Chat API (Backend only).
 

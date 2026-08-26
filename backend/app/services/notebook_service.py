@@ -428,6 +428,9 @@ def upload_notebook_asset(
     if is_docx:
         from app.services.conversion_service import convert_docx_to_pdf_task
         background_tasks.add_task(convert_docx_to_pdf_task, asset.id)
+    else:
+        from app.services.ingestion_service import ingest_asset_background_task
+        background_tasks.add_task(ingest_asset_background_task, asset.id)
 
     return asset
 

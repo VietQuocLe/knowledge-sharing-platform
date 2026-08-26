@@ -6,6 +6,7 @@ from .subject import Subject
 from .document import Document
 from .notebook import Notebook, NotebookSavedDocument
 from .asset import Asset
+from .asset_embedding import AssetEmbedding
 
 __all__ = [
     "Base",
@@ -17,4 +18,6 @@ __all__ = [
     "Notebook",
     "NotebookSavedDocument",
     "Asset",
+    "AssetEmbedding",
 ]
+

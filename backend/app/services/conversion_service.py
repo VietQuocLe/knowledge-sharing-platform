@@ -129,6 +129,14 @@ def convert_docx_to_pdf_task(asset_id: int) -> None:
             db.commit()
             logger.info(f"Asset {asset_id} conversion completed successfully. Converted PDF path: {derived_key}")
 
+            # Trigger ingestion directly in the same session
+            try:
+                from app.services.ingestion_service import ingest_asset
+                logger.info(f"Triggering direct ingestion for conversion-completed asset {asset_id}...")
+                ingest_asset(asset_id, db)
+            except Exception as e:
+                logger.exception(f"Unexpected error when triggers ingestion for asset {asset_id}: {e}")
+
     except Exception as e:
         logger.exception(f"Unexpected error during background conversion of asset {asset_id}: {e}")
         try:
@@ -141,4 +149,16 @@ def convert_docx_to_pdf_task(asset_id: int) -> None:
         except Exception as db_err:
             logger.error(f"Failed to set status to FAILED in DB after unexpected exception: {db_err}")
     finally:
+        # Check if asset conversion failed, update ingestion status to FAILED
+        try:
+            asset = db.query(Asset).filter(Asset.id == asset_id).first()
+            if asset and asset.conversion_status == AssetConversionStatus.FAILED:
+                from app.models.enums import AssetIngestionStatus
+                if asset.ingestion_status != AssetIngestionStatus.FAILED or asset.ingestion_error != "CONVERSION_FAILED":
+                    asset.ingestion_status = AssetIngestionStatus.FAILED
+                    asset.ingestion_error = "CONVERSION_FAILED"
+                    db.commit()
+                    logger.info(f"Asset {asset_id} ingestion marked as FAILED due to conversion failure.")
+        except Exception as e:
+            logger.error(f"Error setting ingestion failure metadata for asset {asset_id}: {e}")
         db.close()

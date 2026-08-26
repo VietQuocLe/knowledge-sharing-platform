@@ -74,3 +74,14 @@ def get_presigned_download_url(*, object_path: str, expires_seconds: int = 900) 
         object_name=object_path,
         expires=timedelta(seconds=expires_seconds),
     )
+
+
+def download_object(object_path: str) -> bytes:
+    ensure_bucket()
+    client = get_minio_client()
+    response = client.get_object(settings.MINIO_BUCKET_NAME, object_path)
+    try:
+        return response.read()
+    finally:
+        response.close()
+        response.release_conn()
