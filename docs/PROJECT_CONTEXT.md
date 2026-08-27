@@ -24,11 +24,11 @@ Theo đúng pattern đã áp dụng thành công ở Sprint 11 (phase backend c�
 
 Current Sprint
 
-> 🔄 Sprint 15 — Quiz & Flashcards Studio — chuẩn bị lên kế hoạch
+> 🔄 Sprint 16 — Quiz Studio (Frontend) — kế hoạch
 
 Overall Progress
 
-98%
+99%
 
 Status
 
@@ -45,22 +45,22 @@ Status
 ✅ Sprint 12 — Ingestion Pipeline (Backend only) — hoàn thành
 ✅ Sprint 13 — Retrieval Engine & Chat API (Backend only) — **hoàn thành**
 ✅ Sprint 14 — Chat Frontend & Citation UI — **hoàn thành**
-🔄 Sprint 15 — Quiz & Flashcards Studio — **kế hoạch**
-⏳ Sprint 16 — Testing — **kế hoạch**
-⏳ Sprint 17 — Deployment & Optimization — **kế hoạch**
+✅ Sprint 15 — Quiz Studio (Backend) — **hoàn thành**
+🔄 Sprint 16 — Quiz Studio (Frontend) — **kế hoạch**
+⏳ Sprint 17 — Testing — **kế hoạch**
+⏳ Sprint 18 — Deployment & Optimization — **kế hoạch**
 
 ---
 
 # 3. Current Sprint Goal
 
-**Sprint 15 — Quiz & Flashcards Studio (Chuẩn bị lên kế hoạch):**
-Phát triển hệ thống ôn tập kiến thức thông minh bằng việc tự động trích xuất các bộ câu hỏi trắc nghiệm (Quiz) và thẻ học nhớ (Flashcards) từ tài liệu trực thuộc Sổ tay thông qua Google GenAI Native Tool Calling (Function Calling).
+**Sprint 16 — Quiz Studio (Frontend) (Kế hoạch):**
+Xây dựng giao diện chơi trắc nghiệm và quản lý AI artifacts trực quan cho người dùng ngày trên Sổ tay cá nhân.
 
 Mục tiêu chi tiết:
-- **Quiz & Flashcards Service:** Xây dựng backend core API tạo các artifacts học tập cho cả trigger trực tiếp trên giao diện và ra lệnh thoại thông qua chat box.
-- **Native SDK Function Calling:** Tận dụng Gemini capabilities sinh cấu trúc đề thi chính xác dạng JSON schema, tối giản hóa việc kết xuất trung gian.
-- **Scope Restriction:** Giới hạn dữ liệu học theo danh sách tệp nguồn chọn lọc (`selected_asset_ids`) thay vì toàn bộ notebook.
-- **Artifact Manager UI:** Thiết kế bảng xem và chơi slide trắc nghiệm/học thẻ nhớ lưu trực tiếp trên notebook, tối ưu hóa các lượt mở xem và luyện tập lại.
+- **Data Hook Layer:** Triển khai api.ts, queryKeys và hooks: `useArtifacts`, `useArtifactDetail`, `useGenerateQuiz`, `useDeleteArtifact`.
+- **UI Management Panels:** NotebookCreationsHub.tsx, ArtifactCard.tsx, GenerateArtifactModal.tsx (chặn checkbox chọn tài liệu chưa COMPLETED).
+- **Interactive Quiz Runner:** QuizHeader, QuizQuestionItem hiển thị đáp án tức thì (instant feedback) kèm nút Reset để thi lại, tích hợp activeArtifactId.
 
 ## Đặc tả kỹ thuật Sprint 11.5
 
@@ -166,6 +166,22 @@ soffice --headless --norestore --convert-to pdf --outdir <tmpdir> <input.docx>
   - **Backend Bug Fixes (ngoài phạm vi FE, do người sử dụng yêu cầu khi test Phase 2, không phải agent tự mở rộng):**
     - `notebook_chat_service.py`: Loại bỏ hardcode `needs_rag=True` ở lượt chat đầu tiên, thay thế bằng lời gọi đánh giá thực tế từ Gemini và fallback kiểm soát số lượng từ (gửi ≤3 từ mặc định `needs_rag = False`).
     - `ingestion_service.py`: Tăng thời gian cooldown của decorator retry `wait_exponential(multiplier=2, min=4, max=50)` giúp chịu được khoảng thời gian cooldown 42 giây khi gặp giới hạn Gemini 429. Nâng kích số batch từ 15 lên 30 kèm nhịp nghỉ `sleep(1)` giữa các batch, đồng thời thực thi truy vấn lại đối tượng `Asset` sau khi gọi rollback để tránh phát sinh lỗi `ObjectDeletedError`.
+- **Sprint 15 — Quiz Studio (Backend) — hoàn thành:**
+  - **Data Model**: Thêm model `NotebookArtifact` (bảng `notebook_artifacts`, denormalize `user_id` tăng hiệu năng truy vấn phân quyền, khóa ngoại CASCADE với `Notebook`), enum `ArtifactType` (QUIZ, FLASHCARD, SUMMARY) và cấu hình mapping alias an toàn `metadata_` -> `metadata`.
+  - **Pydantic Schemas**: Thiết kế các schema `QuizOption`, `QuizQuestion` (kèm validator `@model_validator` loại bỏ options trùng key A-D), `QuizContentPayload`, `QuizGenerateRequest`, `ArtifactSummaryResponse` (computed `total_items` từ metadata, tránh lazy load) và `ArtifactDetailResponse`.
+  - **Validation Pipeline 4 lớp**: Ownership Guard (kiểm quyền Notebook/User) → Cooldown Guard 15s (tránh nhấn đúp API) → Quota Guard 20 artifacts (hạn mức Sổ tay) → All-or-Nothing Asset Completed Check (chỉ sinh khi tài liệu đã thuộc Sổ tay và ingest COMPLETED).
+  - **Linear Space Sampling & Context Extraction**:
+    - Query JOIN tối ưu giữa `AssetEmbedding` và `Asset` để gom text chunks trong một truy vấn duy nhất.
+    - Thuật toán *Linear Space Sampling* tối giản budget 30 chunks phân phối đều trên số tài liệu, bảo toàn chunk đầu và chunk cuối.
+    - Định dạng prompt context chuẩn hóa: `[Tài liệu: {file_name} - Trang {page_number}]`.
+  - **Core GenAI Structured Output**:
+    - Xây dựng pure function `_call_gemini_with_retry` bọc Tenacity exponential retry (`stop_after_attempt(3)`, wait `2-10s`).
+    - Tích hợp model `gemini-3.1-flash-lite`, truyền `response_schema=QuizContentPayload` định dạng JSON.
+    - Soạn System Instructions chuẩn Bloom (30% hiểu/nhận biết, 70% vận dụng/suy luận logic) và ràng buộc chống bịa đặt dữ liệu (anti-hallucination).
+  - **API Endpoints & I/O Optimization**:
+    - Cấp 4 route CRUD/generate artifacts.
+    - Sử dụng `defer(NotebookArtifact.content)` và before validator trong Pydantic schema giải quyết triệt để lỗi xung đột thuộc tính `Base.metadata` của SQLAlchemy, đồng thời ngăn chặn lazy load dữ liệu JSONB lớn không mong muốn.
+  - **Kiểm thử**: Viết `backend/tests/test_quiz_generation.py` phủ unit test sampling, Pydantic validator và integration test Mock Gemini API thành công 100%.
 
 
 ## Frontend
@@ -240,7 +256,7 @@ soffice --headless --norestore --convert-to pdf --outdir <tmpdir> <input.docx>
 
 # 5. Next Task
 
-## Ngay lúc này: Sprint 15 — Quiz & Flashcards Studio
+## Ngay lúc này: Sprint 16 — Quiz Studio (Frontend)
 
 ---
 
@@ -263,7 +279,7 @@ soffice --headless --norestore --convert-to pdf --outdir <tmpdir> <input.docx>
 
 - **SDK:** Native SDK Google GenAI (`google-genai`) — gọi thẳng API, **không dùng LangChain** và **không dùng Sentence Transformers**. Lý do: tránh lớp abstraction thừa, dễ kiểm soát prompt/token/chi phí, ít dependency phải bảo trì cho đồ án cá nhân.
 - **Embedding model:** `gemini-embedding-001` với `output_dimensionality=768` (Matryoshka Representation Learning) — khớp đúng kiểu cột `VECTOR(768)` trong PostgreSQL.
-- **LLM Chat model:** `gemini-3.5-flash-lite` hoặc `gemini-3.1-flash-lite` (chọn theo hạn mức free-tier và độ trễ thực tế) cho chat RAG, intent routing / query condensation và Native Tool Calling sinh quiz/flashcards.
+- **LLM Chat model:** `gemini-3.5-flash-lite` hoặc `gemini-3.1-flash-lite` (chọn theo hạn mức free-tier và độ trễ thực tế) cho chat RAG, intent routing / query condensation và Native Structured Output (response_schema) sinh quiz.
 - **Resilience:** Tenacity Retry (exponential backoff) bọc mọi lời gọi embedding/LLM.
 
 ## Document Processing
@@ -289,14 +305,15 @@ soffice --headless --norestore --convert-to pdf --outdir <tmpdir> <input.docx>
 knowledge-sharing-platform/
 ├── backend/
 │   ├── app/
-│   │   ├── api/       # health, auth, config, departments, majors, subjects, documents, notebooks
+│   │   ├── api/       # health, auth, config, departments, majors, subjects, documents, notebooks (mounted artifacts endpoints)
 │   │   ├── core/      # config, database, security
 │   │   ├── models/    # base, enums, user, department, major, subject,
-│   │   │              # document, notebook, asset
-│   │   ├── schemas/   # auth, department, major, subject, document, asset, notebook
+│   │   │              # document, notebook, asset, artifact
+│   │   ├── schemas/   # auth, department, major, subject, document, asset, notebook, artifact
 │   │   ├── services/  # auth, department, major, subject, document, asset,
-│   │   │              # storage, startup, notebook_service, conversion_service
+│   │   │              # storage, startup, notebook_service, conversion_service, artifact_service, quiz_service
 │   │   ├── main.py, seed.py
+│   │   ├── tests/     # test_quiz_generation.py, test_notebook_artifact.py, etc.
 │   ├── alembic/
 │   ├── Dockerfile, requirements.txt, .env.example
 ├── frontend/src/
@@ -352,7 +369,7 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 - Không có luồng duyệt (`PENDING_REVIEW`) cho đến khi nhánh Admin được mở lại.
 - Download file qua presigned URL MinIO (15 phút) thay vì backend proxy — không cần JWT.
 
-### Current API endpoints (Sprint 10)
+### Current API endpoints (Sprint 15)
 
 - `GET /health`
 - `POST /auth/register`, `POST /auth/login`, `GET /auth/me`
@@ -373,6 +390,16 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 - `POST /notebooks/{notebook_id}/assets` (JWT protected)
 - `DELETE /notebooks/{notebook_id}/assets/{asset_id}` (JWT protected)
 - `GET /notebooks/{notebook_id}/assets/{asset_id}/download` (JWT protected)
+- `POST /notebooks/{notebook_id}/sessions` (JWT protected)
+- `GET /notebooks/{notebook_id}/sessions` (JWT protected)
+- `PATCH /notebooks/{notebook_id}/sessions/{session_id}` (JWT protected)
+- `DELETE /notebooks/{notebook_id}/sessions/{session_id}` (JWT protected)
+- `GET /notebooks/{notebook_id}/sessions/{session_id}/messages` (JWT protected)
+- `POST /notebooks/{notebook_id}/sessions/{session_id}/chat` (JWT protected, SSE stream)
+- `POST /notebooks/{notebook_id}/artifacts/generate` (JWT protected)
+- `GET /notebooks/{notebook_id}/artifacts` (JWT protected)
+- `GET /notebooks/{notebook_id}/artifacts/{artifact_id}` (JWT protected)
+- `DELETE /notebooks/{notebook_id}/artifacts/{artifact_id}` (JWT protected)
 
 ### Frontend routes (Sprint 10)
 
@@ -400,7 +427,7 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 - Database: PostgreSQL 16; metadata tài liệu dùng JSONB.
 - Storage: MinIO; upload qua backend proxy, download qua presigned URL (15 phút).
 - Dual MinIO Client: Tách biệt client gọi nội bộ Docker (MINIO_ENDPOINT=minio:9000) để upload/download ngầm và client ký Presigned URL (MINIO_PUBLIC_ENDPOINT=localhost:9000) để chữ ký HMAC khớp với Host của trình duyệt bên ngoài.
-- Migration runtime hiện dùng `Base.metadata.create_all()`; Alembic scaffold có mặt và sẽ được dùng thật từ Sprint 12 (tạo extension, generated column, index vector).
+- Migration runtime dùng `Base.metadata.create_all()` xuyên suốt dự án; Alembic scaffold có mặt trong repo nhưng không được sử dụng, quyết định hoãn vô thời hạn (xác nhận lại ở Sprint 15/16).
 - Primary key: integer.
 - API chưa versioned (`/api/v1` chưa có).
 - JWT là single access token HS256, expiry mặc định 24 giờ; chưa có refresh token.
@@ -456,12 +483,13 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 11.5. ✅ **Document Conversion & Preview Debt Cleanup** — **hoàn thành** — chuyển đổi DOCX → PDF bằng LibreOffice headless, `converted_pdf_path`, mở khóa preview DOCX
 12. ✅ **Ingestion Pipeline (Backend only)** — **hoàn thành**
 13. ✅ **Retrieval Engine & Chat API (Backend only)** — **hoàn thành** — Hybrid Search RRF (Dense + Sparse), Intent Routing/Condensation qua `gemini-3.5-flash-lite`, SSE streaming chat API kèm trích dẫn trang
-14. ⏳ **Chat Frontend & Citation UI** — **kế hoạch** — giao diện chat ở cột phải `NotebookDetailPage`, streaming câu trả lời, `CitationBadge` click nhảy thẳng trang PDF (`#page=X`)
-15. ⏳ **Quiz & Flashcards Studio** — **kế hoạch** — Native Tool Calling sinh trắc nghiệm/flashcards từ tài liệu đã chọn (`selected_asset_ids`)
-16. ⏳ **Testing** — **kế hoạch** — unit/integration test backend, test luồng chính frontend, hoàn thiện seed/fixture cho demo
-17. ⏳ **Deployment & Optimization** — **kế hoạch** — Docker hóa production, chuyển Cloud (Vercel/Render/Supabase/R2) qua `.env`, tối ưu chi phí token
+14. ✅ **Chat Frontend & Citation UI** — **hoàn thành** — giao diện chat ở cột phải `NotebookDetailPage`, streaming câu trả lời, `CitationBadge` click nhảy thẳng trang PDF (`#page=X`)
+15. ✅ **Quiz Studio (Backend)** — **hoàn thành** — thiết kế model NotebookArtifact, uniform step sampling, Bloom instruction, Google GenAI SDK sinh JSON trích xuất từ `selected_asset_ids`
+16. ⏳ **Quiz Studio (Frontend)** — **kế hoạch** — api.ts, queryKeys, useArtifacts hooks, creations panel/modal, Quiz Runner interactive interface
+17. ⏳ **Testing** — **kế hoạch** — unit/integration test backend, test luồng chính frontend, hoàn thiện seed/fixture cho demo
+18. ⏳ **Deployment & Optimization** — **kế hoạch** — Docker hóa production, chuyển Cloud (Vercel/Render/Supabase/R2) qua `.env`, tối ưu chi phí token
 
-> **Lý do tách sprint AI/RAG:** mỗi sprint từ 11.5 đến 17 phải tự kiểm thử độc lập (backend có script test riêng chạy xanh) trước khi bắt đầu sprint kế tiếp — đúng pattern đã áp dụng ở Sprint 11. Việc này tránh gom nhiều tầng vào một sprint gây quá tải, khó debug và khó rollback từng phần.
+> **Lý do tách sprint AI/RAG:** mỗi sprint từ 11.5 đến 18 phải tự kiểm thử độc lập (backend có script test riêng chạy xanh) trước khi bắt đầu sprint kế tiếp — đúng pattern đã áp dụng ở Sprint 11. Việc này tránh gom nhiều tầng vào một sprint gây quá tải, khó debug và khó rollback từng phần.
 
 ---
 
@@ -478,7 +506,7 @@ Upload (PDF/DOCX)
   → [Sprint 13] Hybrid Search RRF: Dense HNSW + Sparse GIN
   → [Sprint 13] gemini-3.5-flash-lite: intent routing / condensation + trả lời kèm citation (SSE streaming)
   → [Sprint 14] Chat UI + CitationBadge (#page=X)
-  → [Sprint 15] Native Tool Calling: quiz & flashcards
+  → [Sprint 15] Native Structured Output: sinh trắc nghiệm (NotebookArtifact QUIZ)
 ```
 
 ## Tầng lưu trữ vector
@@ -517,7 +545,7 @@ Bảng `assets` bổ sung: `converted_pdf_path` (Sprint 11.5), `file_hash`, `ing
 
 - Intent routing / query condensation bằng `gemini-3.1-flash-lite` để rút gọn câu hỏi theo lịch sử hội thoại trước khi truy hồi.
 - Trả lời dạng SSE streaming, kèm trích dẫn nguồn (tên tài liệu + số trang) để frontend render `CitationBadge`.
-- Quiz và flashcards dùng Native Tool Calling trên tập `selected_asset_ids` do người dùng chọn (Sprint 15).
+- Quiz và flashcards dùng Native Structured Output trên tập `selected_asset_ids` do người dùng chọn (Sprint 15).
 
 ## Đặc tả kỹ thuật Sprint 13 — Retrieval Engine & Chat API (Backend only)
 
@@ -608,17 +636,77 @@ Khi kết nối vào endpoint `/chat`, server trả dữ liệu stream dưới �
 - **Render nội dung:** tích hợp **KaTeX** cho công thức toán và nút copy cho code block.
 - Sprint 14 không đổi backend: mọi hành vi chat đã được Sprint 13 chốt và test độc lập.
 
-## Đặc tả kỹ thuật Sprint 15 — Quiz & Flashcards Studio
+## Đặc tả kỹ thuật Sprint 15 — Quiz Studio (Backend)
 
-Sprint 15 **kế thừa nguyên vẹn RAG Engine của Sprint 13**, không dựng pipeline truy hồi riêng.
+Sprint 15 tập trung phát triển phần Core logic và API cho tính năng sinh câu hỏi trắc nghiệm (Quiz) từ tài liệu trong Sổ tay:
 
-- **`QuizService` dùng chung cho 2 luồng kích hoạt:**
-  1. Bấm nút Quick Action trên UI (người dùng chọn số câu, loại artifact).
-  2. Ra lệnh bằng ngôn ngữ tự nhiên trong chat (ví dụ *"Tạo 5 câu trắc nghiệm ôn tập"*).
-  Cả hai đều đi vào cùng một service để tránh hai nhánh logic sinh đề lệch nhau.
-- **Native Tool Calling:** khai báo tool (`generate_quiz`, `generate_flashcards`) trực tiếp bằng Function Calling của Google GenAI SDK — **không dùng LangChain**. LLM tự nhận diện ý định trong câu chat và trả về **schema JSON** (câu hỏi, các lựa chọn, đáp án đúng, giải thích / mặt trước – mặt sau flashcard) để frontend render thành component tương tác thay vì text thô.
-- **Quản lý phạm vi (`selected_asset_ids`):** người dùng tự chọn danh sách tài liệu cụ thể muốn ra đề — khác với chat thường vốn luôn quét toàn bộ nguồn của Notebook. Truy hồi chỉ chạy trên tập Asset đã chọn (vẫn phải `ingestion_status = COMPLETED`), giúp đề bám đúng phạm vi ôn tập và giảm token.
-- **Lưu trữ artifact:** kết quả quiz/flashcard lưu dưới dạng AI artifact gắn với Notebook để mở lại ôn tập, không sinh lại mỗi lần xem.
+### 1. Cơ sở dữ liệu & Model
+- **Model `NotebookArtifact`**: Bảng dữ liệu tự sinh qua `create_all()` khi chạy app, **không dùng Alembic** ở sprint này.
+- **Fields**:
+  - `id`: integer primary key.
+  - `notebook_id`: foreign key liên kết với Notebook (CASCADE).
+  - `artifact_type`: enum `ArtifactType` gồm 3 giá trị `QUIZ`, `FLASHCARD`, `SUMMARY` (thực tế code backend chỉ support sinh `QUIZ`).
+  - `content`: kiểu dữ liệu JSONB lưu trữ cấu trúc đề quiz.
+  - `created_at`, `updated_at`.
+- **Computed field**: `total_items` trong schema Pydantic là trường tính toán từ số phần tử của câu hỏi `len(content["questions"])`, **không** lưu thành cột trong Database.
+
+### 2. API Endpoints
+Cung cấp 4 API endpoints được bảo vệ bởi JWT (validate ownership và quyền sở hữu Notebook):
+- `POST /notebooks/{notebook_id}/artifacts/generate`: Nhận request chứa `selected_asset_ids` (phải thuộc Notebook đó) và `artifact_type` (chỉ nhận `QUIZ`), trả về thông tin artifact vừa được sinh.
+- `GET /notebooks/{notebook_id}/artifacts/`: Liệt kê các artifacts của Notebook.
+- `GET /notebooks/{notebook_id}/artifacts/{artifact_id}`: Xem chi tiết một artifact.
+- `DELETE /notebooks/{notebook_id}/artifacts/{artifact_id}`: Xóa artifact khỏi Notebook.
+
+### 3. Quy trình thực hiện & Validation (Phase 1 & Phase 2)
+- **Phase 1: Stub/Mock Generator & Validation**
+  - Validation:
+    - User sở hữu notebook (`Notebook.owner_id == current_user.id`).
+    - Tất cả tài liệu chọn phải thuộc notebook. `Asset` của `selected_asset_ids` phải có `ingestion_status == 'COMPLETED'`.
+    - Quota check: Giới hạn `MAX_ARTIFACTS_PER_NOTEBOOK = 20` (nếu vượt quá trả lỗi HTTP 400).
+    - Rate limit: Cooldown 15 giây giữa hai lần generate của cùng một user (HTTP 429 nếu vi phạm).
+  - Môi trường thử nghiệm: Endpoint generate sẽ trả dữ liệu trắc nghiệm giả lập (mock/stub) để kiểm thử đầy đủ các nhánh lỗi và logic nghiệp vụ mà không tốn quota/chi phí AI thực tế.
+- **Phase 2: RAG Quiz Generation thật**
+  - **Multi-Asset Uniform Step Sampling**:
+    - Ngân sách chunk tối đa là 30 chunks chia đều cho số lượng tài liệu (`selected_asset_ids`) được chọn.
+    - Đối với mỗi tài liệu, nếu số chunk thực tế nhỏ hơn ngân sách được phân bổ thì lấy toàn bộ (không sampling).
+    - Ngược lại, xác định bước nhảy `step = total_chunks / budget` (làm tròn hoặc float phù hợp) để lấy các chunks trải đều theo thứ tự trang nhằm phủ rộng nội dung văn bản.
+  - **Prompting & Bloom's Taxonomy Guide**:
+    - Sử dụng `system_instruction` có cấu trúc cố định thiết lập câu hỏi: khoảng 30% câu hỏi ở mức Nhận biết (khái niệm, định nghĩa cơ bản) và 70% câu hỏi ở mức Thông hiểu/Suy luận.
+    - Metodo: **Không** sử dụng trường `difficulty` (độ khó) trong request, schema hay API/UI.
+  - **Gemini Integration**:
+    - Gọi model `gemini-3.1-flash-lite` thông qua Google GenAI SDK. Tái sử dụng client và decorator tenacity retry đã cài đặt sẵn ở Sprint 12-13.
+    - Cấu hình Native Structured Output định nghĩa schema JSON trả về (questions, options, correct_answer, explanation) để đảm bảo kết quả sinh ra khớp cấu trúc lưu trữ và không cần parse thủ công.
+  - **Test Suite**: Bộ test độc lập `test_quiz_generation.py` chạy độc lập kiểm thử chất lượng sinh và các logic biên.
+
+---
+
+## Đặc tả kỹ thuật Sprint 16 — Quiz Studio (Frontend)
+
+Sprint 16 tích hợp hoàn chỉnh giao diện chơi trắc nghiệm và quản lý các sản phẩm học tập AI Artifacts:
+
+### 1. Data Layer & Hooks
+- File `frontend/src/features/notebooks/api.ts` bổ sung các API call tương tác với endpoint artifact.
+- Định nghĩa schema `queryKeys` quản lý dữ liệu cache.
+- Triển khai 4 custom hooks quản lý server-state: `useArtifacts`, `useArtifactDetail`, `useGenerateQuiz`, `useDeleteArtifact`.
+
+### 2. UI Components
+- **`NotebookCreationsHub.tsx`**: Bảng điều khiển quản lý các sản phẩm sáng tạo AI trực thuộc Sổ tay (Artifacts Hub), làm nơi hiển thị danh sách các bài Quiz đã được lưu để người dùng ôn tập / thi thử lại.
+- **`ArtifactCard.tsx`**: Thẻ hiển thị tóm tắt thông tin một artifact (loại hình, số câu hỏi `total_items`, thời gian tạo).
+- **`GenerateArtifactModal.tsx`**: Modal cho phép chọn loại artifact (mặc định chỉ bật lựa chọn Quiz) và lựa chọn danh sách tệp nguồn.
+  - Cảnh báo: Các tài liệu có trạng thái `ingestion_status != COMPLETED` sẽ bị disable/dim checkbox đi kèm badge biểu thị trạng thái (PROCESSING/FAILED) tương ứng để người dùng biết.
+- **`QuizRunner.tsx`**: Trình chơi trắc nghiệm:
+  - `QuizHeader`: Tiêu đề, số câu trả lời đúng/tổng, nút Reset làm lại.
+  - `QuizQuestionItem`: Hiển thị nội dung câu hỏi, danh sách radio button chọn đáp án, và cung cấp phản hồi lập tức (instant feedback) khi người dùng chọn (màu xanh nếu đúng, màu đỏ nếu sai và hiện lời giải giải thích chi tiết).
+- Tích hợp trạng thái máy (state machine) `activeArtifactId` vào `NotebookDetailPage.tsx` để điều khiển hiển thị giữa luồng Chat AI mặc định và luồng ôn thi/chơi trắc nghiệm.
+
+---
+
+## Quyết định kỹ thuật quan trọng (Sprint 15 & 16)
+- **Không hỗ trợ tùy biến difficulty**: Hệ thống loại bỏ trường `difficulty` khỏi API request schema và UI. Độ phân cấp câu hỏi được kiểm soát bởi system instruction Bloom cố định của Backend.
+- **Trường computed `total_items`**: Không lưu trên physical database column để tránh không đồng nhất dữ liệu.
+- **Không dùng Redis/Celery**: Rate limiting và quota được thực thi nhẹ bằng cách check trực tiếp dữ liệu DB & ghi in-memory hoặc lock cooldown theo timestamp của user. FE hỗ trợ disable nút submit khi đang pending.
+- **Scope giới hạn**: Enum `ArtifactType` có mặt cả FLASHCARD và SUMMARY nhưng code của Sprint 15/16 chỉ hỗ trợ sinh và hiển thị danh mục QUIZ. Không có bất kỳ giao diện hay API riêng cho các loại hình khác.
+- **Migrations tối giản**: Sử dụng `create_all()` + reseed data trên local/dev. Không tạo thêm file migration Alembic nào cho `NotebookArtifact` trong sprint này.
 
 ## Local-First & Cloud-Ready
 
@@ -649,13 +737,13 @@ Commit theo Sprint hoặc feature, ví dụ `feat: implement upload module`. Tr�
 
 # 17. Current Status
 
-Current Status: **Sprint 15 — Quiz & Flashcards Studio** (kế hoạch)
+Current Status: **Sprint 16 — Quiz Studio (Frontend)** (kế hoạch)
 
-Last Completed: Sprint 14 — Chat Frontend & Citation UI.
+Last Completed: Sprint 15 — Quiz Studio (Backend) — hoàn thành.
 
-Next Module: Sprint 15 — Quiz & Flashcards Studio.
+Next Module: Sprint 16 — Quiz Studio (Frontend) và Sprint 17 — Testing.
 
-Nguyên tắc vận hành từ Sprint 11.5 trở đi: mỗi sprint phải tự kiểm thử độc lập và chạy xanh trước khi mở sprint kế tiếp; các sprint backend (11.5, 12, 13) có script test độc lập, phần giao diện chat tách sang Sprint 14.
+Nguyên tắc vận hành từ Sprint 11.5 trở đi: mỗi sprint phải tự kiểm thử độc lập và chạy xanh trước khi mở sprint kế tiếp; các sprint backend (11.5, 12, 13, 15) có script test độc lập, phần giao diện chat và quiz tương ứng tách sang Sprint 14 và Sprint 16.
 
 ---
 
@@ -689,6 +777,7 @@ Nguyên tắc vận hành từ Sprint 11.5 trở đi: mỗi sprint phải tự k
 - **Quản lý chi phí token:** giới hạn token/request, cache câu trả lời và quota theo user/session.
 - Virus scanning và presigned upload/download URL.
 - AI artifact layer (summary, mindmap) mở rộng từ nền tảng quiz/flashcards của Sprint 15.
+- **Nâng cấp Chat AI Agent (Tool Calling):** Tái sử dụng `quiz_service.generate_quiz()` độc lập của Sprint 15 để bọc thành Function Declaration (Tool Calling) cho Gemini Chat Engine. Cho phép người dùng ra lệnh bằng ngôn ngữ tự nhiên ngay trong khung chat (ví dụ: *"Tạo 5 câu trắc nghiệm cho tài liệu vừa thảo luận"*) để LLM tự kích hoạt sinh đề và hiển thị kết quả trực tiếp.
 
 ## 19b. Quan sát UI/UX & cấu trúc code (sẽ xử lý ở Sprint 9, sau khi hoàn tất Sprint 8.5)
 

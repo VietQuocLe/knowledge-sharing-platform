@@ -6,6 +6,14 @@ from .notebook_chat import (
     NotebookChatSessionRead,
     NotebookChatSessionDetailRead,
 )
+from .artifact import (
+    QuizOption,
+    QuizQuestion,
+    QuizContentPayload,
+    QuizGenerateRequest,
+    ArtifactSummaryResponse,
+    ArtifactDetailResponse,
+)
 
 __all__ = [
     "NotebookChatMessageCreate",
@@ -14,4 +22,11 @@ __all__ = [
     "NotebookChatSessionUpdate",
     "NotebookChatSessionRead",
     "NotebookChatSessionDetailRead",
+    "QuizOption",
+    "QuizQuestion",
+    "QuizContentPayload",
+    "QuizGenerateRequest",
+    "ArtifactSummaryResponse",
+    "ArtifactDetailResponse",
 ]
+

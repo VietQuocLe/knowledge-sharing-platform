@@ -91,6 +91,8 @@ MinIO (Storage)
 - Taxonomy GET hỗ trợ filter: `GET /majors/?department_id=`, `GET /subjects/?major_id=` (optional).
 - Document public list/detail chỉ trả `PUBLIC` chưa xóa; list yêu cầu `subject_id` (được tối giản hóa sang Flat List để tránh click trung gian nhiều lớp).
 - Model Asset liên kết với Document hoặc Notebook (XOR constraint). Mỗi Document đi kèm đúng 1 Asset (quan hệ 1:1).
+- Model NotebookArtifact liên kết với Notebook (quan hệ N:1). NotebookArtifact dùng để lưu trữ thành quả học tập sinh từ AI (loại hình QUIZ/FLASHCARD/SUMMARY, hiện tại scope chỉ chạy QUIZ) dưới dạng generic JSONB content, với trường total_items tính toán động thông qua Pydantic.
+- Mối quan hệ trong Workspace: `Notebook` kết nối với `Asset` (nguồn cá nhân), `NotebookSavedDocument` (tài liệu hệ thống đã lưu), `NotebookChatSession` (phiên chat), và `NotebookArtifact` (các bài đánh giá/quiz sinh ra).
 - Admin: Duy trì API và route `/admin/taxonomy` cho danh mục.
 - Backend cung cấp API GET `/config/upload` để lấy thông tin giới hạn file size và kiểu file cho phép.
 - Visibility: `PRIVATE → PENDING_REVIEW → PUBLIC`; trạng thái hoạt động của Document dùng `DocumentStatus` (DRAFT, PUBLIC, DELETED).

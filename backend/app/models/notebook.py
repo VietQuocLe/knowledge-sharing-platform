@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from app.models.subject import Subject
     from app.models.user import User
     from app.models.notebook_chat import NotebookChatSession
+    from app.models.artifact import NotebookArtifact
 
 
 class Notebook(Base):
@@ -62,6 +63,11 @@ class Notebook(Base):
     )
 
     chat_sessions: Mapped[list["NotebookChatSession"]] = relationship(
+        back_populates="notebook",
+        cascade="all, delete-orphan",
+    )
+
+    artifacts: Mapped[list["NotebookArtifact"]] = relationship(
         back_populates="notebook",
         cascade="all, delete-orphan",
     )

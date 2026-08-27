@@ -24,6 +24,12 @@ from app.schemas.notebook_chat import (
     NotebookChatMessageRead,
 )
 from app.services import notebook_chat_service
+from app.services import artifact_service
+from app.schemas.artifact import (
+    QuizGenerateRequest,
+    ArtifactSummaryResponse,
+    ArtifactDetailResponse,
+)
 
 router = APIRouter(prefix="/notebooks", tags=["Notebooks"])
 
@@ -297,6 +303,49 @@ async def chat_stream_endpoint(
             "X-Accel-Buffering": "no",
         }
     )
+
+
+# --- Quiz / Artifacts endpoints ---
+
+@router.post("/{notebook_id}/artifacts/generate", response_model=ArtifactDetailResponse, status_code=status.HTTP_201_CREATED)
+def generate_quiz(
+    notebook_id: int,
+    payload: QuizGenerateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return artifact_service.generate_quiz_mock(db, notebook_id, current_user.id, payload)
+
+
+@router.get("/{notebook_id}/artifacts", response_model=list[ArtifactSummaryResponse])
+def list_artifacts(
+    notebook_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return artifact_service.list_notebook_artifacts(db, notebook_id, current_user.id)
+
+
+@router.get("/{notebook_id}/artifacts/{artifact_id}", response_model=ArtifactDetailResponse)
+def get_artifact_detail(
+    notebook_id: int,
+    artifact_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return artifact_service.get_notebook_artifact_detail(db, notebook_id, artifact_id, current_user.id)
+
+
+@router.delete("/{notebook_id}/artifacts/{artifact_id}", response_model=dict)
+def delete_artifact(
+    notebook_id: int,
+    artifact_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    artifact_service.delete_notebook_artifact(db, notebook_id, artifact_id, current_user.id)
+    return {"status": "deleted"}
+
 
 
 

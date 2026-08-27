@@ -102,21 +102,27 @@ Chat Frontend & Citation UI — chat ở cột phải `NotebookDetailPage`, stre
 
 Sprint 15
 
-Quiz & Flashcards Studio — Native Tool Calling sinh trắc nghiệm/flashcards từ `selected_asset_ids` — ⏳ kế hoạch
+Quiz Studio (Backend) — thiết kế model NotebookArtifact (QUIZ role), uniform step sampling, custom Bloom instruction, Google GenAI SDK (Native Structured Output) — ⏳ kế hoạch
 
 ↓
 
 Sprint 16
 
-Testing — unit/integration test backend, test luồng chính frontend, seed/fixture cho demo — ⏳ kế hoạch
+Quiz Studio (Frontend) — query hooks, Creations Hub, selection modal với trạng thái completed guard, Quiz Runner (feedback / reset), active state integration — ⏳ kế hoạch
 
 ↓
 
 Sprint 17
 
+Testing — unit/integration test backend, test luồng chính frontend, seed/fixture cho chi tiết demo — ⏳ kế hoạch
+
+↓
+
+Sprint 18
+
 Deployment & Optimization — Docker hóa production, chuyển Cloud (Vercel/Render/Supabase/R2) qua `.env`, tối ưu chi phí token — ⏳ kế hoạch
 
 ---
 
-Lý do tách sprint AI/RAG: mỗi sprint từ 11.5 đến 17 phải tự kiểm thử độc lập (sprint backend 11.5, 12, 13 có script test riêng chạy xanh) trước khi bắt đầu sprint kế tiếp — theo đúng pattern Sprint 11, tránh gom nhiều tầng vào một sprint gây khó debug và khó rollback.
+Lý do tách sprint AI/RAG: mỗi sprint từ 11.5 đến 18 phải tự kiểm thử độc lập (sprint backend 11.5, 12, 13, 15 có script test riêng chạy xanh) trước khi bắt đầu sprint kế tiếp — theo đúng pattern Sprint 11, tránh gom nhiều tầng vào một sprint gây khó debug và khó rollback.
 

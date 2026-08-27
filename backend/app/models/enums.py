@@ -46,3 +46,10 @@ class AssetIngestionStatus(str, Enum):
     FAILED = "FAILED"
 
 
+class ArtifactType(str, Enum):
+    QUIZ = "QUIZ"
+    FLASHCARD = "FLASHCARD"
+    SUMMARY = "SUMMARY"
+
+
+

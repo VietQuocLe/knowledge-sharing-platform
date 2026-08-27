@@ -8,6 +8,7 @@ from .notebook import Notebook, NotebookSavedDocument
 from .asset import Asset
 from .asset_embedding import AssetEmbedding
 from .notebook_chat import NotebookChatSession, NotebookChatMessage
+from .artifact import NotebookArtifact
 
 __all__ = [
     "Base",
@@ -22,5 +23,6 @@ __all__ = [
     "AssetEmbedding",
     "NotebookChatSession",
     "NotebookChatMessage",
+    "NotebookArtifact",
 ]
 
