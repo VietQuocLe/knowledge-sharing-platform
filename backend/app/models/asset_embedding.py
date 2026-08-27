@@ -61,6 +61,7 @@ class AssetEmbedding(Base):
             "embedding",
             postgresql_using="hnsw",
             postgresql_ops={"embedding": "vector_cosine_ops"},
+            postgresql_with={"m": 16, "ef_construction": 64},
         ),
         Index(
             "idx_asset_embeddings_tsv_content",

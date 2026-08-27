@@ -1,4 +1,5 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, status, File, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, status, File, UploadFile, Request, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
@@ -15,6 +16,14 @@ from app.schemas.notebook import (
     NotebookSavedDocumentRead,
 )
 from app.services import notebook_service
+from app.schemas.notebook_chat import (
+    NotebookChatSessionCreate,
+    NotebookChatSessionRead,
+    NotebookChatSessionUpdate,
+    NotebookChatMessageCreate,
+    NotebookChatMessageRead,
+)
+from app.services import notebook_chat_service
 
 router = APIRouter(prefix="/notebooks", tags=["Notebooks"])
 
@@ -172,6 +181,121 @@ def get_asset_ingestion_status(
         ingestion_status=asset.ingestion_status,
         chunk_count=asset.chunk_count,
         ingestion_error=asset.ingestion_error,
+    )
+
+
+# --- Chat Sessions & Messages endpoints ---
+
+@router.post("/{notebook_id}/sessions", response_model=NotebookChatSessionRead, status_code=status.HTTP_201_CREATED)
+def create_session(
+    notebook_id: int,
+    data: NotebookChatSessionCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return notebook_chat_service.create_chat_session(db, notebook_id, current_user, data)
+
+
+@router.get("/{notebook_id}/sessions", response_model=list[NotebookChatSessionRead])
+def list_sessions(
+    notebook_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return notebook_chat_service.list_sessions_by_notebook(db, notebook_id, current_user)
+
+
+@router.get("/{notebook_id}/sessions/{session_id}/messages", response_model=list[NotebookChatMessageRead])
+def get_messages(
+    notebook_id: int,
+    session_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return notebook_chat_service.get_session_messages(db, notebook_id, session_id, current_user)
+
+
+@router.patch("/{notebook_id}/sessions/{session_id}", response_model=NotebookChatSessionRead)
+def rename_session(
+    notebook_id: int,
+    session_id: int,
+    data: NotebookChatSessionUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return notebook_chat_service.rename_chat_session(db, notebook_id, session_id, current_user, data)
+
+
+@router.delete("/{notebook_id}/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_session(
+    notebook_id: int,
+    session_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    notebook_chat_service.delete_chat_session(db, notebook_id, session_id, current_user)
+
+
+@router.post("/{notebook_id}/sessions/{session_id}/messages", response_model=NotebookChatMessageRead, status_code=status.HTTP_201_CREATED)
+def create_message(
+    notebook_id: int,
+    session_id: int,
+    data: NotebookChatMessageCreate,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Direct message creation is disabled. Use the chat streaming endpoint instead.",
+    )
+
+
+@router.post("/{notebook_id}/sessions/{session_id}/chat")
+async def chat_stream_endpoint(
+    notebook_id: int,
+    session_id: int,
+    data: NotebookChatMessageCreate,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    RAG Chat endpoint returning Server-Sent Events (SSE).
+    """
+    # 1. Validation & Ownership Guard
+    notebook_chat_service.validate_notebook_and_session(db, notebook_id, current_user.id, session_id)
+    
+    # 2. Concurrency Lock check
+    lock = notebook_chat_service.get_session_lock(session_id)
+    if lock.locked():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Phiên trò chuyện đang bận xử lý một yêu cầu khác.",
+        )
+    
+    # 3. Acquire lock without any await statements beforehand to avoid race
+    await lock.acquire()
+
+    # 4. Return StreamingResponse with lock release block
+    async def event_generator():
+        try:
+            async for sse_event in notebook_chat_service.stream_chat_response(
+                db, notebook_id, session_id, current_user, data.content, request, background_tasks
+            ):
+                yield sse_event
+        finally:
+            lock.release()
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
     )
 
 

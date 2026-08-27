@@ -24,11 +24,11 @@ Theo đúng pattern đã áp dụng thành công ở Sprint 11 (phase backend c�
 
 Current Sprint
 
-> 🔄 Sprint 13 — Retrieval Engine & Chat API (Backend only) — chuẩn bị thực hiện
+> 🔄 Sprint 14 — Chat Frontend & Citation UI — chuẩn bị thực hiện
 
 Overall Progress
 
-95%
+96%
 
 Status
 
@@ -43,7 +43,7 @@ Status
 ✅ Sprint 11 — Notebook Detail Page & Document Saving / Asset Upload — **hoàn thành**
 ✅ Sprint 11.5 — Document Conversion & Preview Debt Cleanup — **hoàn thành**
 ✅ Sprint 12 — Ingestion Pipeline (Backend only) — hoàn thành
-⏳ Sprint 13 — Retrieval Engine & Chat API (Backend only) — **kế hoạch**
+✅ Sprint 13 — Retrieval Engine & Chat API (Backend only) — **hoàn thành**
 ⏳ Sprint 14 — Chat Frontend & Citation UI — **kế hoạch**
 ⏳ Sprint 15 — Quiz & Flashcards Studio — **kế hoạch**
 ⏳ Sprint 16 — Testing — **kế hoạch**
@@ -53,14 +53,14 @@ Status
 
 # 3. Current Sprint Goal
 
-**Sprint 13 — Retrieval Engine & Chat API (Backend only) (chuẩn bị thực hiện):**
-Xây dựng động cơ truy hồi thông tin (Hybrid Search RRF) và API hội thoại cá nhân.
+**Sprint 14 — Chat Frontend & Citation UI (chuẩn bị thực hiện):**
+Phát triển giao diện chat ở cột phải của NotebookDetailPage, tiêu thụ SSE stream kết quả trả lời từ backend và tích hợp hiển thị trích dẫn tài liệu động.
 
 Mục tiêu chi tiết:
-- **Database & Session:** Thiết kế bảng lưu trữ phiên chat `NotebookChatSession` và tin nhắn `NotebookChatMessage` có CASCADE.
-- **Hybrid Search RRF:** Tích hợp truy hồi kết hợp Dense (pgvector HNSW) và Sparse (GIN tsvector không dấu), xếp hạng bằng Reciprocal Rank Fusion (RRF).
-- **Intent Routing & Condensation:** Tối ưu hóa câu hỏi thông qua lịch sử tin nhắn cùng `gemini-3.5-flash-lite`, trích xuất ý định để bỏ qua RAG khi không cần thiết.
-- **SSE Streaming API:** Phát triển API `/chat` trả dữ liệu dạng Server-Sent Events, hỗ trợ gửi danh sách trích dẫn (`citations`) trước để tối ưu hóa render UI, tự động hủy stream khi client ngắt kết nối.
+- **`useNotebookChatStream` Hook:** Thiết lập hook quản lý kết nối SSE qua `ReadableStream`, parse từng named event (`citations`, `delta`, `done`, `error`) để tích lũy nội dung và cho phép ngắt stream bằng `AbortController`.
+- **`NotebookChatPanel` Component:** Thiết kế cột chat chiếm trọn chiều cao viewport trong `NotebookDetailPage` với danh sách tin nhắn cuộn tự động, trạng thái tải, và nút gửi/dừng stream.
+- **`CitationBadge` & PDF Jump:** Tự động parse tag `[X]` trong markdown của câu trả lời. Nếu khớp với danh sách `citations` nhận được, hiển thị badge trích dẫn bấm được, click sẽ mở `PdfPreviewModal` và tự động cuộn (jump) tới đúng trang tài liệu (`#page=X`).
+- **Math & Code Rendering:** Hỗ trợ render công thức toán bằng KaTeX và định dạng các code blocks có nút sao chép nhanh trên giao diện.
 
 ## Đặc tả kỹ thuật Sprint 11.5
 
@@ -157,6 +157,14 @@ soffice --headless --norestore --convert-to pdf --outdir <tmpdir> <input.docx>
   - API & Seeding: Cung cấp endpoint polling `GET /notebooks/{notebook_id}/assets/{asset_id}/status` có JWT & Ownership Guard; cập nhật `seed.py` với cờ `--ingest` (mặc định bỏ qua để tiết kiệm quota API).
   - Kiểm thử: Bộ test độc lập `test_ingestion_pipeline.py` và các script verify chạy xanh 100% trên Docker.
 
+- **Sprint 13 — Retrieval Engine & Chat API (Backend only — Hoàn thành):**
+  - Chat Persistence: Thiết lập quan hệ database cascades cho `NotebookChatSession` và `NotebookChatMessage` với default message ordering, ownership guards, và auto-titling thông qua background worker (Gemini).
+  - Retrieval Engine: Triển khai Hybrid Search RRF kết hợp Dense (cosin distance, HNSW index m=16, ef=64) và Sparse (GIN ts_rank_cd không dấu), scoped retrieval, adjacent chunk stitching, token budget enforcement (3000 tokens) sử dụng Gemini count_tokens API.
+  - Intent Routing & Query Condensation: Tích hợp lời gọi LLM rút gọn câu hỏi và phân tách ý định (needs_rag) sử dụng structured response schema, sliding window (6 tin nhắn), first-turn fast-path bypass, tenacity retry (3 attempts) và safe fallback default values.
+  - SSE Streaming & Concurrency: Phát triển API `/chat` dạng SSE, concurrency locks (409 Conflict), xử lý ngắt kết nối (discard/abort stream), và cơ chế write-on-complete nguyên tử.
+  - Kiểm thử: Xây dựng các test suites `test_hybrid_search.py`, `test_condensation.py`, `test_chat_sse.py`, `test_notebook_chat.py` xác minh chính xác dữ liệu cô lập, RAG flows, chit-chat, và concurrency control.
+
+
 ## Frontend
 
 - **Sprint 6 — FE Foundation:** Vite/React/TS/Tailwind, routing, API client, AuthContext, layout/navigation, login/register, ProtectedRoute/AdminRoute
@@ -222,7 +230,7 @@ soffice --headless --norestore --convert-to pdf --outdir <tmpdir> <input.docx>
 
 # 5. Next Task
 
-## Ngay lúc này: Sprint 13 — Retrieval Engine & Chat API (Backend only)
+## Ngay lúc này: Sprint 14 — Chat Frontend & Citation UI
 
 ---
 
@@ -437,7 +445,7 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 11. ✅ **Notebook Detail Page & Document Saving / Asset Upload** — **hoàn thành**
 11.5. ✅ **Document Conversion & Preview Debt Cleanup** — **hoàn thành** — chuyển đổi DOCX → PDF bằng LibreOffice headless, `converted_pdf_path`, mở khóa preview DOCX
 12. ✅ **Ingestion Pipeline (Backend only)** — **hoàn thành**
-13. ⏳ **Retrieval Engine & Chat API (Backend only)** — **kế hoạch** — Hybrid Search RRF (Dense + Sparse), Intent Routing/Condensation qua `gemini-3.5-flash-lite`, SSE streaming chat API kèm trích dẫn trang
+13. ✅ **Retrieval Engine & Chat API (Backend only)** — **hoàn thành** — Hybrid Search RRF (Dense + Sparse), Intent Routing/Condensation qua `gemini-3.5-flash-lite`, SSE streaming chat API kèm trích dẫn trang
 14. ⏳ **Chat Frontend & Citation UI** — **kế hoạch** — giao diện chat ở cột phải `NotebookDetailPage`, streaming câu trả lời, `CitationBadge` click nhảy thẳng trang PDF (`#page=X`)
 15. ⏳ **Quiz & Flashcards Studio** — **kế hoạch** — Native Tool Calling sinh trắc nghiệm/flashcards từ tài liệu đã chọn (`selected_asset_ids`)
 16. ⏳ **Testing** — **kế hoạch** — unit/integration test backend, test luồng chính frontend, hoàn thiện seed/fixture cho demo
@@ -497,55 +505,89 @@ Bảng `assets` bổ sung: `converted_pdf_path` (Sprint 11.5), `file_hash`, `ing
 
 ## Sinh câu trả lời
 
-- Intent routing / query condensation bằng `gemini-3.5-flash-lite` để rút gọn câu hỏi theo lịch sử hội thoại trước khi truy hồi.
+- Intent routing / query condensation bằng `gemini-3.1-flash-lite` để rút gọn câu hỏi theo lịch sử hội thoại trước khi truy hồi.
 - Trả lời dạng SSE streaming, kèm trích dẫn nguồn (tên tài liệu + số trang) để frontend render `CitationBadge`.
 - Quiz và flashcards dùng Native Tool Calling trên tập `selected_asset_ids` do người dùng chọn (Sprint 15).
 
 ## Đặc tả kỹ thuật Sprint 13 — Retrieval Engine & Chat API (Backend only)
 
-### 1. Database models
+### 1. Database models & Citation Shapes
 
 - **`NotebookChatSession`:** `id`, `notebook_id` (FK CASCADE), `user_id` (FK CASCADE), `title` (mặc định `"Phiên trò chuyện mới"`), `created_at`, `updated_at`.
 - **`NotebookChatMessage`:** `id`, `session_id` (FK CASCADE), `role` (`user` / `assistant`), `content`, `citations` JSONB, `created_at`.
-- CASCADE hai tầng: xóa Notebook → xóa session → xóa message, không để lại lịch sử mồ côi.
-- `citations` lưu ngay trong message (denormalize) để render lại lịch sử chat mà không phải truy vấn lại vector store.
+- **Cascade: ** Xóa Notebook → xóa session → xóa message tự động (CASCADE).
+- **Trích dẫn Pruned Citation:** Trường `citations` lưu trong DB và trả về cho FE là dạng mảng đối tượng JSONB đã được tỉa (prune) sạch nội dung text thô để tối ưu lưu trữ. Cấu trúc JSON nhận diện ở FE:
+  ```json
+  [
+    {
+      "index": 1,
+      "file_name": "filename.pdf",
+      "page_number": 3,
+      "asset_id": 45
+    }
+  ]
+  ```
+  *(Lưu ý: Không có trường `content` trong DB record này. FE dựa vào `file_name` và `page_number` để hiển thị CitationBadge và click để Preview PDF cuộn đến trang tương ứng).*
 
-### 2. `rag_service.py`
+### 2. Chat API Endpoints Registry
 
-- **Sliding window:** chỉ nạp **6 tin nhắn gần nhất** vào ngữ cảnh — đủ để hiểu câu hỏi nối tiếp mà không phình token.
-- **Condensation + Intent Router gộp làm một lời gọi LLM** (`gemini-3.5-flash-lite` / `gemini-3.1-flash-lite`) dùng **Structured JSON Output** (Pydantic schema) để tiết kiệm một vòng round-trip:
+Mọi tương tác từ Client (Frontend) sử dụng các endpoint sau (đều yêu cầu Header `Authorization: Bearer <JWT>`):
 
-```json
-{ "standalone_query": "...", "needs_rag": true }
-```
+| HTTP Method | URL Path | Mô tả | Trả về (200 OK / 201 Created) |
+| :--- | :--- | :--- | :--- |
+| **POST** | `/notebooks/{notebook_id}/sessions` | Tạo một phiên chat mới | Đối tượng Session JSON |
+| **GET** | `/notebooks/{notebook_id}/sessions` | Lọc toàn bộ phiên chat của notebook | Mảng các Sessions |
+| **PATCH** | `/notebooks/{notebook_id}/sessions/{session_id}` | Đổi tên tiêu đề phiên chat | Đối tượng Session đã sửa |
+| **DELETE** | `/notebooks/{notebook_id}/sessions/{session_id}` | Xóa vĩnh viễn phiên chat (Cascade) | `{"status": "deleted"}` |
+| **GET** | `/notebooks/{notebook_id}/sessions/{session_id}/messages` | Lấy toàn bộ lịch sử trò chuyện (sắp xếp tăng dần thời gian) | Mảng các Messages (có `citations`) |
+| **POST** | `/notebooks/{notebook_id}/sessions/{session_id}/chat` | Nhận câu hỏi, RAG truy hồi, định tuyến và stream kết quả về | **Server-Sent Events (SSE) Stream** |
 
-  `needs_rag = false` (chào hỏi, cảm ơn, hỏi meta) → bỏ qua truy hồi, trả lời thẳng.
+> [!WARNING]
+> **Legacy Restriction:** Endpoint `POST /notebooks/{notebook_id}/sessions/{session_id}/messages` cũ ghi đè tin nhắn trực tiếp **đã bị khóa cứng bằng HTTP 403 Forbidden** đối với người dùng thông thường để bắt buộc mọi hội thoại phải đi qua luồng tạo và stream SSE của endpoint `/chat`.
 
-- **Scoped Retrieval:** tập chunk hợp lệ = Asset thuộc chính Notebook `UNION` Asset của Document đã lưu qua `Notebook_Saved_Documents`, và **chỉ lấy Asset có `ingestion_status = COMPLETED`**.
-- **Hybrid Search RRF:**
-  - Dense: `embedding <=> :query_embedding` (cosine, HNSW index).
-  - Sparse: `ts_rank_cd(tsv_content, plainto_tsquery('simple', immutable_unaccent(:query)))` (GIN index) — khớp được cả khi người dùng gõ không dấu.
-  - Hợp nhất theo công thức RRF `score = Σ 1 / (60 + rank)` trên từng bảng xếp hạng, lấy **Top-5 chunk** theo `rrf_score`.
-- **Strict Grounding Prompt:** bắt buộc LLM chỉ trả lời dựa trên context được cấp, đánh số trích dẫn dạng `[1]`, `[2]` theo thứ tự chunk; nếu context không chứa thông tin thì từ chối theo mẫu cố định thay vì suy đoán.
+### 3. Quy ước Server-Sent Events (SSE) Protocol
 
-### 3. `chat_router.py` — SSE streaming
+Khi kết nối vào endpoint `/chat`, server trả dữ liệu stream dưới định dạng `text/event-stream`. Có 4 tên sự kiện (`event`) bắt buộc bắn về theo thứ tự quy chuẩn:
 
-- Endpoint: `POST /notebooks/{id}/sessions/{session_id}/chat`.
-- Thứ tự SSE event:
+1. **`event: citations`**
+   - *Thời điểm:* Bắn ngay tức thì sau khi hoàn thành truy hồi Hybrid Search (trước khi LLM bắt đầu sinh câu trả lời).
+   - *Payload:* Mảng đối tượng trích dẫn được chọn cho ngữ cảnh (đã được cắt bớt `content` để tiết kiệm băng thông):
+     ```text
+     data: [{"index": 1, "file_name": "tailieu.pdf", "page_number": 2, "asset_id": 10}]
+     ```
+2. **`event: delta`**
+   - *Thời điểm:* Bắn liên tục cho từng cụm token được sinh ra từ Google Gemini.
+   - *Payload:* Chuỗi text thô bọc trong nháy kép JSON:
+     ```text
+     data: "FastAPI "
+     ```
+3. **`event: done`**
+   - *Thời điểm:* Khi hoàn thành stream thành công và tin nhắn đã được transaction commit vào cơ sở dữ liệu.
+   - *Payload:* Chứa định danh `session_id`, `message_id` tin nhắn trợ lý vừa lưu, và câu hỏi rút gọn (`condensed_query`):
+     ```text
+     data: {"session_id": 1, "message_id": 105, "condensed_query": "What is FastAPI?"}
+     ```
+4. **`event: error`**
+   - *Trường hợp thất bại:* Xảy ra lỗi LLM, lỗi DB giữa chừng. Client hiển thị lỗi trên UI và tự ngắt kết nối.
+     ```text
+     data: {"detail": "Error message content"}
+     ```
 
-```text
-citations   # bắn Top-K chunk (tên tài liệu, page_number, asset_id) ngay sau khi search xong
-delta       # stream từng token câu trả lời
-done        # kết thúc, kèm message_id đã lưu
-error       # lỗi LLM/DB, frontend hiển thị và dừng stream
-```
+### 4. Quyết định kỹ thuật & Registry cấu hình
 
-  Bắn `citations` **trước** phần `delta` để frontend dựng sẵn map trích dẫn, render `CitationBadge` ngay khi token `[1]` xuất hiện.
+* **GEMINI_CHAT_MODEL:** `gemini-3.1-flash-lite` (Xác nhận hoạt động an toàn và phản hồi nhanh trong môi trường phát triển).
+* **GEMINI_EMBEDDING_MODEL:** `gemini-embedding-001` (Kích thước output cắt xuống 768 chiều).
+* **HNSW Index Params:** pgvector index cosine: `m=16`, `ef_construction=64`.
+* **Hybrid Search RRF Formula:**
+  - Lấy Top-20 Dense (bằng cosine distance) + Top-20 Sparse (bằng GIN `ts_rank_cd` không dấu).
+  - Điểm RRF: $Score = \sum \frac{1}{60 + Rank_{\text{dense}}} + \sum \frac{1}{60 + Rank_{\text{sparse}}}$.
+  - Lấy Top-5 chunks có điểm RRF cao nhất để nạp vào prompt context.
+* **Token Budget Control:** Khống chế nội dung context tối đa 3000 tokens (đếm thực tế bằng Gemini `count_tokens` API). Nếu vượt quá, loại bỏ các chunk điểm RRF thấp nhất.
+* **Chat Context Size:** Sử dụng Sliding Window 6 tin nhắn gần nhất để condense query, bỏ qua LLM (Fast-path bypass) nếu là tin nhắn đầu tiên.
+* **Concurrency Guard:** Lock ghi in-memory (`asyncio.Lock` chia theo `session_id`) để chặn việc gọi song song 2 request chat trên cùng một phiên (lỗi `409 Conflict`).
+* **Atomic write-on-complete:** Chỉ ghi tin nhắn vào DB sau khi stream thành công. Cho phép rollback/hủy bỏ khi phát hiện disconnect (`request.is_disconnected()`).
 
-- **Stream cancellation:** kiểm tra `request.is_disconnected()` trong vòng lặp stream để hủy lời gọi LLM khi người dùng bấm "Dừng tạo" — tránh đốt token vô ích.
-- **Regex cleaning:** sau khi stream xong, quét `\[(\d+)\]` trên câu trả lời và **chỉ lưu metadata của chunk thực sự được trích dẫn** vào cột `citations`, bỏ các chunk lấy về nhưng LLM không dùng.
-- **CRUD Sessions:** tạo / liệt kê / đổi tên / xóa phiên; **auto-title** tự sinh tiêu đề 3–5 từ bằng LLM sau tin nhắn đầu tiên.
-- **Kiểm thử độc lập:** script test backend gọi thẳng chat API (câu hỏi có trong tài liệu, câu hỏi ngoài tài liệu, câu chào hỏi `needs_rag = false`, hủy giữa chừng) phải chạy xanh trước khi sang Sprint 14.
+---
 
 ## Đặc tả kỹ thuật Sprint 14 — Chat Frontend & Citation UI
 
@@ -597,11 +639,11 @@ Commit theo Sprint hoặc feature, ví dụ `feat: implement upload module`. Tr�
 
 # 17. Current Status
 
-Current Status: **Sprint 13 — Retrieval Engine & Chat API (Backend only)** (chuẩn bị thực hiện)
+Current Status: **Sprint 14 — Chat Frontend & Citation UI** (chuẩn bị thực hiện)
 
-Last Completed: Sprint 12 — Ingestion Pipeline (Backend only).
+Last Completed: Sprint 13 — Retrieval Engine & Chat API (Backend only).
 
-Next Module: Sprint 13 — Retrieval Engine & Chat API (Backend only).
+Next Module: Sprint 14 — Chat Frontend & Citation UI.
 
 Nguyên tắc vận hành từ Sprint 11.5 trở đi: mỗi sprint phải tự kiểm thử độc lập và chạy xanh trước khi mở sprint kế tiếp; các sprint backend (11.5, 12, 13) có script test độc lập, phần giao diện chat tách hẳn sang Sprint 14 và 15.
 
@@ -620,6 +662,7 @@ Nguyên tắc vận hành từ Sprint 11.5 trở đi: mỗi sprint phải tự k
 ### Hoãn vô thời hạn
 
 - **Deduplication theo SHA-256:** Sprint 12 chỉ tính và lưu `file_hash`, **không** dùng để tái sử dụng embedding của file trùng nội dung. Logic dedup (upload file đã có hash → trỏ sang chunk sẵn có thay vì embed lại) hoãn lại để giữ Sprint 12 gọn và dễ kiểm thử.
+- **Reranker (Cross-Encoder):** Hoãn vô thời hạn / Idea Backlog - Nhằm ưu tiên độ trễ (latency) thấp và vì tập dữ liệu (dataset) tài liệu nhỏ của đồ án cá nhân, hệ thống không tích hợp mô hình Reranker phân cấp dạng Cross-Encoder. Truy hồi Hybrid RRF Top-5 là đủ đáp ứng chất lượng.
 
 ### Nợ kỹ thuật tồn đọng từ audit Sprint 7
 

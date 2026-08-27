@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from app.models.document import Document
     from app.models.subject import Subject
     from app.models.user import User
+    from app.models.notebook_chat import NotebookChatSession
 
 
 class Notebook(Base):
@@ -56,6 +57,11 @@ class Notebook(Base):
     )
 
     saved_documents: Mapped[list["NotebookSavedDocument"]] = relationship(
+        back_populates="notebook",
+        cascade="all, delete-orphan",
+    )
+
+    chat_sessions: Mapped[list["NotebookChatSession"]] = relationship(
         back_populates="notebook",
         cascade="all, delete-orphan",
     )

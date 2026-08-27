@@ -531,3 +531,44 @@ def get_notebook_asset_download_url(
     )
     return download_url, file_name
 
+
+def get_scoped_asset_ids(db: Session, notebook_id: int) -> list[int]:
+    """
+    Retrieves all Completed Asset IDs scoped to this notebook:
+    1. Assets uploaded directly to the notebook.
+    2. Assets belonging to documents saved in the notebook.
+    Only returns assets with ingestion_status == COMPLETED.
+    """
+    from app.models.asset import Asset
+    from app.models.notebook import NotebookSavedDocument
+    from app.models.enums import AssetIngestionStatus
+    from sqlalchemy import select
+
+    # Direct assets
+    direct_ids = db.execute(
+        select(Asset.id).where(
+            Asset.notebook_id == notebook_id,
+            Asset.ingestion_status == AssetIngestionStatus.COMPLETED,
+        )
+    ).scalars().all()
+
+    # Saved document asset ids
+    saved_doc_ids = db.execute(
+        select(NotebookSavedDocument.document_id).where(
+            NotebookSavedDocument.notebook_id == notebook_id
+        )
+    ).scalars().all()
+
+    saved_ids = []
+    if saved_doc_ids:
+        saved_ids = db.execute(
+            select(Asset.id).where(
+                Asset.document_id.in_(saved_doc_ids),
+                Asset.ingestion_status == AssetIngestionStatus.COMPLETED,
+            )
+        ).scalars().all()
+
+    # Combine and de-duplicate
+    return list(set(direct_ids) | set(saved_ids))
+
+
