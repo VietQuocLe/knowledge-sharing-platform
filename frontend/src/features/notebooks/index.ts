@@ -11,6 +11,9 @@ export * from './components/AddDocumentModal'
 export * from './hooks/useUnsaveDocument'
 export * from './hooks/useUploadNotebookAsset'
 export * from './hooks/useDeleteNotebookAsset'
+export * from './hooks/useNotebookChatStream'
+export * from './components/NotebookChatPanel'
+
 
 
 

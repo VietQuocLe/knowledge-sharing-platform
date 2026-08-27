@@ -21,23 +21,29 @@ logger = logging.getLogger("test_condensation")
 
 def run_tests():
     # ==========================================
-    # TEST 1: Fast-path (Empty history)
+    # TEST 1: First-turn (Empty history)
     # ==========================================
-    logger.info("--- TEST 1: Fast-path (Empty history) ---")
+    logger.info("--- TEST 1: First-turn (Empty history) ---")
     
     # We pass empty history
     history = []
     
-    # With empty history, it should directly return needs_rag=True and the raw query
-    # without making any LLM call. We mock the client just in case to verify it's not called.
+    # Now it queries Gemini to determine needs_rag, rather than bypassing.
     with patch("app.services.notebook_chat_service.genai.Client") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        
+        mock_resp = MagicMock()
+        mock_resp.text = '{"needs_rag": true, "condensed_query": "Mạng nơ-ron hoạt động ra sao?"}'
+        mock_client.models.generate_content.return_value = mock_resp
+
         result = condense_query_and_route(history, "Mạng nơ-ron hoạt động ra sao?")
         
         assert result["needs_rag"] is True
         assert result["condensed_query"] == "Mạng nơ-ron hoạt động ra sao?"
-        mock_client_cls.assert_not_called()
+        mock_client.models.generate_content.assert_called_once()
         
-    logger.info("TEST 1 PASSED: Fast-path bypassed LLM correctly.")
+    logger.info("TEST 1 PASSED: First-turn query processed and classified via Gemini correctly.")
 
     # ==========================================
     # TEST 2: Pronoun Resolution
@@ -98,12 +104,12 @@ def run_tests():
     logger.info("--- TEST 4: Retry & Fallback on Gemini Error ---")
     
     history = [msg_user, msg_assistant]
-    raw_query = "Câu hỏi lỗi."
+    raw_query = "Câu hỏi lỗi."  # 3 words -> needs_rag = False
     
     # We patch time.sleep to avoid waiting 14 seconds during retries
     with patch("time.sleep") as mock_sleep, \
          patch("app.services.notebook_chat_service.genai.Client") as mock_client_cls:
-         
+          
         mock_client = MagicMock()
         mock_client_cls.return_value = mock_client
         
@@ -112,8 +118,8 @@ def run_tests():
         
         result = condense_query_and_route(history, raw_query)
         
-        # Fallback values
-        assert result["needs_rag"] is True
+        # Fallback values for short queries (<= 3 words)
+        assert result["needs_rag"] is False
         assert result["condensed_query"] == raw_query
         
         # Verify generate_content called exactly 3 times (due to stop_after_attempt(3))
@@ -121,7 +127,22 @@ def run_tests():
         # Verify sleep was called to wait between retries
         assert mock_sleep.call_count == 2
         
-    logger.info("TEST 4 PASSED: Tenacity retry triggered 3 times and fallback executed cleanly with instantaneous sleep patch.")
+    # Also verify fallback with a long query (> 3 words) -> needs_rag = True
+    with patch("time.sleep") as mock_sleep, \
+         patch("app.services.notebook_chat_service.genai.Client") as mock_client_cls:
+          
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.models.generate_content.side_effect = Exception("Google API Quota Limit Exceeded")
+        
+        long_query = "Mạng nơ-ron nhân tạo hoạt động thế nào hả bạn?"
+        result_long = condense_query_and_route(history, long_query)
+        
+        # Fallback values for long queries (> 3 words)
+        assert result_long["needs_rag"] is True
+        assert result_long["condensed_query"] == long_query
+
+    logger.info("TEST 4 PASSED: Fallback triggers <=3 word count check and defaults needs_rag appropriately.")
 
     print("\nALL INTENT ROUTING & QUERY CONDENSATION TESTS PASSED SUCCESSFULLY!")
 

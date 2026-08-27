@@ -8,6 +8,7 @@ interface PdfPreviewModalProps {
     fileUrl: string | null
     fileName: string
     isLoadingUrl: boolean
+    pageNumber?: number
 }
 
 export function PdfPreviewModal({
@@ -16,6 +17,7 @@ export function PdfPreviewModal({
     fileUrl,
     fileName,
     isLoadingUrl,
+    pageNumber,
 }: PdfPreviewModalProps) {
     const modalRef = useRef<HTMLDivElement>(null)
 
@@ -96,7 +98,7 @@ export function PdfPreviewModal({
                         </div>
                     ) : fileUrl ? (
                         <iframe
-                            src={fileUrl}
+                            src={pageNumber !== undefined ? `${fileUrl}#page=${pageNumber}` : fileUrl}
                             className="w-full h-full border-none bg-white"
                             title={fileName}
                         />

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Sparkles, BookOpen, Clock, FileText, ChevronRight, MessageSquare, Bot, AlertTriangle, File, Plus, MoreVertical, Trash2, Download, ExternalLink, Eye, GraduationCap } from 'lucide-react'
-import { useNotebookDetail, AddDocumentModal, useUnsaveDocument, useDeleteNotebookAsset, notebooksApi } from '../features/notebooks'
+import { BookOpen, Clock, FileText, MessageSquare, File, Plus, MoreVertical, Trash2, Download, ExternalLink, Eye, GraduationCap } from 'lucide-react'
+import { useNotebookDetail, AddDocumentModal, useUnsaveDocument, useDeleteNotebookAsset, notebooksApi, NotebookChatPanel } from '../features/notebooks'
 import { documentsApi, PdfPreviewModal } from '../features/documents'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { Spinner } from '../components/ui/Spinner'
@@ -169,10 +169,10 @@ function SourceCard({ source, notebookId, onPreview, onActionSuccess }: SourceCa
                     <h4
                         onClick={handleTitleClick}
                         className={`text-xs font-bold text-slate-800 break-all leading-snug line-clamp-2 hover:text-indigo-650 transition ${canPreview
-                                ? 'hover:underline cursor-pointer'
-                                : isConverting
-                                    ? 'cursor-wait opacity-80'
-                                    : 'cursor-default'
+                            ? 'hover:underline cursor-pointer'
+                            : isConverting
+                                ? 'cursor-wait opacity-80'
+                                : 'cursor-default'
                             }`}
                         title={source.title}
                     >
@@ -354,6 +354,9 @@ export function NotebookDetailPage() {
 
     const { data: notebook, isLoading, error } = useNotebookDetail(parsedId)
 
+
+
+
     useEffect(() => {
         if (error) {
             const err = error as any
@@ -492,84 +495,7 @@ export function NotebookDetailPage() {
 
                 {/* Right Pane: AI Assistant Widget */}
                 {isAiPanelOpen ? (
-                    <div className="w-[360px] md:w-[400px] border-l border-slate-200 bg-slate-50/50 flex flex-col h-full shrink-0 shadow-3xs animate-in slide-in-from-right duration-250">
-                        {/* AI titlebar */}
-                        <div className="bg-white border-b border-slate-100 px-5 py-4 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600">
-                                    <Sparkles className="h-4 w-4" />
-                                </div>
-                                <div>
-                                    <h3 className="text-xs font-bold text-slate-900 leading-snug">AI Workspace</h3>
-                                    <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50/50 px-1.5 py-0.5 rounded-md mt-0.5 inline-block">
-                                        Sprint 12
-                                    </span>
-                                </div>
-                            </div>
-
-                            <button
-                                onClick={() => setIsAiPanelOpen(false)}
-                                className="p-1.5 rounded-xl text-slate-450 hover:bg-slate-100 hover:text-slate-700 transition"
-                                title="Thu nhỏ khung AI"
-                            >
-                                <ChevronRight className="h-4 w-4" />
-                            </button>
-                        </div>
-
-                        {/* AI content viewport */}
-                        <div className="flex-1 overflow-y-auto p-5 flex flex-col justify-between gap-6">
-                            {/* AI assistant status */}
-                            <div className="space-y-4 my-auto text-center py-6">
-                                <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 animate-bounce">
-                                    <Bot className="h-6 w-6" />
-                                </div>
-                                <div className="space-y-2 max-w-xs mx-auto">
-                                    <h4 className="text-sm font-bold text-slate-800">Trợ lý AI sẵn sàng</h4>
-                                    <p className="text-xs text-slate-500 leading-relaxed">
-                                        Tính năng hội thoại thông minh (RAG Chatbot), trả lời câu hỏi và đính kèm ngữ cảnh tài liệu tự động sẽ xuất hiện ở **Sprint 12**.
-                                    </p>
-                                </div>
-
-                                <div className="pt-2">
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-100">
-                                        <AlertTriangle className="h-3.5 w-3.5" />
-                                        Yêu cầu Sprint 12 AI Pipeline
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Suggestion list */}
-                            <div className="space-y-2 border-t border-indigo-100/50 pt-4">
-                                <p className="text-[10px] uppercase font-bold text-slate-505 tracking-wider mb-2">Đề xuất thử nghiệm (Sprint 12)</p>
-                                <div className="text-left space-y-2">
-                                    <button disabled className="w-full text-left p-2.5 text-xs text-slate-600 rounded-xl bg-white border border-slate-150 opacity-70 cursor-not-allowed hover:bg-slate-50 transition leading-tight">
-                                        💡 Tóm tắt nội dung tài liệu đã lưu
-                                    </button>
-                                    <button disabled className="w-full text-left p-2.5 text-xs text-slate-650 rounded-xl bg-white border border-slate-155 opacity-70 cursor-not-allowed hover:bg-slate-50 transition leading-tight">
-                                        ❓ Soạn câu hỏi trắc nghiệm ôn tập
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Input footer */}
-                        <div className="p-4 bg-white border-t border-slate-100">
-                            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/50 px-3 py-2">
-                                <input
-                                    type="text"
-                                    disabled
-                                    placeholder="Hỏi đáp về tài liệu..."
-                                    className="flex-1 bg-transparent text-xs focus:outline-none text-slate-600 placeholder-slate-400 cursor-not-allowed"
-                                />
-                                <button
-                                    disabled
-                                    className="p-1 px-3 rounded-lg bg-indigo-100 text-indigo-400 font-bold text-xs cursor-not-allowed"
-                                >
-                                    Gửi
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    <NotebookChatPanel notebookId={parsedId} onClose={() => setIsAiPanelOpen(false)} />
                 ) : (
                     /* Floating status badge when collapsed (Bottom-Right Studocu-style) */
                     <button

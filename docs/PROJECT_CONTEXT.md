@@ -24,11 +24,11 @@ Theo đúng pattern đã áp dụng thành công ở Sprint 11 (phase backend c�
 
 Current Sprint
 
-> 🔄 Sprint 14 — Chat Frontend & Citation UI — chuẩn bị thực hiện
+> 🔄 Sprint 15 — Quiz & Flashcards Studio — chuẩn bị lên kế hoạch
 
 Overall Progress
 
-96%
+98%
 
 Status
 
@@ -44,8 +44,8 @@ Status
 ✅ Sprint 11.5 — Document Conversion & Preview Debt Cleanup — **hoàn thành**
 ✅ Sprint 12 — Ingestion Pipeline (Backend only) — hoàn thành
 ✅ Sprint 13 — Retrieval Engine & Chat API (Backend only) — **hoàn thành**
-⏳ Sprint 14 — Chat Frontend & Citation UI — **kế hoạch**
-⏳ Sprint 15 — Quiz & Flashcards Studio — **kế hoạch**
+✅ Sprint 14 — Chat Frontend & Citation UI — **hoàn thành**
+🔄 Sprint 15 — Quiz & Flashcards Studio — **kế hoạch**
 ⏳ Sprint 16 — Testing — **kế hoạch**
 ⏳ Sprint 17 — Deployment & Optimization — **kế hoạch**
 
@@ -53,14 +53,14 @@ Status
 
 # 3. Current Sprint Goal
 
-**Sprint 14 — Chat Frontend & Citation UI (chuẩn bị thực hiện):**
-Phát triển giao diện chat ở cột phải của NotebookDetailPage, tiêu thụ SSE stream kết quả trả lời từ backend và tích hợp hiển thị trích dẫn tài liệu động.
+**Sprint 15 — Quiz & Flashcards Studio (Chuẩn bị lên kế hoạch):**
+Phát triển hệ thống ôn tập kiến thức thông minh bằng việc tự động trích xuất các bộ câu hỏi trắc nghiệm (Quiz) và thẻ học nhớ (Flashcards) từ tài liệu trực thuộc Sổ tay thông qua Google GenAI Native Tool Calling (Function Calling).
 
 Mục tiêu chi tiết:
-- **`useNotebookChatStream` Hook:** Thiết lập hook quản lý kết nối SSE qua `ReadableStream`, parse từng named event (`citations`, `delta`, `done`, `error`) để tích lũy nội dung và cho phép ngắt stream bằng `AbortController`.
-- **`NotebookChatPanel` Component:** Thiết kế cột chat chiếm trọn chiều cao viewport trong `NotebookDetailPage` với danh sách tin nhắn cuộn tự động, trạng thái tải, và nút gửi/dừng stream.
-- **`CitationBadge` & PDF Jump:** Tự động parse tag `[X]` trong markdown của câu trả lời. Nếu khớp với danh sách `citations` nhận được, hiển thị badge trích dẫn bấm được, click sẽ mở `PdfPreviewModal` và tự động cuộn (jump) tới đúng trang tài liệu (`#page=X`).
-- **Math & Code Rendering:** Hỗ trợ render công thức toán bằng KaTeX và định dạng các code blocks có nút sao chép nhanh trên giao diện.
+- **Quiz & Flashcards Service:** Xây dựng backend core API tạo các artifacts học tập cho cả trigger trực tiếp trên giao diện và ra lệnh thoại thông qua chat box.
+- **Native SDK Function Calling:** Tận dụng Gemini capabilities sinh cấu trúc đề thi chính xác dạng JSON schema, tối giản hóa việc kết xuất trung gian.
+- **Scope Restriction:** Giới hạn dữ liệu học theo danh sách tệp nguồn chọn lọc (`selected_asset_ids`) thay vì toàn bộ notebook.
+- **Artifact Manager UI:** Thiết kế bảng xem và chơi slide trắc nghiệm/học thẻ nhớ lưu trực tiếp trên notebook, tối ưu hóa các lượt mở xem và luyện tập lại.
 
 ## Đặc tả kỹ thuật Sprint 11.5
 
@@ -163,6 +163,9 @@ soffice --headless --norestore --convert-to pdf --outdir <tmpdir> <input.docx>
   - Intent Routing & Query Condensation: Tích hợp lời gọi LLM rút gọn câu hỏi và phân tách ý định (needs_rag) sử dụng structured response schema, sliding window (6 tin nhắn), first-turn fast-path bypass, tenacity retry (3 attempts) và safe fallback default values.
   - SSE Streaming & Concurrency: Phát triển API `/chat` dạng SSE, concurrency locks (409 Conflict), xử lý ngắt kết nối (discard/abort stream), và cơ chế write-on-complete nguyên tử.
   - Kiểm thử: Xây dựng các test suites `test_hybrid_search.py`, `test_condensation.py`, `test_chat_sse.py`, `test_notebook_chat.py` xác minh chính xác dữ liệu cô lập, RAG flows, chit-chat, và concurrency control.
+  - **Backend Bug Fixes (ngoài phạm vi FE, do người sử dụng yêu cầu khi test Phase 2, không phải agent tự mở rộng):**
+    - `notebook_chat_service.py`: Loại bỏ hardcode `needs_rag=True` ở lượt chat đầu tiên, thay thế bằng lời gọi đánh giá thực tế từ Gemini và fallback kiểm soát số lượng từ (gửi ≤3 từ mặc định `needs_rag = False`).
+    - `ingestion_service.py`: Tăng thời gian cooldown của decorator retry `wait_exponential(multiplier=2, min=4, max=50)` giúp chịu được khoảng thời gian cooldown 42 giây khi gặp giới hạn Gemini 429. Nâng kích số batch từ 15 lên 30 kèm nhịp nghỉ `sleep(1)` giữa các batch, đồng thời thực thi truy vấn lại đối tượng `Asset` sau khi gọi rollback để tránh phát sinh lỗi `ObjectDeletedError`.
 
 
 ## Frontend
@@ -220,6 +223,13 @@ soffice --headless --norestore --convert-to pdf --outdir <tmpdir> <input.docx>
   - Di chuyển các modal Rename/Delete ra ngoài thẻ `<Link>` đè trong `NotebookCard.tsx` để chấm dứt lỗi trắng trang khi invalidate cache.
   - Di chuyển liên kết "Quay lại Workspace" lên trực tiếp thanh Top Bar toàn cục của layout AppLayout (hiển thị động khi khớp luồng chi tiết).
   - `npm run build` ✅ hoạt động ổn định không lỗi type/import.
+- **Sprint 14 — Chat Frontend & Citation UI (Hoàn thành):**
+  - **Phase 1 — `useNotebookChatStream` Hook:** Triển khai custom hook xử lý SSE bằng `@microsoft/fetch-event-source` để gửi POST body kèm Authorization header. Quản lý vòng đời stream độc lập bằng `AbortController`, chỉ nhận `sessionId` động thay vì remount hook.
+  - **Phase 2 — `NotebookChatPanel`:** Tạo session lazy (chỉ lưu DB khi có tin nhắn đầu), đồng bộ mã session qua URL search param `?session=<id>`. Tích hợp render markdown kết hợp công thức toán KaTeX (`remark-math`/`rehype-katex` với `{ strict: false }`) và code blocks có nút sao chép nhanh.
+  - **Phase 3 — `ChatSessionHistoryPopover`:** Fetch và tìm kiếm client-side danh sách session, quản lý rename/delete session bằng modal dùng chung pattern. Tích hợp safeguard gọi `abort()` khi unmount hoặc đổi/xóa session đang hoạt động để tránh data bleeding.
+  - **Phase 4 — `CitationBadge` & PDF Navigation:** Link injection động bằng Regex chuyển đổi `[X]` thành `citation:X`. Tìm kiếm index trong mảng `citations` thực tế để hiển thị `CitationBadge` bấm được hoặc ẩn làm text thường nếu citation bịa số. Thêm prop `pageNumber` vào `PdfPreviewModal`, tự động nối `#page=N` vào iframe src của trình duyệt.
+  - **UI/UX Polish:** Sửa căn lề bong bóng chat dạng flexbox (User bên phải, Assistant bên trái), tích hợp animation Thinking bounce so le và nhấp nháy cursor ở đuôi tin nhắn đang streaming, thay thế ô input thành textarea tự co giãn chiều cao (Enter gửi tin, Shift+Enter xuống dòng), làm mới hệ thống suggestions card.
+  - `npm run build` ✅ Hoàn tất biên dịch sạch lỗi 100%.
 
 ## Infrastructure
 
@@ -230,7 +240,7 @@ soffice --headless --norestore --convert-to pdf --outdir <tmpdir> <input.docx>
 
 # 5. Next Task
 
-## Ngay lúc này: Sprint 14 — Chat Frontend & Citation UI
+## Ngay lúc này: Sprint 15 — Quiz & Flashcards Studio
 
 ---
 
@@ -639,13 +649,13 @@ Commit theo Sprint hoặc feature, ví dụ `feat: implement upload module`. Tr�
 
 # 17. Current Status
 
-Current Status: **Sprint 14 — Chat Frontend & Citation UI** (chuẩn bị thực hiện)
+Current Status: **Sprint 15 — Quiz & Flashcards Studio** (kế hoạch)
 
-Last Completed: Sprint 13 — Retrieval Engine & Chat API (Backend only).
+Last Completed: Sprint 14 — Chat Frontend & Citation UI.
 
-Next Module: Sprint 14 — Chat Frontend & Citation UI.
+Next Module: Sprint 15 — Quiz & Flashcards Studio.
 
-Nguyên tắc vận hành từ Sprint 11.5 trở đi: mỗi sprint phải tự kiểm thử độc lập và chạy xanh trước khi mở sprint kế tiếp; các sprint backend (11.5, 12, 13) có script test độc lập, phần giao diện chat tách hẳn sang Sprint 14 và 15.
+Nguyên tắc vận hành từ Sprint 11.5 trở đi: mỗi sprint phải tự kiểm thử độc lập và chạy xanh trước khi mở sprint kế tiếp; các sprint backend (11.5, 12, 13) có script test độc lập, phần giao diện chat tách sang Sprint 14.
 
 ---
 

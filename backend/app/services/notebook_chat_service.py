@@ -324,32 +324,30 @@ def condense_query_and_route(history: list[NotebookChatMessage], raw_query: str)
     Condenses raw_query against a sliding window (max 6 messages) of chat history,
     and routes intent to decide if RAG retrieval is required.
     """
-    # Fast path: first turn
-    if not history:
-        logger.info("Condensation: First-turn fast-path active.")
-        return {"needs_rag": True, "condensed_query": raw_query}
-
     # Sliding window: max 6 recent messages
-    recent_history = history[-6:]
+    recent_history = history[-6:] if history else []
     history_text = ""
     for msg in recent_history:
         role_label = "User" if msg.role == "user" else "Assistant"
         history_text += f"{role_label}: {msg.content}\n"
 
     try:
+        # For first turn, history_text is empty, but we still query Gemini to verify the needs_rag classification
         result = _call_gemini_condense(raw_query, history_text)
-        logger.info(f"Condensation successful: needs_rag={result.needs_rag}, condensed='{result.condensed_query}'")
+        logger.info(f"Classification successful: needs_rag={result.needs_rag}, condensed='{result.condensed_query}'")
         return {
             "needs_rag": result.needs_rag,
-            "condensed_query": result.condensed_query,
+            "condensed_query": raw_query if not history else result.condensed_query,
         }
     except Exception as e:
         logger.warning(
-            f"Condensation failed after retries: {e}. Falling back to default values.",
+            f"Classification/Condensation failed after retries: {e}. Running fallback checks.",
             exc_info=True,
         )
+        words = raw_query.strip().split()
+        needs_rag = False if len(words) <= 3 else True
         return {
-            "needs_rag": True,
+            "needs_rag": needs_rag,
             "condensed_query": raw_query,
         }
 
@@ -389,14 +387,10 @@ async def stream_chat_response(
         is_first_turn = (message_count == 0)
 
         # 2. Get history and condense/intent route
-        if is_first_turn:
-            needs_rag = True
-            condensed_query = raw_query
-        else:
-            history = get_session_messages(db, notebook_id, session_id, user)
-            condense_res = condense_query_and_route(history, raw_query)
-            needs_rag = condense_res["needs_rag"]
-            condensed_query = condense_res["condensed_query"]
+        history = [] if is_first_turn else get_session_messages(db, notebook_id, session_id, user)
+        condense_res = condense_query_and_route(history, raw_query)
+        needs_rag = condense_res["needs_rag"]
+        condensed_query = condense_res["condensed_query"]
 
         citations = []
         context_str = ""

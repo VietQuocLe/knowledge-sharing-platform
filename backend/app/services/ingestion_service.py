@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import time
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -27,7 +28,7 @@ def get_genai_client() -> genai.Client:
 
 @retry(
     stop=stop_after_attempt(5),
-    wait=wait_exponential(multiplier=1, min=2, max=10),
+    wait=wait_exponential(multiplier=2, min=4, max=50),
     reraise=True
 )
 def _embed_batch_with_retry(client: genai.Client, contents: list[str]) -> list[list[float]]:
@@ -138,7 +139,7 @@ def ingest_asset(asset_id: int, db: Session) -> bool:
         # 9. Batch Call Gemini Embedding API
         logger.info(f"Generating embeddings for {len(chunks_info)} chunks in batches")
         client = get_genai_client()
-        batch_size = 15
+        batch_size = 30
 
         contents = [c["content"] for c in chunks_info]
         all_embeddings = []
@@ -147,6 +148,9 @@ def ingest_asset(asset_id: int, db: Session) -> bool:
             batch = contents[idx : idx + batch_size]
             batch_embeddings = _embed_batch_with_retry(client, batch)
             all_embeddings.extend(batch_embeddings)
+            # Add short delay between batches to control request rate
+            if idx + batch_size < len(contents):
+                time.sleep(1)
 
         if len(all_embeddings) != len(chunks_info):
             raise RuntimeError(f"Embedding count mismatch: expected {len(chunks_info)}, got {len(all_embeddings)}")
@@ -177,9 +181,12 @@ def ingest_asset(asset_id: int, db: Session) -> bool:
     except Exception as e:
         db.rollback()
         logger.exception(f"Unexpected error during ingestion for asset {asset_id}")
-        asset.ingestion_status = AssetIngestionStatus.FAILED
-        asset.ingestion_error = str(e)
-        db.commit()
+        # Re-fetch local asset record from DB since the previous instance was expired by rollback
+        asset_record = db.get(Asset, asset_id)
+        if asset_record:
+            asset_record.ingestion_status = AssetIngestionStatus.FAILED
+            asset_record.ingestion_error = str(e)
+            db.commit()
         return False
 
 

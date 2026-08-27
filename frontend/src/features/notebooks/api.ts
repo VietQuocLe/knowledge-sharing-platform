@@ -106,4 +106,41 @@ export const notebooksApi = {
             url: `/notebooks/${notebookId}/assets/${assetId}/download`,
         })
     },
+
+    createSession: async (notebookId: number, title?: string): Promise<{ id: number; title: string }> => {
+        return createJsonRequest({
+            method: 'POST',
+            url: `/notebooks/${notebookId}/sessions`,
+            data: { title },
+        })
+    },
+
+    listSessions: async (notebookId: number): Promise<Array<{ id: number; title: string }>> => {
+        return createJsonRequest({
+            method: 'GET',
+            url: `/notebooks/${notebookId}/sessions`,
+        })
+    },
+
+    getSessionMessages: async (notebookId: number, sessionId: number): Promise<Array<{ id: number; session_id: number; role: 'user' | 'assistant'; content: string; citations?: any; created_at: string }>> => {
+        return createJsonRequest({
+            method: 'GET',
+            url: `/notebooks/${notebookId}/sessions/${sessionId}/messages`,
+        })
+    },
+
+    renameSession: async (notebookId: number, sessionId: number, title: string): Promise<{ id: number; title: string }> => {
+        return createJsonRequest({
+            method: 'PATCH',
+            url: `/notebooks/${notebookId}/sessions/${sessionId}`,
+            data: { title },
+        })
+    },
+
+    deleteSession: async (notebookId: number, sessionId: number): Promise<void> => {
+        return createJsonRequest({
+            method: 'DELETE',
+            url: `/notebooks/${notebookId}/sessions/${sessionId}`,
+        })
+    },
 }
