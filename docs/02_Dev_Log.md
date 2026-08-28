@@ -467,3 +467,108 @@ Document Conversion & Preview Debt Cleanup: trả nợ kỹ thuật preview phá
 
 Sprint 12 — Ingestion Pipeline (Backend only)
 
+---
+
+# Sprint 12
+
+## Goal
+
+Ingestion Pipeline (Backend only): Xây dựng pipeline xử lý văn bản tự động, từ trích xuất văn bản theo trang, chunking và embedding qua Gemini.
+
+## Completed
+
+- DB & Schemas: schema `AssetEmbedding` kèm index HNSW & GIN.
+- Text Extraction: Tích hợp `pypdfium2` trích xuất text độc lập từng trang.
+- Page-aware chunking: Cắt chunk 500-700 tokens, overlap 100 tokens trong phạm vi cùng trang.
+- Gemini Embedding model: `gemini-embedding-001` (768d).
+- Trạng thái xử lý: `ingestion_status` (PENDING, PROCESSING, COMPLETED, FAILED) và polling API hook.
+
+## Decisions
+
+- Sử dụng vector 768 chiều (Matryoshka representation learning) nhằm tối ưu hiệu năng và tài nguyên lưu trữ pgvector.
+- Chunk vắt trang bị loại bỏ hoàn toàn để bảo đảm citation badge trỏ chính xác trang PDF.
+
+---
+
+# Sprint 13
+
+## Goal
+
+Retrieval Engine & Chat API (Backend only): Bản dịch truy vấn, Hybrid Search RRF và SSE streaming.
+
+## Completed
+
+- Hybrid Search RRF: Dense (HNSW) kết hợp Sparse (GIN ts_rank) và công thức Reciprocal Rank Fusion.
+- Chat API & Session: lưu trữ hội thoại, auto-title phiên làm việc bằng LLM.
+- Condensation: Rút gọn câu hỏi phân tách ý định bằng Gemini API.
+- SSE Stream: API luồng chat đẩy dữ liệu streaming, phân loại event (`citations`, `delta`, `done`, `error`).
+
+## Decisions
+
+- Không dùng Redis/Celery; concurrency control thực thi bằng in-memory Lock theo session.
+- Citations được tỉa gọn (pruned) nội dung raw text để tối ưu dung lượng truyền tải.
+
+---
+
+# Sprint 14
+
+## Goal
+
+Chat Frontend & Citation UI: Triển khai giao diện AI Chat hoàn chỉnh tại cột phải của Workspace.
+
+## Completed
+
+- Stream Hook: Custom hook `useNotebookChatStream` dùng SSE reader.
+- AI Chat Panel: Khung chat, danh sách message, scroll bottom, suggest cards, textarea tự co giãn chiều cao.
+- Citation Mapping: Parse thẻ [X], tích hợp badge bấm để bật PDF preview nhảy trực tiếp trang tương ứng.
+- Lịch sử chat: popover quản lý session, đổi tên, xóa session có abort controller tự hủy stream.
+
+## Decisions
+
+- Trích dẫn sai/bịa số của LLM được chuyển thành văn bản phẳng, chỉ kết xuất badge cho trích dẫn hợp lệ trong dữ liệu.
+
+---
+
+# Sprint 15
+
+## Goal
+
+Quiz Studio (Backend): Thiết kế sinh câu hỏi trắc nghiệm tự động từ tài liệu nguồn cá nhân/công cộng.
+
+## Completed
+
+- DB & Model: Bảng `notebook_artifacts`, enum `ArtifactType` (QUIZ, FLASHCARD, SUMMARY).
+- Step Sampling: Thuật toán uniform sampling lấy tối đa 30 chunks bao quát toàn bộ tài liệu nguồn.
+- Bloom's Taxonomy Prompting: Thiết kế system instruction sinh đề (30% nhận biết, 70% hiểu/vận dụng).
+- Native Structured Output: cấu hình `response_schema` để Gemini trả về JSON cứng cáp.
+- Guards: Quota lock (20 artifacts/notebook), Cooldown (15s), Ingestion Guard (check all COMPLETED).
+
+## Decisions
+
+- Không hỗ trợ tham số độ khó (`difficulty`) để giảm bớt độ phức tạp cấu hình, tập trung vào prompts Bloom.
+
+---
+
+# Sprint 16
+
+## Goal
+
+Quiz Studio (Frontend): Tích hợp giao diện quản lý tạo và chạy trắc nghiệm.
+
+## Completed
+
+- Creations Hub & ArtifactCard: Bảng quản lý tạo mới và danh sách các bài quiz đã tạo, chuyển đổi từ grid sang dạng row list gọn nhẹ.
+- Quiz Runner: Chơi trắc nghiệm tương tác với instant feedback (đáp án màu xanh/đỏ và giải thích chi tiết), score panel và reset làm lại.
+- URL-driven State: Lưu trạng thái `activeArtifactId` qua search parameter `?artifact={id}` giúp tương thích phím back/forward của trình duyệt.
+- Xử lý lỗi xóa quiz: Sửa lỗi endpoint delete bằng cách truyền đúng tham số `notebookId`.
+
+## Decisions
+
+- Loại bỏ hoàn toàn nút back thủ công trong khu vực thi để nhường quyền điều hướng đồng bộ cho URL và Top Bar chung.
+
+---
+
+## Next Sprint
+
+Sprint 17 — Testing
+

@@ -108,6 +108,8 @@ def run_tests():
             "num_questions": 5
         }
         resp = client.post(f"/notebooks/{notebook_id}/artifacts/generate", json=payload, headers=headers_u1)
+        import sys
+        sys.stdout.buffer.write(b"GENERATE RESPONSE DETAIL: " + resp.content + b"\n")
         assert resp.status_code == 201
         data = resp.json()
         assert data["title"] == f"Quiz Mock - Notebook U1 Artifact Notebook"

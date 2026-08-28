@@ -13,8 +13,14 @@ export * from './hooks/useUploadNotebookAsset'
 export * from './hooks/useDeleteNotebookAsset'
 export * from './hooks/useNotebookChatStream'
 export * from './components/NotebookChatPanel'
-
-
+export * from './hooks/useArtifacts'
+export * from './hooks/useArtifactDetail'
+export * from './hooks/useGenerateQuiz'
+export * from './hooks/useDeleteArtifact'
+export * from './components/NotebookCreationsHub'
+export * from './components/QuizRunner/QuizRunner'
+export * from './components/GenerateArtifactModal'
+export * from './components/DeleteArtifactModal'
 
 
 

@@ -17,6 +17,9 @@ export interface NotebookSource {
     file_type: string
     size: number | null
     created_at: string
+    conversion_status?: 'PENDING' | 'COMPLETED' | 'FAILED' | null
+    asset_id?: number | null
+    ingestion_status?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | null
 }
 
 export interface NotebookDetail {
@@ -143,4 +146,75 @@ export const notebooksApi = {
             url: `/notebooks/${notebookId}/sessions/${sessionId}`,
         })
     },
+
+    getArtifacts: async (notebookId: number): Promise<ArtifactSummary[]> => {
+        return createJsonRequest({
+            method: 'GET',
+            url: `/notebooks/${notebookId}/artifacts`,
+        })
+    },
+
+    getArtifactDetail: async (notebookId: number, artifactId: number): Promise<ArtifactDetail> => {
+        return createJsonRequest({
+            method: 'GET',
+            url: `/notebooks/${notebookId}/artifacts/${artifactId}`,
+        })
+    },
+
+    generateQuiz: async (notebookId: number, data: QuizGenerateRequest): Promise<ArtifactDetail> => {
+        return createJsonRequest({
+            method: 'POST',
+            url: `/notebooks/${notebookId}/artifacts/generate`,
+            data,
+        })
+    },
+
+    deleteArtifact: async (notebookId: number, artifactId: number): Promise<{ status: string }> => {
+        return createJsonRequest({
+            method: 'DELETE',
+            url: `/notebooks/${notebookId}/artifacts/${artifactId}`,
+        })
+    },
+}
+
+export interface QuizOption {
+    key: 'A' | 'B' | 'C' | 'D'
+    text: string
+}
+
+export interface QuizQuestion {
+    id: number
+    question: string
+    options: QuizOption[]
+    correct_answer: 'A' | 'B' | 'C' | 'D'
+    explanation: string
+}
+
+export interface QuizContentPayload {
+    title: string
+    questions: QuizQuestion[]
+}
+
+export interface ArtifactSummary {
+    id: number
+    notebook_id: number
+    user_id: number
+    title: string
+    artifact_type: 'QUIZ'
+    metadata: {
+        selected_asset_ids: number[]
+        num_questions: number
+    }
+    total_items: number
+    created_at: string
+    updated_at: string
+}
+
+export interface ArtifactDetail extends ArtifactSummary {
+    content: QuizContentPayload
+}
+
+export interface QuizGenerateRequest {
+    selected_asset_ids: number[]
+    num_questions: number
 }

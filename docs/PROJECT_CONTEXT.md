@@ -24,7 +24,7 @@ Theo đúng pattern đã áp dụng thành công ở Sprint 11 (phase backend c�
 
 Current Sprint
 
-> 🔄 Sprint 16 — Quiz Studio (Frontend) — kế hoạch
+> 🔄 Sprint 17 — Testing — kế hoạch
 
 Overall Progress
 
@@ -46,21 +46,20 @@ Status
 ✅ Sprint 13 — Retrieval Engine & Chat API (Backend only) — **hoàn thành**
 ✅ Sprint 14 — Chat Frontend & Citation UI — **hoàn thành**
 ✅ Sprint 15 — Quiz Studio (Backend) — **hoàn thành**
-🔄 Sprint 16 — Quiz Studio (Frontend) — **kế hoạch**
-⏳ Sprint 17 — Testing — **kế hoạch**
+✅ Sprint 16 — Quiz Studio (Frontend) — **hoàn thành**
+🔄 Sprint 17 — Testing — **kế hoạch**
 ⏳ Sprint 18 — Deployment & Optimization — **kế hoạch**
 
 ---
 
 # 3. Current Sprint Goal
 
-**Sprint 16 — Quiz Studio (Frontend) (Kế hoạch):**
-Xây dựng giao diện chơi trắc nghiệm và quản lý AI artifacts trực quan cho người dùng ngày trên Sổ tay cá nhân.
+**Sprint 17 — Testing (Kế hoạch):**
+Xây dựng và hoàn thiện bộ test tự động cho toàn bộ hệ thống (Unit tests, Integration tests, End-to-end user flows) và kiểm thử chất lượng giao diện người dùng.
 
 Mục tiêu chi tiết:
-- **Data Hook Layer:** Triển khai api.ts, queryKeys và hooks: `useArtifacts`, `useArtifactDetail`, `useGenerateQuiz`, `useDeleteArtifact`.
-- **UI Management Panels:** NotebookCreationsHub.tsx, ArtifactCard.tsx, GenerateArtifactModal.tsx (chặn checkbox chọn tài liệu chưa COMPLETED).
-- **Interactive Quiz Runner:** QuizHeader, QuizQuestionItem hiển thị đáp án tức thì (instant feedback) kèm nút Reset để thi lại, tích hợp activeArtifactId.
+- **Backend Testing:** Tăng độ phủ kiểm thử cho các service trích xuất, embedding, hybrid search, RAG stream và artifacts generation.
+- **Frontend Testing:** Kiểm thử dòng chảy trò chơi trắc nghiệm, chat AI, và liên kết tài liệu.
 
 ## Đặc tả kỹ thuật Sprint 11.5
 
@@ -238,13 +237,19 @@ soffice --headless --norestore --convert-to pdf --outdir <tmpdir> <input.docx>
   - Thêm logic kiểm định `isPreviewable` để chặn xem trước đối với các định dạng không phải PDF (như DOCX) để tránh tự động tải tệp tin ngầm gây lỗi màn hình trắng.
   - Di chuyển các modal Rename/Delete ra ngoài thẻ `<Link>` đè trong `NotebookCard.tsx` để chấm dứt lỗi trắng trang khi invalidate cache.
   - Di chuyển liên kết "Quay lại Workspace" lên trực tiếp thanh Top Bar toàn cục của layout AppLayout (hiển thị động khi khớp luồng chi tiết).
-  - `npm run build` ✅ hoạt động ổn định không lỗi type/import.
-- **Sprint 14 — Chat Frontend & Citation UI (Hoàn thành):**
-  - **Phase 1 — `useNotebookChatStream` Hook:** Triển khai custom hook xử lý SSE bằng `@microsoft/fetch-event-source` để gửi POST body kèm Authorization header. Quản lý vòng đời stream độc lập bằng `AbortController`, chỉ nhận `sessionId` động thay vì remount hook.
-  - **Phase 2 — `NotebookChatPanel`:** Tạo session lazy (chỉ lưu DB khi có tin nhắn đầu), đồng bộ mã session qua URL search param `?session=<id>`. Tích hợp render markdown kết hợp công thức toán KaTeX (`remark-math`/`rehype-katex` với `{ strict: false }`) và code blocks có nút sao chép nhanh.
-  - **Phase 3 — `ChatSessionHistoryPopover`:** Fetch và tìm kiếm client-side danh sách session, quản lý rename/delete session bằng modal dùng chung pattern. Tích hợp safeguard gọi `abort()` khi unmount hoặc đổi/xóa session đang hoạt động để tránh data bleeding.
-  - **Phase 4 — `CitationBadge` & PDF Navigation:** Link injection động bằng Regex chuyển đổi `[X]` thành `citation:X`. Tìm kiếm index trong mảng `citations` thực tế để hiển thị `CitationBadge` bấm được hoặc ẩn làm text thường nếu citation bịa số. Thêm prop `pageNumber` vào `PdfPreviewModal`, tự động nối `#page=N` vào iframe src của trình duyệt.
-  - **UI/UX Polish:** Sửa căn lề bong bóng chat dạng flexbox (User bên phải, Assistant bên trái), tích hợp animation Thinking bounce so le và nhấp nháy cursor ở đuôi tin nhắn đang streaming, thay thế ô input thành textarea tự co giãn chiều cao (Enter gửi tin, Shift+Enter xuống dòng), làm mới hệ thống suggestions card.
+- **Sprint 16 — Quiz Studio (Frontend) — hoàn thành:**
+    - **Data Hook Layer:** Triển khai 4 custom hooks quản lý server-state: `useArtifacts`, `useArtifactDetail`, `useGenerateQuiz`, và `useDeleteArtifact` tương tác với các REST endpoints. Hook mutation `useGenerateQuiz` thiết lập cơ chế cache warming qua việc ghi trực tiếp chi tiết bài trắc nghiệm vào cache TanStack Query bằng `setQueryData` và invalidate dữ liệu danh sách creations hub (`invalidateQueries`).
+    - **NotebookCreationsHub:** Panel hiển thị danh sách các bài ôn tập AI (Quiz). Tích hợp văn bản hạn mức quota (`X / 20 bài ôn tập`) cạnh tiêu đề, loading spinner và trạng thái rỗng "Kho trống" kèm nút CTA nhanh để kích hoạt modal sinh trắc nghiệm.
+    - **GenerateArtifactModal:** Modal cấu hình tạo Quiz. Hỗ trợ checkbox vô hiệu hóa tài liệu chưa xử lý xong (`ingestion_status != COMPLETED`), cấp tùy chọn nhanh số lượng câu hỏi `[5, 10, 15, 20]`, và trạng thái Submit bị khóa (disable backdrop click, cancel, submit và hiển thị loader spinner).
+    - **DeleteArtifactModal:** Modal cảnh báo xác nhận xóa vĩnh viễn bài quiz, có cơ chế ngăn tương tác khi đang xóa và mutation invalidation chuẩn xác.
+    - **Quiz Runner System:**
+      - `QuizRunner`: Component chính đi kèm khung xương skeleton loading nhấp nháy, xử lý lỗi 404 bằng dialog cứu hộ và toast thông minh.
+      - `QuizHeader`: Bảng quản lý chứa tiêu đề bài quiz, thông số tiến trình (`Kết quả: X / Y câu`) và nút Reset tiện lợi có icon quay lại.
+      - `QuizQuestionItem`: Hiển thị câu hỏi, các lựa chọn A-D độc lập với cơ chế phản hồi chọn lập tức (xanh lá cây nếu đúng, đỏ nếu sai) và hiển thị hộp thoại giải thích nguồn gốc.
+    - **Kiến trúc State & URL SearchParams:**
+      - Tách biệt và nâng quản lý state `activeArtifactId` lên `NotebookDetailPage.tsx` thông qua hook `useSearchParams` đọc từ query URL `?artifact={id}` giúp đồng bộ hoàn hảo nút quay lại (Back/Forward) của trình duyệt.
+      - `NotebookCreationsHub` được tái thiết kế thành controlled component thuần túy nhận props và callbacks từ trang cha, ngăn chặn lỗi unmount mất trạng thái.
+      - Cập nhật checker `isViewingQuiz` trong `AppLayout.tsx` chuyển sang đọc từ query parameter `artifact` đồng bộ.
   - `npm run build` ✅ Hoàn tất biên dịch sạch lỗi 100%.
 
 ## Infrastructure
@@ -256,7 +261,7 @@ soffice --headless --norestore --convert-to pdf --outdir <tmpdir> <input.docx>
 
 # 5. Next Task
 
-## Ngay lúc này: Sprint 16 — Quiz Studio (Frontend)
+## Ngay lúc này: Sprint 17 — Testing
 
 ---
 
@@ -485,8 +490,8 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 13. ✅ **Retrieval Engine & Chat API (Backend only)** — **hoàn thành** — Hybrid Search RRF (Dense + Sparse), Intent Routing/Condensation qua `gemini-3.5-flash-lite`, SSE streaming chat API kèm trích dẫn trang
 14. ✅ **Chat Frontend & Citation UI** — **hoàn thành** — giao diện chat ở cột phải `NotebookDetailPage`, streaming câu trả lời, `CitationBadge` click nhảy thẳng trang PDF (`#page=X`)
 15. ✅ **Quiz Studio (Backend)** — **hoàn thành** — thiết kế model NotebookArtifact, uniform step sampling, Bloom instruction, Google GenAI SDK sinh JSON trích xuất từ `selected_asset_ids`
-16. ⏳ **Quiz Studio (Frontend)** — **kế hoạch** — api.ts, queryKeys, useArtifacts hooks, creations panel/modal, Quiz Runner interactive interface
-17. ⏳ **Testing** — **kế hoạch** — unit/integration test backend, test luồng chính frontend, hoàn thiện seed/fixture cho demo
+16. ✅ **Quiz Studio (Frontend)** — **hoàn thành** — api.ts, queryKeys, useArtifacts hooks, creations panel/modal, Quiz Runner interactive interface
+17. 🔄 **Testing** — **đang triển khai** — unit/integration test backend, test luồng chính frontend, hoàn thiện seed/fixture cho demo
 18. ⏳ **Deployment & Optimization** — **kế hoạch** — Docker hóa production, chuyển Cloud (Vercel/Render/Supabase/R2) qua `.env`, tối ưu chi phí token
 
 > **Lý do tách sprint AI/RAG:** mỗi sprint từ 11.5 đến 18 phải tự kiểm thử độc lập (backend có script test riêng chạy xanh) trước khi bắt đầu sprint kế tiếp — đúng pattern đã áp dụng ở Sprint 11. Việc này tránh gom nhiều tầng vào một sprint gây quá tải, khó debug và khó rollback từng phần.
@@ -692,12 +697,18 @@ Sprint 16 tích hợp hoàn chỉnh giao diện chơi trắc nghiệm và quản
 ### 2. UI Components
 - **`NotebookCreationsHub.tsx`**: Bảng điều khiển quản lý các sản phẩm sáng tạo AI trực thuộc Sổ tay (Artifacts Hub), làm nơi hiển thị danh sách các bài Quiz đã được lưu để người dùng ôn tập / thi thử lại.
 - **`ArtifactCard.tsx`**: Thẻ hiển thị tóm tắt thông tin một artifact (loại hình, số câu hỏi `total_items`, thời gian tạo).
-- **`GenerateArtifactModal.tsx`**: Modal cho phép chọn loại artifact (mặc định chỉ bật lựa chọn Quiz) và lựa chọn danh sách tệp nguồn.
+- **`GenerateArtifactModal.tsx`**: Modal cấu hình thiết lập tạo bài ôn tập. Cho phép lựa chọn danh sách tệp nguồn đã qua xử lý (`ingestion_status == COMPLETED`) và lựa chọn số lượng câu hỏi ôn tập (5, 10, 15, hoặc 20 câu).
   - Cảnh báo: Các tài liệu có trạng thái `ingestion_status != COMPLETED` sẽ bị disable/dim checkbox đi kèm badge biểu thị trạng thái (PROCESSING/FAILED) tương ứng để người dùng biết.
+- **`DeleteArtifactModal.tsx`**: Modal cảnh báo xác nhận trước khi thực hiện xóa vĩnh viễn bài tập trắc nghiệm khỏi Sổ tay, đồng bộ hóa cache TanStack Query sau khi kết thúc.
 - **`QuizRunner.tsx`**: Trình chơi trắc nghiệm:
   - `QuizHeader`: Tiêu đề, số câu trả lời đúng/tổng, nút Reset làm lại.
   - `QuizQuestionItem`: Hiển thị nội dung câu hỏi, danh sách radio button chọn đáp án, và cung cấp phản hồi lập tức (instant feedback) khi người dùng chọn (màu xanh nếu đúng, màu đỏ nếu sai và hiện lời giải giải thích chi tiết).
-- Tích hợp trạng thái máy (state machine) `activeArtifactId` vào `NotebookDetailPage.tsx` để điều khiển hiển thị giữa luồng Chat AI mặc định và luồng ôn thi/chơi trắc nghiệm.
+
+### 3. Kiến trúc State & URL Synchronization
+- **Lập trạng thái Page-level (`activeArtifactId`)**: Trạng thái active của bài trắc nghiệm được quản lý tại trang cha `NotebookDetailPage.tsx` nhờ hook `useSearchParams` từ query URL `?artifact={id}`.
+- **Lý do thiết kế**: Vì `NotebookCreationsHub` và `QuizRunner` là hai layout con hiển thị loại trừ lẫn nhau (CreationsHub bị unmount khi chơi quiz để QuizRunner chiếm trọn khu vực làm việc). Việc đưa state lên trang cha và đồng bộ với URL giúp ngăn chặn việc mất trạng thái khi unmount, đồng thời hỗ trợ nút điều hướng Back/Forward và click-to-share link một cách tự nhiên.
+- **Controlled Component**: `NotebookCreationsHub` được triển khai dưới dạng controlled component thuần túy nhận prop `onSelectArtifact` từ `NotebookDetailPage.tsx` để điều hướng qua SearchParams mà không tự giữ trạng thái local.
+- **URL parameter sync in AppLayout**: Cập nhật hàm `isViewingQuiz` trong `AppLayout.tsx` chuyển trạng thái kiểm tra từ `quizId` sang `artifact` để thống nhất cấu trúc router.
 
 ---
 
@@ -737,11 +748,11 @@ Commit theo Sprint hoặc feature, ví dụ `feat: implement upload module`. Tr�
 
 # 17. Current Status
 
-Current Status: **Sprint 16 — Quiz Studio (Frontend)** (kế hoạch)
+Current Status: **Sprint 17 — Testing** (kế hoạch)
 
-Last Completed: Sprint 15 — Quiz Studio (Backend) — hoàn thành.
+Last Completed: Sprint 16 — Quiz Studio (Frontend) — hoàn thành.
 
-Next Module: Sprint 16 — Quiz Studio (Frontend) và Sprint 17 — Testing.
+Next Module: Sprint 17 — Testing và Sprint 18 — Deployment & Optimization.
 
 Nguyên tắc vận hành từ Sprint 11.5 trở đi: mỗi sprint phải tự kiểm thử độc lập và chạy xanh trước khi mở sprint kế tiếp; các sprint backend (11.5, 12, 13, 15) có script test độc lập, phần giao diện chat và quiz tương ứng tách sang Sprint 14 và Sprint 16.
 

@@ -40,6 +40,7 @@ export function AppLayout() {
   const location = useLocation()
   const hideSearch = location.pathname.startsWith('/me/workspace')
   const isWorkspaceEditor = location.pathname.startsWith('/me/workspace/') && location.pathname !== '/me/workspace'
+  const isViewingQuiz = new URLSearchParams(location.search).has('artifact')
   const isAdmin = user?.role === 'ADMIN'
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { isCollapsed, setIsCollapsed } = useSidebar()
@@ -221,7 +222,7 @@ export function AppLayout() {
           <div className="flex-1 min-w-0 flex items-center gap-2">
             {isWorkspaceEditor && (
               <Link
-                to="/me/workspace"
+                to={isViewingQuiz ? location.pathname : "/me/workspace"}
                 className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-slate-800 transition shrink-0"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -238,11 +239,11 @@ export function AppLayout() {
           <div className="flex-1 max-w-md flex items-center gap-4">
             {isWorkspaceEditor && (
               <Link
-                to="/me/workspace"
+                to={isViewingQuiz ? location.pathname : "/me/workspace"}
                 className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 px-3 py-1.5 rounded-lg transition shrink-0"
               >
                 <ArrowLeft className="h-4 w-4" />
-                Quay lại Workspace
+                {isViewingQuiz ? 'Quay lại Sổ ghi chú' : 'Quay lại Workspace'}
               </Link>
             )}
             {!hideSearch && <SubjectSearchInput />}

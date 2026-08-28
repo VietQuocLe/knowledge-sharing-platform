@@ -84,37 +84,37 @@ Document Conversion & Preview Debt Cleanup (LibreOffice headless DOCX → PDF, `
 
 Sprint 12
 
-Ingestion Pipeline (Backend only) — bảng `AssetEmbedding`, `pypdfium2` page-aware chunking, `gemini-embedding-001` (768d), index HNSW/GIN — 🔄 in progress
+Ingestion Pipeline (Backend only) — bảng `AssetEmbedding`, `pypdfium2` page-aware chunking, `gemini-embedding-001` (768d), index HNSW/GIN — ✅ done
 
 ↓
 
 Sprint 13
 
-Retrieval Engine & Chat API (Backend only) — Hybrid Search RRF (Dense + Sparse), Intent Routing/Condensation qua `gemini-3.5-flash-lite`, SSE streaming kèm trích dẫn trang — ⏳ kế hoạch
+Retrieval Engine & Chat API (Backend only) — Hybrid Search RRF (Dense + Sparse), Intent Routing/Condensation qua `gemini-3.5-flash-lite`, SSE streaming kèm trích dẫn trang — ✅ done
 
 ↓
 
 Sprint 14
 
-Chat Frontend & Citation UI — chat ở cột phải `NotebookDetailPage`, streaming, `CitationBadge` nhảy thẳng trang PDF (`#page=X`) — ⏳ kế hoạch
+Chat Frontend & Citation UI — chat ở cột phải `NotebookDetailPage`, streaming, `CitationBadge` nhảy thẳng trang PDF (`#page=X`) — ✅ done
 
 ↓
 
 Sprint 15
 
-Quiz Studio (Backend) — thiết kế model NotebookArtifact (QUIZ role), uniform step sampling, custom Bloom instruction, Google GenAI SDK (Native Structured Output) — ⏳ kế hoạch
+Quiz Studio (Backend) — thiết kế model NotebookArtifact (QUIZ role), uniform step sampling, custom Bloom instruction, Google GenAI SDK (Native Structured Output) — ✅ done
 
 ↓
 
 Sprint 16
 
-Quiz Studio (Frontend) — query hooks, Creations Hub, selection modal với trạng thái completed guard, Quiz Runner (feedback / reset), active state integration — ⏳ kế hoạch
+Quiz Studio (Frontend) — query hooks, Creations Hub, selection modal với trạng thái completed guard, Quiz Runner (feedback / reset), active state integration — ✅ done
 
 ↓
 
 Sprint 17
 
-Testing — unit/integration test backend, test luồng chính frontend, seed/fixture cho chi tiết demo — ⏳ kế hoạch
+Testing — unit/integration test backend, test luồng chính frontend, seed/fixture cho chi tiết demo — 🔄 in progress
 
 ↓
 

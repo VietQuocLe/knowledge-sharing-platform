@@ -201,12 +201,17 @@ def get_notebook_by_id(db: Session, user: User, notebook_id: int) -> dict:
             "size": asset.size,
             "created_at": asset.created_at,
             "conversion_status": asset.conversion_status,
+            "asset_id": asset.id,
+            "ingestion_status": asset.ingestion_status,
         })
 
     for sd in saved_docs:
         doc = sd.document
-        doc_asset_size = doc.assets[0].size if doc.assets else None
-        doc_asset_type = doc.assets[0].file_type if doc.assets else doc.resource_type.value
+        primary_asset = doc.assets[0] if doc.assets else None
+        doc_asset_id = primary_asset.id if primary_asset else None
+        doc_asset_size = primary_asset.size if primary_asset else None
+        doc_asset_type = primary_asset.file_type if primary_asset else doc.resource_type.value
+        doc_ingestion_status = primary_asset.ingestion_status if primary_asset else None
 
         sources.append({
             "id": doc.id,
@@ -215,6 +220,8 @@ def get_notebook_by_id(db: Session, user: User, notebook_id: int) -> dict:
             "file_type": doc_asset_type,
             "size": doc_asset_size,
             "created_at": sd.created_at,
+            "asset_id": doc_asset_id,
+            "ingestion_status": doc_ingestion_status,
         })
 
     # Sort sources by created_at descending (newest first)

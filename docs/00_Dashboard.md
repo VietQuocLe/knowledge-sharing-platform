@@ -2,13 +2,13 @@
 
 ## Current Sprint
 
-Sprint 12 — Ingestion Pipeline (Backend only) 🔄
+Sprint 17 — Testing 🔄
 
 ---
 
 ## Last Completed
 
-Sprint 11.5 — Document Conversion & Preview Debt Cleanup ✅
+Sprint 16 — Quiz Studio (Frontend) ✅
 
 ---
 
@@ -16,29 +16,27 @@ Sprint 11.5 — Document Conversion & Preview Debt Cleanup ✅
 
 Overall
 
-95%
+97%
 
-███████████████░░
+████████████████░
 
 Backend
 
-95%
+98%
 
 Frontend
 
-95%
+96%
 
 ---
 
 ## Next Task
 
-Hoàn tất Sprint 12 (Ingestion Pipeline, backend only): bảng `AssetEmbedding` + index HNSW/GIN, trích xuất text bằng `pypdfium2`, page-aware chunking và embedding qua `gemini-embedding-001` (768d).
-
-Nguyên tắc: mỗi sprint backend (11.5, 12, 13) phải có script test độc lập chạy xanh trước khi sang sprint kế tiếp.
+Bắt đầu Sprint 17 (Testing): viết thêm bộ test tự động (unit, integration) phía backend và hoàn thiện kiểm thử giao diện tại frontend.
 
 ---
 
 ## Current Problem
 
-Không có blocker. Tiến trình chuyển đổi tự động DOCX → PDF phái sinh bằng LibreOffice headless và hiển thị trạng thái động (PENDING, COMPLETED, FAILED) trên giao diện đã hoàn thiện và chạy ổn định.
+Không có blocker. Tính năng sinh và chơi trắc nghiệm (Quiz Runner) đã tích hợp hoạt động đồng bộ với URL, hỗ trợ responsive hoàn hảo và được nghiệm thu sạch lỗi.
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { BookOpen, Clock, FileText, MessageSquare, File, Plus, MoreVertical, Trash2, Download, ExternalLink, Eye, GraduationCap } from 'lucide-react'
-import { useNotebookDetail, AddDocumentModal, useUnsaveDocument, useDeleteNotebookAsset, notebooksApi, NotebookChatPanel } from '../features/notebooks'
+import { useNotebookDetail, AddDocumentModal, useUnsaveDocument, useDeleteNotebookAsset, notebooksApi, NotebookChatPanel, NotebookCreationsHub, QuizRunner, GenerateArtifactModal } from '../features/notebooks'
 import { documentsApi, PdfPreviewModal } from '../features/documents'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { Spinner } from '../components/ui/Spinner'
@@ -340,6 +340,26 @@ export function NotebookDetailPage() {
 
     const [isAiPanelOpen, setIsAiPanelOpen] = useState(true)
     const [isAddDocOpen, setIsAddDocOpen] = useState(false)
+    const [searchParams, setSearchParams] = useSearchParams()
+
+    const activeArtifactId = (() => {
+        const param = searchParams.get('artifact')
+        return param ? Number(param) : null
+    })()
+
+    const handleSelectArtifact = (id: number | null) => {
+        setSearchParams((prev) => {
+            const next = new URLSearchParams(prev)
+            if (id === null) {
+                next.delete('artifact')
+            } else {
+                next.set('artifact', String(id))
+            }
+            return next
+        })
+    }
+
+    const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false)
     const [previewState, setPreviewState] = useState<{
         isOpen: boolean
         fileUrl: string | null
@@ -405,92 +425,110 @@ export function NotebookDetailPage() {
                 {/* Left Pane: Documents Area */}
                 <div className="flex-1 flex flex-col min-w-0 h-full p-6 bg-white overflow-y-auto gap-6">
                     {/* Header bar */}
-                    <div className="flex flex-col gap-2 pb-4 border-b border-slate-100 flex-shrink-0">
-                        <div className="flex flex-wrap items-center gap-3">
-                            <h1 className="text-xl font-extrabold text-slate-900 md:text-2xl tracking-tight leading-snug">
-                                {notebook.title}
-                            </h1>
-                            {notebook.subject_name && (
-                                <Badge variant="primary" className="flex items-center gap-1 font-bold">
-                                    <BookOpen className="h-3.5 w-3.5" />
-                                    {notebook.subject_name}
-                                </Badge>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Quick Actions Block (StudyFetch style) */}
-                    <div className="bg-slate-50/70 border border-slate-150 rounded-2xl p-5 space-y-4 flex-shrink-0">
-                        <div>
-                            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                                Bắt đầu học tập
-                            </h3>
-                            <p className="text-[11px] text-slate-500 mt-1">
-                                Tải tài liệu nguồn lên hoặc tạo bài luyện tập, Flashcard ôn tập ngay lập tức.
-                            </p>
-                        </div>
-
-                        <div className="flex flex-wrap gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setIsAddDocOpen(true)}
-                                className="px-4 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-805 rounded-xl shadow-xs transition flex items-center gap-2 cursor-pointer"
-                            >
-                                <Plus className="h-4 w-4" />
-                                Thêm tài liệu nguồn
-                            </button>
-                            <button
-                                type="button"
-                                disabled
-                                className="px-4 py-2.5 text-xs font-bold text-slate-400 bg-slate-100 border border-slate-205 rounded-xl flex items-center gap-2 cursor-not-allowed"
-                            >
-                                <GraduationCap className="h-4 w-4 text-slate-400" />
-                                <span>Tạo bài tập / Quiz</span>
-                                <span className="text-[9px] font-extrabold text-amber-700 bg-amber-50 border border-amber-150 px-1.5 py-0.5 rounded-md leading-none">
-                                    Sprint 12
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Sources section */}
-                    <div className="space-y-4 flex flex-col">
-                        <div className="flex items-center justify-between flex-shrink-0">
-                            <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-                                Tài liệu nguồn ({notebook.sources_count})
-                            </h2>
-
-                            {/* Compact Quota Indicator */}
-                            <div className="flex items-center gap-3">
-                                <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">
-                                    <span className="font-bold text-slate-800">{notebook.sources_count}</span>
-                                    <span className="text-[10px]"> / {notebook.max_sources} nguồn</span>
-                                </span>
+                    {activeArtifactId === null && (
+                        <div className="flex flex-col gap-2 pb-4 border-b border-slate-100 flex-shrink-0">
+                            <div className="flex flex-wrap items-center gap-3">
+                                <h1 className="text-xl font-extrabold text-slate-900 md:text-2xl tracking-tight leading-snug">
+                                    {notebook.title}
+                                </h1>
+                                {notebook.subject_name && (
+                                    <Badge variant="primary" className="flex items-center gap-1 font-bold">
+                                        <BookOpen className="h-3.5 w-3.5" />
+                                        {notebook.subject_name}
+                                    </Badge>
+                                )}
                             </div>
                         </div>
+                    )}
 
-                        {notebook.sources.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {notebook.sources.map((source) => (
-                                    <SourceCard
-                                        key={`${source.type}-${source.id}`}
-                                        source={source}
-                                        notebookId={notebook.id}
-                                        onPreview={setPreviewState}
-                                        onActionSuccess={() => { }}
-                                    />
-                                ))}
+                    {activeArtifactId !== null ? (
+                        <QuizRunner
+                            notebookId={notebook.id}
+                            artifactId={activeArtifactId}
+                            onBack={() => handleSelectArtifact(null)}
+                        />
+                    ) : (
+                        <>
+                            {/* Quick Actions Block (StudyFetch style) */}
+                            <div className="bg-slate-50/70 border border-slate-150 rounded-2xl p-5 space-y-4 flex-shrink-0">
+                                <div>
+                                    <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                                        Bắt đầu học tập
+                                    </h3>
+                                    <p className="text-[11px] text-slate-500 mt-1">
+                                        Tải tài liệu nguồn lên hoặc tạo bài luyện tập, Flashcard ôn tập ngay lập tức.
+                                    </p>
+                                </div>
+
+                                <div className="flex flex-wrap gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsAddDocOpen(true)}
+                                        className="px-4 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-805 rounded-xl shadow-xs transition flex items-center gap-2 cursor-pointer"
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        Thêm tài liệu nguồn
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsGenerateModalOpen(true)}
+                                        className="px-4 py-2.5 text-xs font-bold text-slate-705 border border-slate-205 bg-white hover:bg-slate-50 active:bg-slate-100 rounded-xl shadow-xs transition flex items-center gap-2 cursor-pointer"
+                                    >
+                                        <GraduationCap className="h-4 w-4 text-indigo-600" />
+                                        <span>Tạo bài tập / Quiz</span>
+                                    </button>
+                                </div>
                             </div>
-                        ) : (
-                            <div className="py-12 px-4 border-2 border-dashed border-slate-200 rounded-3xl text-center bg-slate-50/30">
-                                <FileText className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-                                <h3 className="text-sm font-semibold text-slate-800 mb-1">Chưa có nguồn tài liệu nào</h3>
-                                <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
-                                    Sổ ghi chú này hiện chưa được liên kết nguồn nào. Tính năng lưu tài liệu công cộng và upload tệp tin cá nhân đã sẵn sàng để sử dụng.
-                                </p>
+
+                            {/* Creations Hub */}
+                            <div className="pt-2">
+                                <NotebookCreationsHub
+                                    notebookId={notebook.id}
+                                    onSelectArtifact={handleSelectArtifact}
+                                    onOpenGenerateModal={() => setIsGenerateModalOpen(true)}
+                                />
                             </div>
-                        )}
-                    </div>
+
+                            {/* Sources section */}
+                            <div className="space-y-4 flex flex-col pt-6 border-t border-slate-100">
+                                <div className="flex items-center justify-between flex-shrink-0">
+                                    <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                                        Tài liệu nguồn
+                                    </h2>
+
+                                    {/* Compact Quota Indicator */}
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">
+                                            <span className="font-bold text-slate-800">{notebook.sources_count}</span>
+                                            <span className="text-[10px]"> / {notebook.max_sources} nguồn</span>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {notebook.sources.length > 0 ? (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {notebook.sources.map((source) => (
+                                            <SourceCard
+                                                key={`${source.type}-${source.id}`}
+                                                source={source}
+                                                notebookId={notebook.id}
+                                                onPreview={setPreviewState}
+                                                onActionSuccess={() => { }}
+                                            />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="py-12 px-4 border-2 border-dashed border-slate-205 border-slate-200 rounded-3xl text-center bg-slate-50/30">
+                                        <FileText className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+                                        <h3 className="text-sm font-semibold text-slate-800 mb-1">Chưa có nguồn tài liệu nào</h3>
+                                        <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+                                            Sổ ghi chú này hiện chưa được liên kết nguồn nào. Tính năng lưu tài liệu công cộng và upload tệp tin cá nhân đã sẵn sàng để sử dụng.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 {/* Right Pane: AI Assistant Widget */}
@@ -513,6 +551,19 @@ export function NotebookDetailPage() {
                 onClose={() => setIsAddDocOpen(false)}
                 notebook={notebook}
             />
+
+            {isGenerateModalOpen && (
+                <GenerateArtifactModal
+                    isOpen={isGenerateModalOpen}
+                    notebookId={notebook.id}
+                    sources={notebook.sources}
+                    onClose={() => setIsGenerateModalOpen(false)}
+                    onSuccess={(newArtifactId) => {
+                        handleSelectArtifact(newArtifactId)
+                        setIsGenerateModalOpen(false)
+                    }}
+                />
+            )}
 
             <PdfPreviewModal
                 isOpen={previewState.isOpen}
