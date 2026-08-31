@@ -67,6 +67,14 @@ def delete_object(object_path: str) -> None:
 
 
 def get_presigned_download_url(*, object_path: str, expires_seconds: int = 900) -> str:
+    public_endpoint = settings.MINIO_PUBLIC_ENDPOINT
+    if public_endpoint and "r2.dev" in public_endpoint.lower():
+        endpoint = public_endpoint.rstrip("/")
+        if not endpoint.startswith("http://") and not endpoint.startswith("https://"):
+            endpoint = f"https://{endpoint}"
+        clean_path = object_path.lstrip("/")
+        return f"{endpoint}/{clean_path}"
+
     ensure_bucket()
     client = get_public_minio_client()
     return client.presigned_get_object(

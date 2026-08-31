@@ -94,8 +94,17 @@ def get_asset_download_url(db: Session, document_id: int, asset_id: int) -> tupl
     if asset is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Asset not found")
 
+    import os
+    if asset.converted_pdf_path:
+        object_path = asset.converted_pdf_path
+        base_name, _ = os.path.splitext(asset.file_name)
+        file_name = f"{base_name}.pdf"
+    else:
+        object_path = asset.file_path
+        file_name = asset.file_name
+
     download_url = storage_service.get_presigned_download_url(
-        object_path=asset.file_path,
+        object_path=object_path,
         expires_seconds=PRESIGNED_URL_EXPIRES_SECONDS,
     )
-    return download_url, asset.file_name
+    return download_url, file_name
