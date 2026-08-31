@@ -15,6 +15,7 @@ import { useAuth } from '../features/auth/context/AuthContext'
 import { type AuthUser } from '../features/auth/api'
 import { SubjectSearchInput } from '../features/taxonomy'
 import { useSidebar } from '../hooks/useSidebar'
+import { PageTransition } from '../components/PageTransition'
 
 // --- Module-scope component (stable identity) ---
 function AuthControls({ user, onLogout }: { user: AuthUser | null; onLogout: () => void }) {
@@ -44,6 +45,13 @@ export function AppLayout() {
   const isAdmin = user?.role === 'ADMIN'
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { isCollapsed, setIsCollapsed } = useSidebar()
+
+  const getBackToNotebookUrl = () => {
+    const params = new URLSearchParams(location.search)
+    params.delete('artifact')
+    const searchString = params.toString()
+    return searchString ? `${location.pathname}?${searchString}` : location.pathname
+  }
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false)
   const toggleMobileMenu = () => setIsMobileMenuOpen((prev) => !prev)
@@ -174,13 +182,13 @@ export function AppLayout() {
   }
 
   return (
-    <div className="h-screen bg-slate-50 flex font-sans antialiased text-slate-800 overflow-hidden">
+    <div className="h-screen bg-[#FAF9F6] flex font-sans antialiased text-slate-800 overflow-hidden">
       {/* ======================================================== */}
       {/* 1. DESKTOP LEFT SIDEBAR                                   */}
       {/* ======================================================== */}
       <aside
         className={`
-          hidden md:flex flex-col bg-slate-900 h-full z-30
+          hidden md:flex flex-col bg-[#13141A] h-full z-30
           transition-all duration-300
           ${isCollapsed ? 'w-20 cursor-col-resize' : 'w-64'}
         `}
@@ -199,7 +207,7 @@ export function AppLayout() {
             onClick={closeMobileMenu}
             aria-hidden="true"
           />
-          <aside className="fixed inset-y-0 left-0 z-50 w-72 flex flex-col bg-slate-900 md:hidden shadow-2xl">
+          <aside className="fixed inset-y-0 left-0 z-50 w-72 flex flex-col bg-[#13141A] md:hidden shadow-2xl">
             {sidebarContent(false)}
           </aside>
         </>
@@ -210,7 +218,7 @@ export function AppLayout() {
       {/* ======================================================== */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {/* Mobile sticky bar */}
-        <div className="md:hidden sticky top-0 z-20 flex items-center gap-2 bg-white px-3 h-14">
+        <div className="md:hidden sticky top-0 z-20 flex items-center gap-2 bg-[#FAF9F6]/90 backdrop-blur-md border-b border-slate-200/60 px-3 h-14">
           <button
             type="button"
             onClick={toggleMobileMenu}
@@ -222,7 +230,7 @@ export function AppLayout() {
           <div className="flex-1 min-w-0 flex items-center gap-2">
             {isWorkspaceEditor && (
               <Link
-                to={isViewingQuiz ? location.pathname : "/me/workspace"}
+                to={isViewingQuiz ? getBackToNotebookUrl() : "/me/workspace"}
                 className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-slate-800 transition shrink-0"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -239,7 +247,7 @@ export function AppLayout() {
           <div className="flex-1 max-w-md flex items-center gap-4">
             {isWorkspaceEditor && (
               <Link
-                to={isViewingQuiz ? location.pathname : "/me/workspace"}
+                to={isViewingQuiz ? getBackToNotebookUrl() : "/me/workspace"}
                 className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 px-3 py-1.5 rounded-lg transition shrink-0"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -253,10 +261,12 @@ export function AppLayout() {
 
         <main className={
           isWorkspaceEditor
-            ? "flex-1 overflow-hidden w-full h-full p-0"
+            ? "flex-1 overflow-hidden w-full h-full p-0 flex flex-col min-h-0"
             : "flex-1 overflow-y-auto px-6 pb-8 md:px-8 md:pb-10 max-w-7xl w-full mx-auto"
         }>
-          <Outlet />
+          <PageTransition>
+            <Outlet />
+          </PageTransition>
         </main>
       </div>
     </div>

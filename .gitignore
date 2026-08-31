@@ -25,23 +25,27 @@ coverage.xml
 htmlcov/
 __pypackages__/
 
-# Virtualenv/pyenv
-venv/
-ENV/
-.venv/
-
-# Flask / Django
+# Flask / Django / SQLite
 instance/
 *.db
 *.sqlite3
 
+# Database Dumps & SQL
+*.dump
+*.sql
+backup_data.dump
+
 # Environment files
 .env
 .env.*
-# Allow project-specific env examples
+.env.local
+.env.*.local
+# Un-ignore all .env.example files across root, backend, frontend
+!.env.example
 !backend/.env.example
+!frontend/.env.example
 
-# Node
+# Node / Frontend builds
 node_modules/
 npm-debug.log*
 yarn-debug.log*
@@ -62,19 +66,23 @@ build/
 
 # IDEs and editors
 .idea/
+.vscode/
 
-# Secrets and keys
+# Secrets, keys & private sync scripts
 *.pem
 *.key
 secrets.json
+sync_to_r2.py
 
 # Docker
-# Keep Dockerfiles and compose files tracked; ignore runtime artifacts
 docker-compose.override.yml
 
-# Misc
+# Misc & temporary files
 *.swp
 *~
 *.tmp
-Thumbs.db
+derived/
 
+# Binary Seed Assets (Uploaded directly to Cloudflare R2)
+backend/app/seed_assets/
+seed_assets/

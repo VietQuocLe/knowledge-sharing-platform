@@ -35,6 +35,12 @@ export interface Asset {
   size: number
 }
 
+export interface DocumentCreator {
+  id: number
+  full_name?: string
+  email?: string
+}
+
 export interface Document {
   id: number
   title: string
@@ -42,7 +48,8 @@ export interface Document {
   subject_id: number
   resource_type: ResourceType
   status: DocumentStatus
-  created_by: number
+  created_by?: number | null
+  creator?: DocumentCreator | null
   created_at: string
   assets: Asset[]
 }

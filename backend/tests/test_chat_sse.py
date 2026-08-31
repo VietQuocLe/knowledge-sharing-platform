@@ -6,10 +6,10 @@ import json
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
-# Set environment overrides to connect locally (outside Docker)
-os.environ["POSTGRES_HOST"] = "localhost"
-os.environ["POSTGRES_PORT"] = "5433"
-os.environ["MINIO_HOST"] = "localhost"
+# Set environment overrides to connect locally (outside Docker) if not set
+os.environ.setdefault("POSTGRES_HOST", "localhost")
+os.environ.setdefault("POSTGRES_PORT", "5433")
+os.environ.setdefault("MINIO_HOST", "localhost")
 
 # Ensure backend directory is in path
 backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -100,8 +100,12 @@ async def run_tests():
         mock_response = MagicMock()
         mock_chunk_1 = MagicMock()
         mock_chunk_1.text = "FastAPI "
+        mock_chunk_1.usage_metadata = None
         mock_chunk_2 = MagicMock()
         mock_chunk_2.text = "is awesome [1]!"
+        mock_chunk_2.usage_metadata = MagicMock()
+        mock_chunk_2.usage_metadata.prompt_token_count = 120
+        mock_chunk_2.usage_metadata.candidates_token_count = 25
         mock_response.__iter__.return_value = [mock_chunk_1, mock_chunk_2]
         
         with patch("app.services.notebook_chat_service.condense_query_and_route") as mock_condense, \
@@ -150,6 +154,14 @@ async def run_tests():
             done_idx = next(i for i, e in enumerate(events) if "event: done" in e)
             assert citation_idx < delta_idx < done_idx
 
+            # Verify done event payload contains token metrics
+            done_data_line = events[done_idx + 1]
+            assert "data:" in done_data_line
+            done_data = json.loads(done_data_line.replace("data:", "").strip())
+            assert done_data["prompt_tokens"] == 120
+            assert done_data["completion_tokens"] == 25
+            assert done_data["total_tokens"] == 145
+
             # Check messages written to DB
             from app.models.notebook_chat import NotebookChatMessage
             db.expire_all()
@@ -159,6 +171,8 @@ async def run_tests():
             assert msgs[0].content == "What is FastAPI?"
             assert msgs[1].role == "assistant"
             assert "FastAPI is awesome" in msgs[1].content
+            assert msgs[1].prompt_tokens == 120
+            assert msgs[1].completion_tokens == 25
             
             # Assert citations details inside the DB message are properly parsed and pruned
             assert len(msgs[1].citations) == 1
@@ -169,7 +183,7 @@ async def run_tests():
             assert "content" not in db_citation  # Verify block/content was pruned/removed
             assert "index" in db_citation
             
-        logger.info("TEST 1 PASSED: SSE streamed RAG response and preserved message log!")
+        logger.info("TEST 1 PASSED: SSE streamed RAG response and preserved message log with token counts!")
 
         # Clean messages
         db.query(NotebookChatMessage).delete()
@@ -305,12 +319,12 @@ async def run_tests():
             # Assert closed has been called on mock gemini stream
             mock_gemini_stream.close.assert_called_once()
             
-            # DB messages should have 0 records since we aborted insert upon disconnect
+            # DB messages should have 2 records (user + assistant) saved reliably after stream completion
             db.expire_all()
             msgs = db.query(NotebookChatMessage).filter(NotebookChatMessage.session_id == session.id).all()
-            assert len(msgs) == 0
+            assert len(msgs) == 2
             
-        logger.info("TEST 4 PASSED: Stream generator closed Gemini client response and skipped database commit upon client disconn.")
+        logger.info("TEST 4 PASSED: Stream generator successfully closed Gemini stream and reliably persisted messages to DB.")
 
         # =====================================================================
         # TEST 5: Empty Notebook Fallback (Short-circuit & assert no Gemini call)
@@ -373,6 +387,10 @@ class BackgroundTasksMock:
         self.tasks = []
     def add_task(self, func, *args, **kwargs):
         self.tasks.append((func, args, kwargs))
+
+
+def test_chat_sse_all():
+    asyncio.run(run_tests())
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BookOpen, Search, Loader2 } from 'lucide-react'
+import { BookOpen, Search } from 'lucide-react'
 import { useAuth } from '../features/auth'
 import {
     useNotebooks,
@@ -7,6 +7,7 @@ import {
     CreateNotebookCard,
     CreateNotebookModal,
 } from '../features/notebooks'
+import { NotebookCardSkeleton } from '../components/ui/Skeleton'
 import { EmptyState } from '../components/ui/EmptyState'
 
 export function MyNotebooksPage() {
@@ -51,7 +52,7 @@ export function MyNotebooksPage() {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Tìm kiếm sổ ghi chú nhanh..."
-                        className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-4 pr-10 text-xs text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition"
+                        className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-4 pr-10 text-xs text-slate-800 placeholder-slate-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20 transition"
                     />
                     <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                 </div>
@@ -59,8 +60,10 @@ export function MyNotebooksPage() {
 
             {/* Loading State */}
             {isLoading ? (
-                <div className="flex h-60 items-center justify-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-indigo-650" />
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <NotebookCardSkeleton key={i} />
+                    ))}
                 </div>
             ) : (
                 <>

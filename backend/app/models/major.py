@@ -18,7 +18,7 @@ major_subject = Table(
     Base.metadata,
     Column("major_id", Integer, ForeignKey("majors.id", ondelete="CASCADE"), primary_key=True),
     Column("subject_id", Integer, ForeignKey("subjects.id", ondelete="CASCADE"), primary_key=True),
-    Column("category", Enum(SubjectCategory), nullable=False, default=SubjectCategory.GENERAL, server_default='GENERAL'),
+    Column("category", Enum(SubjectCategory, name="subject_category"), nullable=False, default=SubjectCategory.GENERAL, server_default='GENERAL'),
 )
 
 class Major(Base):

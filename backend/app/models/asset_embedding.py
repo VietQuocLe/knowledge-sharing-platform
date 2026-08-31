@@ -39,6 +39,8 @@ class AssetEmbedding(Base):
 
     page_number: Mapped[int] = mapped_column(Integer, nullable=False)
 
+    token_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
     metadata_: Mapped[dict[str, Any]] = mapped_column(
         JSONB,
         default=dict,

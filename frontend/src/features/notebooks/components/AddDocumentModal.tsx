@@ -20,9 +20,11 @@ export function AddDocumentModal({ isOpen, onClose, notebook }: AddDocumentModal
     const [isUploading, setIsUploading] = useState(false)
 
     // TanStack queries/mutations
+    // Mặc định tải tài liệu theo môn của Notebook; khi người dùng tìm kiếm thì mở rộng tìm trên toàn thư viện
+    const isSearching = searchTerm.trim().length > 0
     const { data: documentsData, isLoading: isDocsLoading } = useDocuments({
-        subjectId: notebook.subject_id || undefined,
-        size: 50
+        subjectId: isSearching ? undefined : (notebook.subject_id || undefined),
+        size: isSearching ? 100 : 50,
     })
 
     const { mutate: saveDocument, isPending: isSavingDoc } = useSaveDocumentToNotebook(notebook.id)
@@ -154,7 +156,7 @@ export function AddDocumentModal({ isOpen, onClose, notebook }: AddDocumentModal
                         type="button"
                         onClick={() => setActiveTab('library')}
                         className={`flex-1 pb-2.5 text-xs font-bold text-center border-b-2 transition cursor-pointer ${activeTab === 'library'
-                            ? 'border-indigo-600 text-indigo-600'
+                            ? 'border-sky-600 text-sky-600'
                             : 'border-transparent text-slate-450 hover:text-slate-655'
                             }`}
                     >
@@ -164,7 +166,7 @@ export function AddDocumentModal({ isOpen, onClose, notebook }: AddDocumentModal
                         type="button"
                         onClick={() => setActiveTab('upload')}
                         className={`flex-1 pb-2.5 text-xs font-bold text-center border-b-2 transition cursor-pointer ${activeTab === 'upload'
-                            ? 'border-indigo-600 text-indigo-600'
+                            ? 'border-sky-600 text-sky-600'
                             : 'border-transparent text-slate-450 hover:text-slate-655'
                             }`}
                     >
@@ -183,7 +185,7 @@ export function AddDocumentModal({ isOpen, onClose, notebook }: AddDocumentModal
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 placeholder="Tìm tài liệu từ danh sách..."
-                                className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                                className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition"
                             />
                         </div>
 
@@ -191,7 +193,7 @@ export function AddDocumentModal({ isOpen, onClose, notebook }: AddDocumentModal
                         <div className="flex-1 overflow-y-auto max-h-[40vh] pr-1 space-y-2">
                             {isDocsLoading ? (
                                 <div className="flex justify-center py-10">
-                                    <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
+                                    <Loader2 className="h-6 w-6 animate-spin text-sky-500" />
                                 </div>
                             ) : filteredDocuments.length > 0 ? (
                                 filteredDocuments.map((doc) => {
@@ -205,7 +207,7 @@ export function AddDocumentModal({ isOpen, onClose, notebook }: AddDocumentModal
                                             className="p-3 rounded-xl border border-slate-150 hover:border-slate-350 transition flex items-center justify-between gap-3 text-left"
                                         >
                                             <div className="min-w-0 flex-1 flex items-start gap-2.5">
-                                                <FileText className="h-4.5 w-4.5 text-indigo-500 shrink-0 mt-0.5" />
+                                                <FileText className="h-4.5 w-4.5 text-sky-500 shrink-0 mt-0.5" />
                                                 <div className="min-w-0">
                                                     <h4 className="text-xs font-bold text-slate-800 truncate" title={doc.title}>
                                                         {doc.title}
@@ -225,7 +227,7 @@ export function AddDocumentModal({ isOpen, onClose, notebook }: AddDocumentModal
                                                     ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                                                     : isQuotaFull
                                                         ? 'bg-rose-50/55 text-rose-400 cursor-not-allowed border border-rose-100/30'
-                                                        : 'bg-indigo-600 hover:bg-indigo-700 text-white active:bg-indigo-808 shadow-sm'
+                                                        : 'bg-black hover:bg-slate-800 text-white shadow-sm'
                                                     }`}
                                             >
                                                 {isSaved ? 'Đã lưu' : 'Lưu'}
@@ -253,7 +255,7 @@ export function AddDocumentModal({ isOpen, onClose, notebook }: AddDocumentModal
                 ) : (
                     // Upload Tab Content
                     <div className="space-y-4">
-                        <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 hover:border-indigo-500 rounded-2xl p-6 bg-slate-50/30 group transition cursor-pointer relative">
+                        <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 hover:border-sky-500 rounded-2xl p-6 bg-slate-50/30 group transition cursor-pointer relative">
                             <input
                                 type="file"
                                 multiple
@@ -263,7 +265,7 @@ export function AddDocumentModal({ isOpen, onClose, notebook }: AddDocumentModal
                                 className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
                             />
 
-                            <UploadCloud className="h-10 w-10 text-slate-400 group-hover:text-indigo-500 shrink-0 mb-2 transition" />
+                            <UploadCloud className="h-10 w-10 text-slate-400 group-hover:text-sky-500 shrink-0 mb-2 transition" />
                             <p className="text-xs font-bold text-slate-800 text-center">
                                 Nhấp hoặc thả tập tin vào đây để tải lên.
                             </p>
@@ -277,7 +279,7 @@ export function AddDocumentModal({ isOpen, onClose, notebook }: AddDocumentModal
                                 {selectedFiles.map((file, idx) => (
                                     <div key={`${file.name}-${idx}`} className="flex items-center justify-between p-3 rounded-xl border border-slate-150 bg-slate-50/50">
                                         <div className="flex items-center gap-2 min-w-0">
-                                            <Paperclip className="h-4 w-4 text-indigo-500 shrink-0" />
+                                            <Paperclip className="h-4 w-4 text-sky-500 shrink-0" />
                                             <div className="min-w-0">
                                                 <p className="text-xs font-bold text-slate-800 truncate" title={file.name}>
                                                     {file.name}
@@ -315,7 +317,7 @@ export function AddDocumentModal({ isOpen, onClose, notebook }: AddDocumentModal
                                 onClick={handleFileUpload}
                                 className={`px-4 py-2 text-xs font-bold text-white rounded-xl shadow-sm transition flex items-center gap-1.5 ${selectedFiles.length === 0 || isUploading || isQuotaFull
                                     ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                                    : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-805 active:bg-indigo-800 cursor-pointer'
+                                    : 'bg-black hover:bg-slate-800 active:scale-[0.98] cursor-pointer'
                                     }`}
                             >
                                 {isUploading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}

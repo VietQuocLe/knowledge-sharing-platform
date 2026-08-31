@@ -3,10 +3,10 @@ import sys
 import logging
 from unittest.mock import patch, MagicMock
 
-# Set environment overrides to connect locally (outside Docker)
-os.environ["POSTGRES_HOST"] = "localhost"
-os.environ["POSTGRES_PORT"] = "5433"
-os.environ["MINIO_HOST"] = "localhost"
+# Set environment overrides to connect locally (outside Docker) if not set
+os.environ.setdefault("POSTGRES_HOST", "localhost")
+os.environ.setdefault("POSTGRES_PORT", "5433")
+os.environ.setdefault("MINIO_HOST", "localhost")
 
 # Ensure backend directory is in path
 backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -95,28 +95,32 @@ def run_tests():
             chunk_index=0,
             content="Học máy là một lĩnh vực của trí tuệ nhân tạo.",
             embedding=[0.11] * 768,
-            page_number=1
+            page_number=1,
+            token_count=1000,
         )
         emb_a1_2 = AssetEmbedding(
             asset_id=asset_a1.id,
             chunk_index=1,
             content="Nó cho phép máy tính tự động học hỏi từ dữ liệu dữ kiện.",
             embedding=[0.12] * 768,
-            page_number=1
+            page_number=1,
+            token_count=1000,
         )
         emb_a1_3 = AssetEmbedding(
             asset_id=asset_a1.id,
             chunk_index=2,
             content="Các thuật toán tinh vi giúp phân tích xu hướng phức tạp.",
             embedding=[0.13] * 768,
-            page_number=1
+            page_number=1,
+            token_count=500,
         )
         emb_a1_page2 = AssetEmbedding(
             asset_id=asset_a1.id,
             chunk_index=3,
             content="Đây là nội dung ở trang số hai về mạng nơ-ron chuyên sâu.",
             embedding=[0.20] * 768,
-            page_number=2
+            page_number=2,
+            token_count=1000,
         )
         
         # Populate embeddings for Pending Asset A2 (should remain invisible)
@@ -125,7 +129,8 @@ def run_tests():
             chunk_index=0,
             content="Tài liệu nháp chưa xử lý xong về trí tuệ nhân tạo.",
             embedding=[0.11] * 768,
-            page_number=1
+            page_number=1,
+            token_count=50,
         )
 
         # Populate embeddings for Asset B1 (Notebook B - similar text/embedding)
@@ -134,7 +139,8 @@ def run_tests():
             chunk_index=0,
             content="Học máy và phân tích thiết kế hệ thống phần mềm.", # similar keyword
             embedding=[0.11] * 768, # matching embedding
-            page_number=1
+            page_number=1,
+            token_count=50,
         )
 
         db.add_all([emb_a1_1, emb_a1_2, emb_a1_3, emb_a1_page2, emb_a2_pending, emb_b1_1])
@@ -177,6 +183,14 @@ def run_tests():
         # VERIFICATION 3: Adjacent Chunk Stitching
         # ==========================================
         logger.info("--- VERIFICATION 3: Adjacent Chunk Stitching ---")
+        # Temporarily lower token_counts so both stitched blocks fit into 3000 tokens
+        emb_a1_1.token_count = 100
+        emb_a1_2.token_count = 100
+        emb_a1_3.token_count = 100
+        emb_a1_page2.token_count = 100
+        db.commit()
+        db.expire_all()
+
         with patch("app.services.retrieval_service.generate_query_embedding") as mock_emb:
             mock_emb.return_value = [0.11] * 768 # close to emb_a1_1, emb_a1_2, emb_a1_3
 
@@ -220,35 +234,28 @@ def run_tests():
         # VERIFICATION 4: Token Budget Enforcement
         # ==========================================
         logger.info("--- VERIFICATION 4: Token Budget Enforcement ---")
+        # Increase token_count of page 1 blocks to 2500 and page 2 to 1000 so total > 3000
+        emb_a1_1.token_count = 1000
+        emb_a1_2.token_count = 1000
+        emb_a1_3.token_count = 500
+        emb_a1_page2.token_count = 1000
+        db.commit()
+        db.expire_all()
+
         with patch("app.services.retrieval_service.generate_query_embedding") as mock_emb:
             mock_emb.return_value = [0.11] * 768
             
-            # Mock Gemini count_tokens to simulate over budget
-            with patch("app.services.retrieval_service.genai.Client") as mock_client_cls:
-                mock_client = MagicMock()
-                mock_client_cls.return_value = mock_client
-                
-                # Mock first call (with 2 blocks) returning > 3000 tokens
-                # Mock second call (with 1 block popped) returning < 3000 tokens
-                mock_count_response1 = MagicMock(total_tokens=3500)
-                mock_count_response2 = MagicMock(total_tokens=1200)
-                
-                mock_client.models.count_tokens.side_effect = [
-                    mock_count_response1,
-                    mock_count_response2
-                ]
-
-                ret_budget = hybrid_retrieval(db, notebook_id=nb_a.id, query="học máy")
-                
-                # It should drop the second block (page 2 block) and retain only page 1 block
-                assert len(ret_budget["chunks"]) == 1
-                assert ret_budget["chunks"][0]["page_number"] == 1
-                
-                # Only renumbered [1] should remain
-                assert "[1] [Tài liệu: ktlt_doc.pdf]" in ret_budget["context"] or "Trang: 1" in ret_budget["context"]
-                assert "[2]" not in ret_budget["context"]
-                
-                logger.info("Checked: Token budget enforced. Lower RRF scores dropped correctly.")
+            ret_budget = hybrid_retrieval(db, notebook_id=nb_a.id, query="học máy")
+            
+            # It should drop the second block (page 2 block) and retain only page 1 block
+            assert len(ret_budget["chunks"]) == 1
+            assert ret_budget["chunks"][0]["page_number"] == 1
+            
+            # Only renumbered [1] should remain
+            assert "[1] [Tài liệu: ktlt_doc.pdf]" in ret_budget["context"] or "Trang: 1" in ret_budget["context"]
+            assert "[2]" not in ret_budget["context"]
+            
+            logger.info("Checked: In-memory token budget enforced. Lower RRF scores dropped correctly.")
 
         logger.info("ALL HYBRID RETRIEVAL PERSISTENCE INTEGRATION TESTS PASSED SUCCESSFULLY!")
 

@@ -9,11 +9,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# 2. Cài đặt thư viện Python (không cần sửa requirements.txt vì gọi soffice qua subprocess)
+# 2. Cài đặt Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 3. Copy mã nguồn
+# 3. Copy source code
 COPY . .
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# 4. Khởi chạy Uvicorn server (hỗ trợ dynamic port trên Cloud, fallback port 8000)
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

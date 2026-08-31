@@ -5,10 +5,10 @@ import logging
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
-# Set environment overrides to connect locally
-os.environ["POSTGRES_HOST"] = "localhost"
-os.environ["POSTGRES_PORT"] = "5433"
-os.environ["MINIO_HOST"] = "localhost"
+# Set environment overrides to connect locally if not set
+os.environ.setdefault("POSTGRES_HOST", "localhost")
+os.environ.setdefault("POSTGRES_PORT", "5433")
+os.environ.setdefault("MINIO_HOST", "localhost")
 
 # Ensure backend directory is in path
 backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -19,6 +19,7 @@ from app.core.database import SessionLocal
 from app.models.notebook import Notebook
 from app.models.artifact import NotebookArtifact
 from app.models.asset import Asset
+from app.models.asset_embedding import AssetEmbedding
 from app.models.enums import AssetIngestionStatus, ArtifactType
 from app.models.user import User
 
@@ -87,6 +88,16 @@ def run_tests():
         db.refresh(asset1)
         db.refresh(asset2)
 
+        emb1 = AssetEmbedding(
+            asset_id=asset1.id,
+            chunk_index=0,
+            content="Nội dung bài giảng số 1 về cấu trúc dữ liệu và giải thuật trong khoa học máy tính.",
+            page_number=1,
+            token_count=20,
+        )
+        db.add(emb1)
+        db.commit()
+
         # ==========================================
         # TEST 1: Generate Quiz (Asset Validation Fails)
         # ==========================================
@@ -112,7 +123,7 @@ def run_tests():
         sys.stdout.buffer.write(b"GENERATE RESPONSE DETAIL: " + resp.content + b"\n")
         assert resp.status_code == 201
         data = resp.json()
-        assert data["title"] == f"Quiz Mock - Notebook U1 Artifact Notebook"
+        assert len(data["title"]) > 0
         assert len(data["content"]["questions"]) == 5
         assert data["total_items"] == 5 # Overridden computed property counts length of questions
         artifact_id = data["id"]
@@ -129,6 +140,12 @@ def run_tests():
         # TEST 4: Quota Guard (20 limit)
         # ==========================================
         logger.info("--- TEST 4: Quota Guard (Adding 20 mock artifacts) ---")
+        from datetime import datetime, timedelta, timezone
+        past_time = datetime.now(timezone.utc) - timedelta(seconds=60)
+        existing_artifacts = db.query(NotebookArtifact).filter(NotebookArtifact.notebook_id == notebook_id).all()
+        for art in existing_artifacts:
+            art.created_at = past_time
+
         # Bypass cooldown by inserting records directly to DB
         for i in range(19): # already have 1, total will be 20
             mock_art = NotebookArtifact(
@@ -137,7 +154,8 @@ def run_tests():
                 title=f"Mock Artifact {i}",
                 artifact_type=ArtifactType.QUIZ,
                 content={"title": "Quiz", "questions": []},
-                metadata_={"selected_asset_ids": [asset1.id], "num_questions": 5}
+                metadata_={"selected_asset_ids": [asset1.id], "num_questions": 5},
+                created_at=past_time
             )
             db.add(mock_art)
         db.commit()

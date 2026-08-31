@@ -29,7 +29,7 @@ class User(Base):
     google_id: Mapped[str | None] = mapped_column(String(255), unique=True)
 
     role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole),
+        Enum(UserRole, name="user_role"),
         default=UserRole.USER,
         nullable=False,
     )
@@ -43,7 +43,6 @@ class User(Base):
 
     documents: Mapped[list["Document"]] = relationship(
         back_populates="creator",
-        cascade="all, delete-orphan",
     )
 
     notebooks: Mapped[list["Notebook"]] = relationship(

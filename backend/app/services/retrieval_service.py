@@ -3,14 +3,21 @@ from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 from google import genai
 from google.genai import types
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.core.config import settings
+from app.models.asset import Asset
 from app.models.asset_embedding import AssetEmbedding
 from app.services.notebook_service import get_scoped_asset_ids
 
 logger = logging.getLogger(__name__)
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=1, max=3),
+    reraise=True,
+)
 def generate_query_embedding(query: str) -> list[float]:
     """
     Generates query embedding using settings.GEMINI_EMBEDDING_MODEL
@@ -37,7 +44,7 @@ def hybrid_retrieval(db: Session, notebook_id: int, query: str) -> dict:
     4. Triggers Sparse Search (top-20).
     5. Performs RRF merge (k=60), filters to top-5.
     6. Stitches adjacent chunks.
-    7. Enforces token budget (3000 tokens) using client.models.count_tokens.
+    7. Enforces token budget (3000 tokens) in memory using accumulated token_count.
     8. Renumbers the final stitched chunks [1]..[N].
     """
     # 1. Fetch scoped assets (Early Return / Short-circuit)
@@ -49,8 +56,6 @@ def hybrid_retrieval(db: Session, notebook_id: int, query: str) -> dict:
             "chunks": [],
             "context": "",
         }
-
-    client = genai.Client(api_key=settings.GOOGLE_API_KEY)
 
     # 2. Dense query (vector search)
     try:
@@ -148,6 +153,7 @@ def hybrid_retrieval(db: Session, notebook_id: int, query: str) -> dict:
     stitched_blocks = []
     for chunk in chunks_sorted:
         item = id_to_item[chunk.id]
+        chunk_tokens = chunk.token_count if (getattr(chunk, "token_count", 0) or 0) > 0 else max(1, int(len(chunk.content.split()) * 1.3))
         if stitched_blocks and (
             stitched_blocks[-1]["asset_id"] == chunk.asset_id
             and stitched_blocks[-1]["page_number"] == chunk.page_number
@@ -156,6 +162,7 @@ def hybrid_retrieval(db: Session, notebook_id: int, query: str) -> dict:
             # Stitch content and append index
             stitched_blocks[-1]["chunk_indices"].append(chunk.chunk_index)
             stitched_blocks[-1]["content"] += " " + chunk.content
+            stitched_blocks[-1]["token_count"] += chunk_tokens
             # Keep the highest RRF score (best score)
             if item["rrf_score"] > stitched_blocks[-1]["best_score"]:
                 stitched_blocks[-1]["best_score"] = item["rrf_score"]
@@ -166,6 +173,7 @@ def hybrid_retrieval(db: Session, notebook_id: int, query: str) -> dict:
                 "page_number": chunk.page_number,
                 "chunk_indices": [chunk.chunk_index],
                 "content": chunk.content,
+                "token_count": chunk_tokens,
                 "best_score": item["rrf_score"],
             })
 
@@ -173,36 +181,35 @@ def hybrid_retrieval(db: Session, notebook_id: int, query: str) -> dict:
     stitched_blocks = sorted(stitched_blocks, key=lambda b: b["best_score"], reverse=True)
 
     # 6. Token Budget Enforcement (3000 tokens maximum)
-    final_blocks = list(stitched_blocks)
-    while len(final_blocks) > 0:
-        # Build test doc string to count tokens
-        context_str = ""
-        for i, block in enumerate(final_blocks, 1):
-            context_str += f"[{i}] [Asset ID: {block['asset_id']}, Trang: {block['page_number']}]\n{block['content']}\n\n"
-        
-        try:
-            resp = client.models.count_tokens(
-                model=settings.GEMINI_CHAT_MODEL,
-                contents=context_str,
-            )
-            total_tokens = resp.total_tokens
-        except Exception as e:
-            logger.warning(f"Failed to call Gemini count_tokens, falling back to heuristic: {e}")
-            total_tokens = len(context_str) // 3
+    max_budget = 3000
+    accumulated_tokens = 0
+    final_blocks = []
 
-        if total_tokens <= 3000 or len(final_blocks) == 1:
-            break
+    for block in stitched_blocks:
+        block_tokens = block.get("token_count", 0)
+        if not final_blocks:
+            # Always include at least the top-ranked block
+            final_blocks.append(block)
+            accumulated_tokens += block_tokens
+        elif accumulated_tokens + block_tokens <= max_budget:
+            final_blocks.append(block)
+            accumulated_tokens += block_tokens
         else:
-            # Exceeded budget! Drop the block with the lowest rank (last index in sorted list)
-            final_blocks.pop()
+            # Stop adding blocks once budget is exceeded
+            break
 
     # 7. Renumbering & Build final context string
+    # Batch fetch Asset records for all unique asset_ids in final_blocks
+    unique_asset_ids = list({block["asset_id"] for block in final_blocks})
+    asset_map: dict[int, str] = {}
+    if unique_asset_ids:
+        assets = db.execute(select(Asset).where(Asset.id.in_(unique_asset_ids))).scalars().all()
+        asset_map = {asset.id: asset.file_name for asset in assets}
+
     final_context_list = []
     final_context_str = ""
     for idx, block in enumerate(final_blocks, 1):
-        from app.models.asset import Asset
-        asset = db.get(Asset, block["asset_id"])
-        file_name = asset.file_name if asset else f"Document_{block['asset_id']}"
+        file_name = asset_map.get(block["asset_id"], f"Document_{block['asset_id']}")
 
         block_desc = {
             "index": idx,

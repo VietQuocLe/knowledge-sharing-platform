@@ -1,4 +1,5 @@
 import { Link, Outlet } from 'react-router-dom'
+import { PageTransition } from '../components/PageTransition'
 
 export function AdminLayout() {
   return (
@@ -16,7 +17,9 @@ export function AdminLayout() {
           </nav>
         </aside>
         <main className="flex-1">
-          <Outlet />
+          <PageTransition>
+            <Outlet />
+          </PageTransition>
         </main>
       </div>
     </div>

@@ -27,6 +27,7 @@ class Notebook(Base):
     owner_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
 
     subject_id: Mapped[int | None] = mapped_column(

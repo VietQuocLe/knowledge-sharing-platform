@@ -36,31 +36,31 @@ export function ArtifactCard({ artifact, isActive, onSelect, onDeleted }: Artifa
             <div
                 onClick={onSelect}
                 className={`p-4 rounded-2xl border transition duration-150 flex flex-col justify-between gap-3 relative group cursor-pointer ${isActive
-                    ? 'border-indigo-500 bg-indigo-50/30'
-                    : 'border-slate-200 bg-white hover:border-slate-350 hover:shadow-2xs'
+                    ? 'border-[#0D9488] bg-[#E6FFFA]/40 shadow-2xs'
+                    : 'border-slate-200/80 bg-white hover:border-[#B2F5EA] hover:shadow-xs'
                     }`}
             >
                 {/* Card Content Row */}
                 <div className="flex items-start gap-4 min-w-0 pr-6">
                     <div
                         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border shadow-3xs group-hover:scale-105 transition ${isActive
-                            ? 'bg-indigo-100 border-indigo-250 text-indigo-700'
-                            : 'bg-slate-50 border-slate-150 text-slate-650'
+                            ? 'bg-[#E6FFFA] border-[#B2F5EA] text-[#0D9488]'
+                            : 'bg-[#E6FFFA]/60 border-[#B2F5EA]/80 text-[#0D9488]'
                             }`}
                     >
                         <FileQuestion className="h-5 w-5" />
                     </div>
                     <div className="min-w-0 flex-1">
                         <h4
-                            className={`text-xs font-bold text-slate-800 break-all leading-snug line-clamp-2 hover:text-indigo-650 transition ${isActive ? 'text-indigo-900' : ''
+                            className={`text-xs font-bold text-slate-800 break-words leading-snug line-clamp-2 hover:text-[#0D9488] transition ${isActive ? 'text-[#0F766E]' : ''
                                 }`}
                             title={artifact.title}
                         >
                             {artifact.title}
                         </h4>
                         <div className="flex flex-wrap gap-1.5 mt-2">
-                            <span className="text-[10px] text-slate-455 font-medium flex items-center gap-1">
-                                <Sparkles className="h-3 w-3 text-indigo-500" />
+                            <span className="text-[10px] text-teal-800 font-medium flex items-center gap-1 bg-[#E6FFFA] px-2 py-0.5 rounded-full border border-[#B2F5EA]">
+                                <Sparkles className="h-3 w-3 text-[#0D9488]" />
                                 <span>Quiz • {artifact.total_items ?? 0} câu hỏi</span>
                             </span>
                         </div>

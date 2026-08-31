@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { File, Download, FileText, Eye, User, Archive } from 'lucide-react'
+import { File, Download, FileText, Eye, User, Archive, Loader2 } from 'lucide-react'
 import { ErrorMessage } from '../components/ui/ErrorMessage'
-import { Spinner } from '../components/ui/Spinner'
+import { Skeleton } from '../components/ui/Skeleton'
 import { Breadcrumb } from '../components/ui/Breadcrumb'
 import { Badge } from '../components/ui/Badge'
 import { Card } from '../components/ui/Card'
-import { documentsApi, documentsKeys, PdfPreviewModal } from '../features/documents'
+import { documentsApi, documentsKeys, PdfPreviewModal, type Asset } from '../features/documents'
 import { taxonomyApi } from '../features/taxonomy/api'
 import { taxonomyKeys } from '../features/taxonomy/queryKeys'
 import { parseRouteId } from '../utils/parseRouteId'
@@ -19,11 +19,11 @@ export function DocumentDetailPage() {
   const [downloadingAssetId, setDownloadingAssetId] = useState<number | null>(null)
 
   // PDF Preview states
-  const [previewAsset, setPreviewAsset] = useState<any | null>(null)
+  const [previewAsset, setPreviewAsset] = useState<Asset | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [isLoadingPreviewUrl, setIsLoadingPreviewUrl] = useState(false)
 
-  async function handlePreview(asset: any) {
+  async function handlePreview(asset: Asset) {
     if (documentId === null) return
     setPreviewAsset(asset)
     setPreviewUrl(null)
@@ -101,9 +101,33 @@ export function DocumentDetailPage() {
 
   if (isCurrentlyLoading) {
     return (
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
-        <div className="flex justify-center py-16">
-          <Spinner size="lg" />
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-6 font-sans">
+        <Skeleton className="h-4 w-48" />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-8 space-y-6">
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Skeleton className="h-5 w-24 rounded-full" />
+                <Skeleton className="h-5 w-20 rounded-full" />
+              </div>
+              <Skeleton className="h-8 w-4/5" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-3 shadow-3xs">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+          </div>
+          <div className="lg:col-span-4 space-y-6">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-4 shadow-3xs">
+              <Skeleton className="h-5 w-36" />
+              <Skeleton className="h-20 w-full rounded-xl" />
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-3 shadow-3xs">
+              <Skeleton className="h-5 w-36" />
+              <Skeleton className="h-16 w-full" />
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -187,8 +211,12 @@ export function DocumentDetailPage() {
                   <User className="h-4.5 w-4.5" />
                 </div>
                 <div>
-                  <p className="font-bold text-slate-800">Đăng bởi: Quản trị viên</p>
-                  <p className="text-slate-450 mt-0.5">Tài khoản Hệ thống đóng góp</p>
+                  <p className="font-bold text-slate-800">
+                    Đăng bởi: {document.creator?.full_name || (document.created_by ? 'Quản trị viên' : 'Tác giả ẩn danh')}
+                  </p>
+                  <p className="text-slate-450 mt-0.5">
+                    {document.creator ? (document.creator.email || 'Thành viên đóng góp') : (document.created_by ? 'Tài khoản Hệ thống đóng góp' : 'Tài khoản đã bị xóa hoặc ẩn danh')}
+                  </p>
                 </div>
               </div>
             </div>
@@ -235,7 +263,7 @@ export function DocumentDetailPage() {
                             {getFileIcon(asset.file_name, asset.file_type)}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <h4 className="text-xs font-bold text-slate-800 break-all leading-tight" title={asset.file_name}>
+                            <h4 className="text-xs font-bold text-slate-800 break-words leading-tight" title={asset.file_name}>
                               {asset.file_name}
                             </h4>
                             <p className="text-3xs font-semibold text-slate-450 uppercase tracking-wider mt-0.5">
@@ -253,7 +281,7 @@ export function DocumentDetailPage() {
                           >
                             {isDownloading ? (
                               <>
-                                <Spinner size="sm" className="border-t-white" />
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                 ...
                               </>
                             ) : (
@@ -312,9 +340,9 @@ export function DocumentDetailPage() {
             </Card>
 
             {/* Học liệu hữu ích? */}
-            <Card className="bg-indigo-50/40 border-indigo-100">
-              <h3 className="text-sm font-bold text-indigo-950 mb-2">Học liệu hữu ích?</h3>
-              <p className="text-xs text-indigo-900/80 leading-relaxed mb-4">
+            <Card className="bg-sky-50/50 border-sky-100">
+              <h3 className="text-sm font-bold text-slate-900 mb-2">Học liệu hữu ích?</h3>
+              <p className="text-xs text-slate-600 leading-relaxed mb-4">
                 Nếu tài liệu này giúp ích cho quá trình ôn tập hoặc nghiên cứu của bạn, hãy đóng góp thêm nhiều tài liệu khác.
               </p>
               {import.meta.env.VITE_CONTRIBUTE_FORM_URL && (
@@ -322,7 +350,7 @@ export function DocumentDetailPage() {
                   href={import.meta.env.VITE_CONTRIBUTE_FORM_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block text-center w-full rounded-lg bg-indigo-650 hover:bg-indigo-755 text-white hover:text-white px-3 py-2 text-xs font-bold transition shadow-2xs cursor-pointer"
+                  className="block text-center w-full rounded-lg bg-sky-600 hover:bg-sky-700 text-white hover:text-white px-3 py-2 text-xs font-bold transition shadow-2xs cursor-pointer"
                 >
                   Gửi học liệu đóng góp
                 </a>

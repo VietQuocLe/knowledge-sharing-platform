@@ -73,7 +73,7 @@ export function RenameSessionModal({ isOpen, notebookId, session, onClose }: Ren
                         placeholder="Nhập tên cuộc hội thoại mới"
                         className={`w-full rounded-xl border py-2.5 px-4 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 transition ${errors.title
                             ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/20'
-                            : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20'
+                            : 'border-slate-200 focus:border-sky-500 focus:ring-sky-500/20'
                             }`}
                     />
                     {errors.title && (
@@ -88,14 +88,14 @@ export function RenameSessionModal({ isOpen, notebookId, session, onClose }: Ren
                         type="button"
                         disabled={isPending}
                         onClick={handleClose}
-                        className="px-4 py-2 text-sm font-medium text-slate-650 hover:bg-slate-100 rounded-xl transition"
+                        className="px-4 py-2 text-sm font-medium text-slate-650 hover:bg-slate-100 rounded-xl transition cursor-pointer"
                     >
                         Hủy
                     </button>
                     <button
                         type="submit"
                         disabled={isPending}
-                        className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-705 active:bg-indigo-800 rounded-xl shadow-md shadow-indigo-600/10 hover:shadow-indigo-600/20 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-black hover:bg-slate-800 active:scale-[0.98] rounded-xl shadow-md shadow-slate-200 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     >
                         {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                         {isPending ? 'Đang thực hiện...' : 'Lưu lại'}

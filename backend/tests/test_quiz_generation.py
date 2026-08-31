@@ -6,10 +6,10 @@ from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
-# Set environment overrides to connect locally
-os.environ["POSTGRES_HOST"] = "localhost"
-os.environ["POSTGRES_PORT"] = "5433"
-os.environ["MINIO_HOST"] = "localhost"
+# Set environment overrides to connect locally if not set
+os.environ.setdefault("POSTGRES_HOST", "localhost")
+os.environ.setdefault("POSTGRES_PORT", "5433")
+os.environ.setdefault("MINIO_HOST", "localhost")
 
 # Ensure backend directory is in path
 backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

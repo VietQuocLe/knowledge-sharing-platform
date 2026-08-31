@@ -5,10 +5,10 @@ import logging
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
-# Set environment overrides to connect locally (outside Docker)
-os.environ["POSTGRES_HOST"] = "localhost"
-os.environ["POSTGRES_PORT"] = "5433"
-os.environ["MINIO_HOST"] = "localhost"
+# Set environment overrides to connect locally (outside Docker) if not set
+os.environ.setdefault("POSTGRES_HOST", "localhost")
+os.environ.setdefault("POSTGRES_PORT", "5433")
+os.environ.setdefault("MINIO_HOST", "localhost")
 
 # Ensure backend directory is in path
 backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

@@ -28,20 +28,23 @@ class Document(Base):
     subject_id: Mapped[int] = mapped_column(
         ForeignKey("subjects.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
 
-    created_by: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
+    created_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        default=None,
     )
 
     resource_type: Mapped[ResourceType] = mapped_column(
-        Enum(ResourceType),
+        Enum(ResourceType, name="resource_type"),
         nullable=False,
     )
 
     status: Mapped[DocumentStatus] = mapped_column(
-        Enum(DocumentStatus),
+        Enum(DocumentStatus, name="document_status"),
         default=DocumentStatus.PUBLIC,
         nullable=False,
     )
@@ -52,7 +55,7 @@ class Document(Base):
         nullable=False,
     )
 
-    creator: Mapped["User"] = relationship(back_populates="documents")
+    creator: Mapped["User | None"] = relationship(back_populates="documents")
 
     subject: Mapped["Subject"] = relationship(back_populates="documents")
 

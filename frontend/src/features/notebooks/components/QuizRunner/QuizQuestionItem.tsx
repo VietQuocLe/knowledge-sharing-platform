@@ -21,7 +21,7 @@ export function QuizQuestionItem({
         <div className="border border-slate-150 rounded-2xl p-5 bg-white shadow-3xs font-sans space-y-4 transition duration-200">
             {/* Header: Question label and Status badge */}
             <div className="flex items-center justify-between gap-3 flex-shrink-0">
-                <span className="text-[11px] font-extrabold text-indigo-650 uppercase tracking-wider">
+                <span className="text-[11px] font-extrabold text-slate-800 uppercase tracking-wider">
                     Câu {index + 1}
                 </span>
 
@@ -60,7 +60,7 @@ export function QuizQuestionItem({
                     const isCorrectOption = optKey === question.correct_answer
 
                     // Styling state calculations
-                    let cardStyle = 'border-slate-205 bg-white text-slate-705 shadow-3xs hover:border-indigo-305 hover:bg-slate-50 cursor-pointer'
+                    let cardStyle = 'border-slate-205 bg-white text-slate-705 shadow-3xs hover:border-sky-300 hover:bg-slate-50 cursor-pointer'
                     let badgeStyle = 'bg-slate-100 text-slate-500 border border-slate-200'
                     let badgeValue: React.ReactNode = optKey
 

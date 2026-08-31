@@ -66,7 +66,7 @@ export function CreateNotebookModal({ isOpen, onClose }: CreateNotebookModalProp
                         placeholder="Nhập tên sổ ghi chú (ví dụ: Học phần Đại Số, ôn thi cuối kỳ...)"
                         className={`w-full rounded-xl border py-2.5 px-4 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 transition ${errors.title
                             ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/20'
-                            : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20'
+                            : 'border-slate-200 focus:border-sky-500 focus:ring-sky-500/20'
                             }`}
                     />
                     {errors.title && (
@@ -81,10 +81,10 @@ export function CreateNotebookModal({ isOpen, onClose }: CreateNotebookModalProp
                         Môn học liên kết (Không bắt buộc)
                     </label>
                     {selectedSubject ? (
-                        <div className="flex items-center justify-between rounded-xl border border-indigo-100 bg-indigo-50/50 px-4 py-2.5">
+                        <div className="flex items-center justify-between rounded-xl border border-sky-100 bg-sky-50/50 px-4 py-2.5">
                             <div className="flex items-center gap-2.5 min-w-0">
-                                <BookOpen className="h-4 w-4 shrink-0 text-indigo-500" />
-                                <span className="font-mono text-[9px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded shrink-0">
+                                <BookOpen className="h-4 w-4 shrink-0 text-sky-500" />
+                                <span className="font-mono text-[9px] bg-sky-100 text-slate-800 border border-sky-200 px-1.5 py-0.5 rounded shrink-0">
                                     {selectedSubject.code}
                                 </span>
                                 <span className="text-sm text-slate-750 font-medium truncate">
@@ -94,7 +94,7 @@ export function CreateNotebookModal({ isOpen, onClose }: CreateNotebookModalProp
                             <button
                                 type="button"
                                 onClick={() => setSelectedSubject(null)}
-                                className="p-1 rounded-full text-slate-400 hover:bg-indigo-100 hover:text-indigo-650 transition shrink-0"
+                                className="p-1 rounded-full text-slate-400 hover:bg-sky-100 hover:text-sky-600 transition shrink-0"
                             >
                                 <X className="h-3.5 w-3.5" />
                             </button>
@@ -112,14 +112,14 @@ export function CreateNotebookModal({ isOpen, onClose }: CreateNotebookModalProp
                         type="button"
                         disabled={isPending}
                         onClick={handleClose}
-                        className="px-4 py-2 text-sm font-medium text-slate-650 hover:bg-slate-100 rounded-xl transition"
+                        className="px-4 py-2 text-sm font-medium text-slate-650 hover:bg-slate-100 rounded-xl transition cursor-pointer"
                     >
                         Hủy
                     </button>
                     <button
                         type="submit"
                         disabled={isPending}
-                        className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-705 active:bg-indigo-800 rounded-xl shadow-md shadow-indigo-600/10 hover:shadow-indigo-600/20 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-black hover:bg-slate-800 active:scale-[0.98] rounded-xl shadow-md shadow-slate-200 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     >
                         {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                         {isPending ? 'Đang tạo...' : 'Tạo sổ'}

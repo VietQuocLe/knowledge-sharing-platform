@@ -11,6 +11,10 @@ export type RegisterPayload = {
   password: string
 }
 
+export type GoogleLoginPayload = {
+  credential: string
+}
+
 export type AuthUser = {
   id: number
   email: string
@@ -41,6 +45,13 @@ export const authApi = {
     return createJsonRequest<AuthResponse>({
       method: 'POST',
       url: '/auth/register',
+      data: payload,
+    })
+  },
+  googleLogin: async (payload: GoogleLoginPayload) => {
+    return createJsonRequest<AuthResponse>({
+      method: 'POST',
+      url: '/auth/google',
       data: payload,
     })
   },

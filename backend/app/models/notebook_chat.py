@@ -3,11 +3,12 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import DateTime, Enum as SQLEnum, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
+from app.models.enums import ChatMessageRole
 
 if TYPE_CHECKING:
     from app.models.notebook import Notebook
@@ -22,11 +23,13 @@ class NotebookChatSession(Base):
     notebook_id: Mapped[int] = mapped_column(
         ForeignKey("notebooks.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     
     title: Mapped[str] = mapped_column(
@@ -66,15 +69,17 @@ class NotebookChatMessage(Base):
     session_id: Mapped[int] = mapped_column(
         ForeignKey("notebook_chat_sessions.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     
-    role: Mapped[str] = mapped_column(
-        String(50),
+    role: Mapped[ChatMessageRole] = mapped_column(
+        SQLEnum(ChatMessageRole, name="chat_message_role"),
+        default=ChatMessageRole.USER,
         nullable=False,
     )
     
     content: Mapped[str] = mapped_column(
-        String,
+        Text,
         nullable=False,
     )
     
@@ -84,7 +89,17 @@ class NotebookChatMessage(Base):
     )
     
     condensed_query: Mapped[str | None] = mapped_column(
-        String,
+        Text,
+        nullable=True,
+    )
+
+    prompt_tokens: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+
+    completion_tokens: Mapped[int | None] = mapped_column(
+        Integer,
         nullable=True,
     )
     

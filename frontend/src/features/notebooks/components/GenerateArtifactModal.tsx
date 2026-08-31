@@ -79,7 +79,7 @@ export function GenerateArtifactModal({
                 <div className="p-5 border-b border-slate-100 flex items-center justify-between">
                     <div>
                         <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                            <Sparkles className="h-4 w-4 text-indigo-500 fill-indigo-50" />
+                            <Sparkles className="h-4 w-4 text-sky-600 fill-sky-50" />
                             Tạo bài trắc nghiệm ôn tập
                         </h3>
                         <p className="text-[11px] text-slate-500 mt-0.5">
@@ -108,7 +108,7 @@ export function GenerateArtifactModal({
                                     type="button"
                                     disabled={isPending}
                                     onClick={handleSelectAll}
-                                    className="text-[11px] font-bold text-indigo-650 hover:underline disabled:opacity-50"
+                                    className="text-[11px] font-bold text-sky-600 hover:underline disabled:opacity-50"
                                 >
                                     {selectedAssetIds.length === completedSources.length
                                         ? 'Bỏ chọn tất cả'
@@ -147,10 +147,10 @@ export function GenerateArtifactModal({
                                                     disabled={!isReady || isPending}
                                                     checked={isReady && selectedAssetIds.includes(src.asset_id!)}
                                                     onChange={() => { }} // click on parent div handles state
-                                                    className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer disabled:cursor-not-allowed"
+                                                    className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer disabled:cursor-not-allowed"
                                                 />
                                                 <div className="min-w-0">
-                                                    <span className="font-bold text-slate-800 break-all leading-snug flex items-center gap-1.5">
+                                                    <span className="font-bold text-slate-800 break-words leading-snug flex items-center gap-1.5">
                                                         <FileText className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                                                         {src.title}
                                                     </span>
@@ -215,8 +215,8 @@ export function GenerateArtifactModal({
                                     disabled={isPending}
                                     onClick={() => setNumQuestions(qty)}
                                     className={`flex-1 py-2 text-xs font-bold rounded-xl border transition-all ${numQuestions === qty
-                                            ? 'border-indigo-650 bg-indigo-50 text-indigo-705 shadow-3xs'
-                                            : 'border-slate-205 bg-white text-slate-505 hover:bg-slate-50'
+                                            ? 'border-sky-600 bg-sky-50 text-slate-900 shadow-3xs'
+                                            : 'border-slate-205 bg-white text-slate-700 hover:bg-slate-50'
                                         }`}
                                 >
                                     {qty} câu hỏi
@@ -240,7 +240,7 @@ export function GenerateArtifactModal({
                         type="button"
                         disabled={selectedAssetIds.length === 0 || isPending}
                         onClick={handleSubmit}
-                        className="px-5 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-705 active:bg-indigo-805 rounded-xl shadow-xs transition flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-5 py-2.5 text-xs font-bold text-white bg-black hover:bg-slate-800 active:scale-[0.98] rounded-xl shadow-xs transition flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isPending ? (
                             <>

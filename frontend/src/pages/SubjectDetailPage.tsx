@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { FileText, ChevronRight, BookOpen, Layers, Presentation, FileBadge, Video, Music, ExternalLink, Cpu, File, AlertCircle } from 'lucide-react'
+import { FileText, ChevronRight, BookOpen, Presentation, FileBadge, Video, Music, ExternalLink, Cpu, File, AlertCircle } from 'lucide-react'
 import { PaginationBar } from '../components/ui/PaginationBar'
 import { ErrorMessage } from '../components/ui/ErrorMessage'
-import { Spinner } from '../components/ui/Spinner'
+import { Skeleton, DocumentCardSkeleton } from '../components/ui/Skeleton'
 import { Breadcrumb } from '../components/ui/Breadcrumb'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
@@ -18,17 +18,17 @@ import { SUBJECT_CATEGORY_LABELS } from '../features/taxonomy/constants'
 
 const filterOptions = [
   { value: null, label: 'Tất cả' },
-  { value: 'LECTURE', label: 'Slide / Bài giảng' },
-  { value: 'EXAM', label: 'Đề thi & Đáp án' },
-  { value: 'REFERENCE', label: 'Tài liệu tham khảo' },
-  { value: 'SYLLABUS', label: 'Đề cương môn học' },
+  { value: 'LECTURE', label: 'Bài giảng & Slide' },
+  { value: 'EXAM', label: 'Bài tập & Thực hành' },
+  { value: 'REFERENCE', label: 'Giáo trình & Tham khảo' },
+  { value: 'SYLLABUS', label: 'Đề cương chi tiết' },
 ]
 
 const getResourceIcon = (type: string) => {
   switch (type) {
     case 'SLIDE':
     case 'LECTURE':
-      return <Presentation className="h-5 w-5 text-indigo-500" />
+      return <Presentation className="h-5 w-5 text-sky-600" />
     case 'EXAM':
       return <FileBadge className="h-5 w-5 text-amber-500" />
     case 'DOCUMENT':
@@ -39,7 +39,7 @@ const getResourceIcon = (type: string) => {
     case 'VIDEO':
       return <Video className="h-5 w-5 text-rose-500" />
     case 'AUDIO':
-      return <Music className="h-5 w-5 text-violet-500" />
+      return <Music className="h-5 w-5 text-sky-500" />
     case 'LINK':
       return <ExternalLink className="h-5 w-5 text-sky-500" />
     case 'AI_ARTIFACT':
@@ -111,9 +111,16 @@ export function SubjectDetailPage() {
 
   if (isLoadingSubject || isLoadingDept) {
     return (
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-10">
-        <div className="flex justify-center py-16">
-          <Spinner size="lg" />
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-6 font-sans">
+        <Skeleton className="h-4 w-48" />
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-4 shadow-3xs">
+          <Skeleton className="h-7 w-1/3" />
+          <Skeleton className="h-4 w-2/3" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <DocumentCardSkeleton key={i} />
+          ))}
         </div>
       </div>
     )
@@ -175,24 +182,6 @@ export function SubjectDetailPage() {
                 </div>
               )}
 
-              {subject.majors && subject.majors.length > 0 && (
-                <div className="pt-3 border-t border-slate-100 space-y-2">
-                  <span className="text-xs font-bold text-slate-450 uppercase tracking-wider block font-sans">Ngành trực thuộc:</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {subject.majors.map((m) => (
-                      <Link
-                        key={m.id}
-                        to={m.id ? `/majors/${m.id}` : '#'}
-                        className="inline-flex items-center gap-1 rounded-md bg-slate-50 border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition"
-                      >
-                        <Layers className="h-3 w-3 text-slate-400" />
-                        {m.name}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               <div className="pt-3 border-t border-slate-100 space-y-1">
                 <span className="text-xs font-bold text-slate-450 uppercase tracking-wider block">Mô tả tóm tắt:</span>
                 <p className="text-xs text-slate-500 leading-relaxed">
@@ -237,8 +226,10 @@ export function SubjectDetailPage() {
               <h2 className="text-lg font-bold text-slate-900 mb-4">Danh sách tài liệu môn học</h2>
 
               {isLoadingDocuments ? (
-                <div className="flex justify-center py-16">
-                  <Spinner size="lg" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <DocumentCardSkeleton key={i} />
+                  ))}
                 </div>
               ) : errorDocuments ? (
                 <ErrorMessage message="Không thể tải danh sách tài liệu môn học." />
@@ -291,7 +282,7 @@ export function SubjectDetailPage() {
                           </div>
 
                           {hasAssets && (
-                            <div className="text-slate-350 group-hover:text-indigo-650 transition-colors shrink-0">
+                            <div className="text-slate-350 group-hover:text-sky-600 transition-colors shrink-0">
                               <ChevronRight className="h-4 w-4 transform group-hover:translate-x-0.5 transition-transform" />
                             </div>
                           )}

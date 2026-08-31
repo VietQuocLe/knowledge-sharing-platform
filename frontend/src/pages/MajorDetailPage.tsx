@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import { ErrorMessage } from '../components/ui/ErrorMessage'
-import { Spinner } from '../components/ui/Spinner'
+import { Skeleton, SubjectCardSkeleton } from '../components/ui/Skeleton'
 import { Breadcrumb } from '../components/ui/Breadcrumb'
 import { Card } from '../components/ui/Card'
 import { taxonomyApi } from '../features/taxonomy/api'
@@ -92,9 +92,16 @@ export function MajorDetailPage() {
 
   if (isLoadingMajor || isLoadingSubjects) {
     return (
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-10">
-        <div className="flex justify-center py-16">
-          <Spinner size="lg" />
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-6 font-sans">
+        <Skeleton className="h-4 w-40" />
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-3 shadow-3xs">
+          <Skeleton className="h-7 w-1/3" />
+          <Skeleton className="h-4 w-2/3" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SubjectCardSkeleton key={i} />
+          ))}
         </div>
       </div>
     )
@@ -133,7 +140,7 @@ export function MajorDetailPage() {
                 <BookOpen className="h-12 w-12" />
               </div>
               <div className="space-y-2">
-                <span className="inline-flex items-center rounded-md bg-indigo-50 border border-indigo-200/50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
+                <span className="inline-flex items-center rounded-md bg-sky-50 border border-sky-200/50 px-2.5 py-0.5 text-xs font-semibold text-slate-800">
                   Mã ngành: {major.code}
                 </span>
                 <h1 className="text-xl font-bold tracking-tight text-slate-900 leading-snug">
@@ -151,7 +158,7 @@ export function MajorDetailPage() {
             <div className="border-b border-slate-150 pb-3">
               <h2 className="text-lg font-bold text-slate-900 font-sans">Tài liệu các môn</h2>
               <p className="text-sm text-slate-500 mt-1">
-                Mỗi kì thì bạn sẽ học tầm 4-5 môn, chi tiết bạn xem ở chương trình đào tạo.
+                Mỗi kì thì bạn sẽ học tầm 3-4 môn, chi tiết bạn xem ở chương trình đào tạo.
               </p>
             </div>
 
@@ -200,7 +207,7 @@ export function MajorDetailPage() {
                                   <span className="inline-flex items-center rounded bg-slate-100 px-2 py-0.5 text-2xs font-bold text-slate-650 shrink-0">
                                     {sub.code}
                                   </span>
-                                  <span className="text-sm font-bold text-slate-800 truncate group-hover:text-indigo-650 transition">
+                                  <span className="text-sm font-bold text-slate-800 truncate group-hover:text-sky-600 transition">
                                     {sub.name}
                                   </span>
                                 </div>

@@ -166,6 +166,7 @@ export const notebooksApi = {
             method: 'POST',
             url: `/notebooks/${notebookId}/artifacts/generate`,
             data,
+            timeout: 90000,
         })
     },
 

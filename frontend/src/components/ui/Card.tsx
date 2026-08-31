@@ -10,8 +10,8 @@ export function Card({ children, hoverable = false, className = '', ...props }: 
     return (
         <div
             className={`
-        rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300
-        ${hoverable ? 'hover:-translate-y-1 hover:border-slate-350 hover:shadow-md cursor-pointer' : ''}
+        rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all duration-250
+        ${hoverable ? 'hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md cursor-pointer' : ''}
         ${className}
       `.trim()}
             {...props}

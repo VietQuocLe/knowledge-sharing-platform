@@ -507,13 +507,15 @@ def get_notebook_asset_download_url(
             detail="You do not have permission to access/modify this notebook",
         )
 
-    # 2. Get asset
+    # 2. Get asset (either uploaded directly to notebook or belonging to a saved document in notebook)
     asset = db.execute(
-        select(Asset).where(
+        select(Asset)
+        .outerjoin(NotebookSavedDocument, NotebookSavedDocument.document_id == Asset.document_id)
+        .where(
             Asset.id == asset_id,
-            Asset.notebook_id == notebook_id,
+            (Asset.notebook_id == notebook_id) | (NotebookSavedDocument.notebook_id == notebook_id),
         )
-    ).scalar_one_or_none()
+    ).scalars().first()
 
     if asset is None:
         raise HTTPException(

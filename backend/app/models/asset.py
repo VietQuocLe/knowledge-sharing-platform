@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from app.models.document import Document
     from app.models.notebook import Notebook
     from app.models.asset_embedding import AssetEmbedding
+    from app.models.user import User
 
 
 class Asset(Base):
@@ -30,11 +31,19 @@ class Asset(Base):
     document_id: Mapped[int | None] = mapped_column(
         ForeignKey("documents.id", ondelete="CASCADE"),
         nullable=True,
+        index=True,
     )
 
     notebook_id: Mapped[int | None] = mapped_column(
         ForeignKey("notebooks.id", ondelete="CASCADE"),
         nullable=True,
+        index=True,
+    )
+
+    uploaded_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
 
     file_name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -52,7 +61,7 @@ class Asset(Base):
         nullable=True,
     )
 
-    file_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    file_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
 
     ingestion_status: Mapped[AssetIngestionStatus] = mapped_column(
         SQLEnum(AssetIngestionStatus, name="asset_ingestion_status"),
@@ -69,6 +78,8 @@ class Asset(Base):
         server_default=func.now(),
         nullable=False,
     )
+
+    uploader: Mapped["User | None"] = relationship()
 
     document: Mapped["Document | None"] = relationship(back_populates="assets")
 

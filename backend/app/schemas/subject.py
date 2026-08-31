@@ -13,15 +13,13 @@ class SubjectBase(BaseModel):
 
 
 class SubjectCreate(SubjectBase):
-    department_id: int
-    major_ids: list[int]
+    major_ids: list[int] = Field(default_factory=list)
 
 
 class SubjectUpdate(BaseModel):
     code: str | None = None
     name: str | None = None
-    department_id: int
-    major_ids: list[int]
+    major_ids: list[int] | None = None
 
 
 class SubjectResponse(SubjectBase):

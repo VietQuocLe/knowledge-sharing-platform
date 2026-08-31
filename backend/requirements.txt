@@ -1,21 +1,31 @@
+# Web Framework & Server
 fastapi
 uvicorn[standard]
-
-sqlalchemy
-psycopg[binary]
-
-python-dotenv
-pydantic-settings
-
 python-multipart
 
+# Database & ORM
+sqlalchemy
+psycopg[binary]
 pgvector
-minio
 
-pwdlib[argon2]
-pyjwt
+# Configuration & Validation
+python-dotenv
+pydantic-settings
 pydantic[email]
 
+# Storage & Network Clients
+minio
+httpx>=0.27.0
+
+# Authentication & Security
+pwdlib[argon2]
+pyjwt
+google-auth>=2.0.0
+
+# AI & LLM Core
 google-genai>=0.1.0
 tenacity>=8.2.0
+langfuse>=2.0.0
+
+# Document Processing
 pypdfium2>=4.30.0

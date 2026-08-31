@@ -9,12 +9,12 @@ export function formatResourceType(type: ResourceType | string): string {
         case 'LECTURE':
             return 'Bài giảng / Slide'
         case 'EXAM':
-            return 'Đề thi & Đáp án'
+            return 'Bài tập / Lab'
         case 'DOCUMENT':
         case 'REFERENCE':
             return 'Tài liệu tham khảo'
         case 'SYLLABUS':
-            return 'Đề cương môn học'
+            return 'Đề cương chi tiết'
         case 'VIDEO':
             return 'Video bài giảng'
         case 'AUDIO':

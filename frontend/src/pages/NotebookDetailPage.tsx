@@ -168,7 +168,7 @@ function SourceCard({ source, notebookId, onPreview, onActionSuccess }: SourceCa
                 <div className="min-w-0 flex-1">
                     <h4
                         onClick={handleTitleClick}
-                        className={`text-xs font-bold text-slate-800 break-all leading-snug line-clamp-2 hover:text-indigo-650 transition ${canPreview
+                        className={`text-xs font-bold text-slate-800 break-words leading-snug line-clamp-2 hover:text-sky-600 transition ${canPreview
                             ? 'hover:underline cursor-pointer'
                             : isConverting
                                 ? 'cursor-wait opacity-80'
@@ -189,7 +189,7 @@ function SourceCard({ source, notebookId, onPreview, onActionSuccess }: SourceCa
                             </Badge>
                         )}
                         {isConverting && (
-                            <Badge variant="primary" className="text-[9px] px-1.5 py-0 border-indigo-200 bg-indigo-50 text-indigo-700 font-bold animate-pulse">
+                            <Badge variant="primary" className="text-[9px] px-1.5 py-0 border-sky-200 bg-sky-50 text-sky-700 font-bold animate-pulse">
                                 Đang xử lý...
                             </Badge>
                         )}
@@ -239,7 +239,7 @@ function SourceCard({ source, notebookId, onPreview, onActionSuccess }: SourceCa
                             <button
                                 type="button"
                                 onClick={handlePreview}
-                                className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-655 flex items-center gap-2 transition cursor-pointer"
+                                className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-sky-50 hover:text-sky-600 flex items-center gap-2 transition cursor-pointer"
                             >
                                 <Eye className="h-3.5 w-3.5 text-slate-455" />
                                 Xem trước
@@ -251,7 +251,7 @@ function SourceCard({ source, notebookId, onPreview, onActionSuccess }: SourceCa
                                 <button
                                     type="button"
                                     onClick={handleDownload}
-                                    className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 transition cursor-pointer"
+                                    className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-sky-50 hover:text-sky-600 flex items-center gap-2 transition cursor-pointer"
                                 >
                                     <Download className="h-3.5 w-3.5 text-slate-450" />
                                     Tải về máy
@@ -276,7 +276,7 @@ function SourceCard({ source, notebookId, onPreview, onActionSuccess }: SourceCa
                                         setIsMenuOpen(false)
                                         navigate(`/documents/${source.id}`)
                                     }}
-                                    className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 transition cursor-pointer"
+                                    className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-sky-50 hover:text-sky-600 flex items-center gap-2 transition cursor-pointer"
                                 >
                                     <ExternalLink className="h-3.5 w-3.5 text-slate-455" />
                                     Xem ở thư viện
@@ -419,11 +419,11 @@ export function NotebookDetailPage() {
     }
 
     return (
-        <div className="flex h-full w-full overflow-hidden bg-slate-50 relative font-sans">
+        <div className="flex-1 flex flex-col min-h-0 h-full w-full overflow-hidden bg-[#FAF9F6] relative font-sans">
             {/* Main view wrapper */}
-            <div className="flex h-full w-full overflow-hidden">
+            <div className="flex flex-1 min-h-0 h-full w-full overflow-hidden">
                 {/* Left Pane: Documents Area */}
-                <div className="flex-1 flex flex-col min-w-0 h-full p-6 bg-white overflow-y-auto gap-6">
+                <div className="flex-1 flex flex-col min-w-0 h-full p-6 bg-white overflow-y-auto gap-6 border-r border-slate-200/80">
                     {/* Header bar */}
                     {activeArtifactId === null && (
                         <div className="flex flex-col gap-2 pb-4 border-b border-slate-100 flex-shrink-0">
@@ -450,7 +450,7 @@ export function NotebookDetailPage() {
                     ) : (
                         <>
                             {/* Quick Actions Block (StudyFetch style) */}
-                            <div className="bg-slate-50/70 border border-slate-150 rounded-2xl p-5 space-y-4 flex-shrink-0">
+                            <div className="bg-[#F8F8F6] border border-slate-200/80 rounded-2xl p-5 space-y-4 flex-shrink-0">
                                 <div>
                                     <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
                                         Bắt đầu học tập
@@ -464,7 +464,7 @@ export function NotebookDetailPage() {
                                     <button
                                         type="button"
                                         onClick={() => setIsAddDocOpen(true)}
-                                        className="px-4 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-805 rounded-xl shadow-xs transition flex items-center gap-2 cursor-pointer"
+                                        className="px-4 py-2.5 text-xs font-bold text-white bg-black hover:bg-slate-800 active:bg-slate-900 rounded-xl shadow-xs transition flex items-center gap-2 cursor-pointer"
                                     >
                                         <Plus className="h-4 w-4" />
                                         Thêm tài liệu nguồn
@@ -472,9 +472,9 @@ export function NotebookDetailPage() {
                                     <button
                                         type="button"
                                         onClick={() => setIsGenerateModalOpen(true)}
-                                        className="px-4 py-2.5 text-xs font-bold text-slate-705 border border-slate-205 bg-white hover:bg-slate-50 active:bg-slate-100 rounded-xl shadow-xs transition flex items-center gap-2 cursor-pointer"
+                                        className="px-4 py-2.5 text-xs font-bold text-slate-800 border border-slate-200 bg-white hover:bg-slate-50 active:bg-slate-100 rounded-xl shadow-xs transition flex items-center gap-2 cursor-pointer"
                                     >
-                                        <GraduationCap className="h-4 w-4 text-indigo-600" />
+                                        <GraduationCap className="h-4 w-4 text-[#0D9488]" />
                                         <span>Tạo bài tập / Quiz</span>
                                     </button>
                                 </div>
@@ -498,8 +498,8 @@ export function NotebookDetailPage() {
 
                                     {/* Compact Quota Indicator */}
                                     <div className="flex items-center gap-3">
-                                        <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">
-                                            <span className="font-bold text-slate-800">{notebook.sources_count}</span>
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FEF9C3] text-amber-800 border border-amber-200 text-xs font-semibold whitespace-nowrap">
+                                            <span className="font-bold">{notebook.sources_count}</span>
                                             <span className="text-[10px]"> / {notebook.max_sources} nguồn</span>
                                         </span>
                                     </div>
@@ -518,7 +518,7 @@ export function NotebookDetailPage() {
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="py-12 px-4 border-2 border-dashed border-slate-205 border-slate-200 rounded-3xl text-center bg-slate-50/30">
+                                    <div className="py-12 px-4 border-2 border-dashed border-slate-200 rounded-3xl text-center bg-[#F8F8F6]/60">
                                         <FileText className="h-10 w-10 text-slate-300 mx-auto mb-3" />
                                         <h3 className="text-sm font-semibold text-slate-800 mb-1">Chưa có nguồn tài liệu nào</h3>
                                         <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
@@ -538,7 +538,7 @@ export function NotebookDetailPage() {
                     /* Floating status badge when collapsed (Bottom-Right Studocu-style) */
                     <button
                         onClick={() => setIsAiPanelOpen(true)}
-                        className="fixed bottom-6 right-6 z-40 flex items-center justify-center h-14 w-14 rounded-full bg-indigo-600 text-white shadow-xl hover:bg-indigo-755 hover:scale-105 active:scale-95 transition cursor-pointer"
+                        className="fixed bottom-6 right-6 z-40 flex items-center justify-center h-14 w-14 rounded-full bg-black text-white shadow-xl hover:bg-slate-800 hover:scale-105 active:scale-95 transition cursor-pointer"
                         title="Mở Trợ lý AI"
                     >
                         <MessageSquare className="h-6 w-6" />

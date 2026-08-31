@@ -6,6 +6,7 @@ type AuthContextValue = {
   token: string | null
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
+  loginWithGoogle: (credential: string) => Promise<void>
   register: (email: string, full_name: string, password: string) => Promise<void>
   logout: () => void
 }
@@ -48,6 +49,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(response.user)
   }
 
+  const loginWithGoogle = async (credential: string) => {
+    const response = await authApi.googleLogin({ credential })
+    localStorage.setItem('access_token', response.access_token)
+    setToken(response.access_token)
+    setUser(response.user)
+  }
+
   const register = async (email: string, full_name: string, password: string) => {
     const response = await authApi.register({ email, full_name, password })
     localStorage.setItem('access_token', response.access_token)
@@ -62,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, token, isLoading, login, register, logout }),
+    () => ({ user, token, isLoading, login, loginWithGoogle, register, logout }),
     [isLoading, token, user],
   )
 

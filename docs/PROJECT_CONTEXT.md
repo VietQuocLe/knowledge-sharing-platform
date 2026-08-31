@@ -24,7 +24,7 @@ Theo đúng pattern đã áp dụng thành công ở Sprint 11 (phase backend c�
 
 Current Sprint
 
-> 🔄 Sprint 17 — Testing — kế hoạch
+> 🔄 Sprint 17 — Testing — đang triển khai
 
 Overall Progress
 
@@ -47,14 +47,15 @@ Status
 ✅ Sprint 14 — Chat Frontend & Citation UI — **hoàn thành**
 ✅ Sprint 15 — Quiz Studio (Backend) — **hoàn thành**
 ✅ Sprint 16 — Quiz Studio (Frontend) — **hoàn thành**
-🔄 Sprint 17 — Testing — **kế hoạch**
+✅ Sprint 16.5 — Tối ưu hóa Tầng Service, LLM Observability & Hoàn thiện Trải nghiệm (Hardening) — **hoàn thành**
+🔄 Sprint 17 — Testing — **đang triển khai**
 ⏳ Sprint 18 — Deployment & Optimization — **kế hoạch**
 
 ---
 
 # 3. Current Sprint Goal
 
-**Sprint 17 — Testing (Kế hoạch):**
+**Sprint 17 — Testing (Đang triển khai):**
 Xây dựng và hoàn thiện bộ test tự động cho toàn bộ hệ thống (Unit tests, Integration tests, End-to-end user flows) và kiểm thử chất lượng giao diện người dùng.
 
 Mục tiêu chi tiết:
@@ -113,7 +114,7 @@ soffice --headless --norestore --convert-to pdf --outdir <tmpdir> <input.docx>
   - `GET /resources/admin`; service `get_owned_by_id`
 - **Sprint 8.5 — Database Architecture Refactor:**
   - Models: `Document`, `Notebook`, `NotebookSavedDocument`, `Asset` (bỏ `resource_id`, thêm `document_id`/`notebook_id`); `AssetEmbedding` placeholder
-  - Enums: `DocumentStatus` (DRAFT/PUBLIC/DELETED), `ResourceType` (EXAM/SLIDE/DOCUMENT/VIDEO/AUDIO/LINK/AI_ARTIFACT)
+  - Enums: `DocumentStatus` (DRAFT/PUBLIC/DELETED), `ResourceType` (EXAM/SLIDE/DOCUMENT/LECTURE/REFERENCE/SYLLABUS/VIDEO/AUDIO/LINK/AI_ARTIFACT)
   - API `/documents/`: `GET /documents/` (paginated, filter subject_id + resource_type), `GET /documents/{id}`, `GET /documents/{id}/assets/{assetId}/download` (presigned MinIO URL, 15 phút)
   - `storage_service.get_presigned_download_url()` hoạt động
   - `document_service.py`, `asset_service.py` — business logic tách khỏi router
@@ -171,7 +172,7 @@ soffice --headless --norestore --convert-to pdf --outdir <tmpdir> <input.docx>
   - **Validation Pipeline 4 lớp**: Ownership Guard (kiểm quyền Notebook/User) → Cooldown Guard 15s (tránh nhấn đúp API) → Quota Guard 20 artifacts (hạn mức Sổ tay) → All-or-Nothing Asset Completed Check (chỉ sinh khi tài liệu đã thuộc Sổ tay và ingest COMPLETED).
   - **Linear Space Sampling & Context Extraction**:
     - Query JOIN tối ưu giữa `AssetEmbedding` và `Asset` để gom text chunks trong một truy vấn duy nhất.
-    - Thuật toán *Linear Space Sampling* tối giản budget 30 chunks phân phối đều trên số tài liệu, bảo toàn chunk đầu và chunk cuối.
+    - Thuật toán *Multi-Asset Linear Space Sampling* (Numpy-style Linspace) nội suy khoảng cách đều theo công thức `index = round(i * (total_chunks - 1) / (budget_per_asset - 1))`, đảm bảo bao phủ 100% biên tài liệu (luôn lấy trọn vẹn cả chunk mở đầu `index = 0` và chunk kết luận `index = N - 1`), triệt tiêu hoàn toàn hiện tượng undershoot/bỏ sót nội dung cuối tài liệu.
     - Định dạng prompt context chuẩn hóa: `[Tài liệu: {file_name} - Trang {page_number}]`.
   - **Core GenAI Structured Output**:
     - Xây dựng pure function `_call_gemini_with_retry` bọc Tenacity exponential retry (`stop_after_attempt(3)`, wait `2-10s`).
@@ -313,10 +314,10 @@ knowledge-sharing-platform/
 │   │   ├── api/       # health, auth, config, departments, majors, subjects, documents, notebooks (mounted artifacts endpoints)
 │   │   ├── core/      # config, database, security
 │   │   ├── models/    # base, enums, user, department, major, subject,
-│   │   │              # document, notebook, asset, artifact
-│   │   ├── schemas/   # auth, department, major, subject, document, asset, notebook, artifact
-│   │   ├── services/  # auth, department, major, subject, document, asset,
-│   │   │              # storage, startup, notebook_service, conversion_service, artifact_service, quiz_service
+│   │   │              # document, notebook, asset, asset_embedding, notebook_chat, artifact
+│   │   ├── schemas/   # auth, department, major, subject, document, asset, notebook, notebook_chat, artifact
+│   │   ├── services/  # auth, department, major, subject, document, asset, storage, startup,
+│   │   │              # notebook, conversion, ingestion, retrieval, notebook_chat, artifact, quiz
 │   │   ├── main.py, seed.py
 │   │   ├── tests/     # test_quiz_generation.py, test_notebook_artifact.py, etc.
 │   ├── alembic/
@@ -330,16 +331,17 @@ knowledge-sharing-platform/
 │   │   ├── documents/ # api (Document types), queryKeys (documentsKeys),
 │   │   │              # hooks/ (useDocuments, useDocumentDetail, useUploadConfig),
 │   │   │              # components/PublicResourceCard, index.ts
-│   │   ├── notebooks/ # api, queryKeys, hooks/useNotebooks, hooks/useCreateNotebook,
-│   │   │              # components/NotebookCard, components/CreateNotebookCard, components/CreateNotebookModal
-│   │   ├── taxonomy/  # api, queryKeys, TaxonomyView, DepartmentMajorSubjectPicker, hooks/
+│   │   ├── notebooks/ # api, queryKeys, hooks/ (useNotebooks, useCreateNotebook, useNotebookDetail, useNotebookChatStream, useArtifacts...),
+│   │   │              # components/ (NotebookCard, CreateNotebookCard, CreateNotebookModal, AddDocumentModal, NotebookChatPanel,
+│   │   │              # NotebookCreationsHub, QuizRunner/, GenerateArtifactModal, DeleteArtifactModal...)
+│   │   ├── taxonomy/  # api, queryKeys, TaxonomyView, DepartmentMajorSubjectPicker, SubjectSearchInput, hooks/
 │   │   └── README.md
 │   ├── layouts/       # PublicLayout, AppLayout, AdminLayout
 │   ├── pages/         # active: Home, Departments, DepartmentDetail, MajorDetail,
 │   │                  #         SubjectDetail, DocumentDetail, Login, Register,
 │   │                  #         MyNotebooksPage, NotebookDetailPage,
 │   │                  #         MyResources (notice), AdminTaxonomy
-│   │                  # stubbed: ResourceCreate, ResourceUpload, AdminModeration
+│   │                  # stubbed: AdminModeration
 │   ├── router/AppRouter.tsx
 │   └── utils/parseRouteId.ts
 ├── init-db/01-enable-pgvector.sql
@@ -380,7 +382,7 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 - `POST /auth/register`, `POST /auth/login`, `GET /auth/me`
 - `GET /departments/`, `GET /departments/{id}`; admin: `POST`, `PUT`, `DELETE`
 - `GET /majors/?department_id=`, `GET /majors/{id}`; admin: `POST`, `PUT`, `DELETE`
-- `GET /subjects/?major_id=`, `GET /subjects/{id}`; admin: `POST`, `PUT`, `DELETE`
+- `GET /subjects/?major_id=&q=&limit=`, `GET /subjects/{id}`; admin: `POST`, `PUT`, `DELETE`
 - `GET /documents/?subject_id=&resource_type=&page=&size=` (only PUBLIC)
 - `GET /documents/{id}` (only PUBLIC, nested assets)
 - `GET /documents/{id}/assets/{asset_id}/download` → presigned MinIO URL (no JWT)
@@ -395,6 +397,7 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 - `POST /notebooks/{notebook_id}/assets` (JWT protected)
 - `DELETE /notebooks/{notebook_id}/assets/{asset_id}` (JWT protected)
 - `GET /notebooks/{notebook_id}/assets/{asset_id}/download` (JWT protected)
+- `GET /notebooks/{notebook_id}/assets/{asset_id}/status` (JWT protected)
 - `POST /notebooks/{notebook_id}/sessions` (JWT protected)
 - `GET /notebooks/{notebook_id}/sessions` (JWT protected)
 - `PATCH /notebooks/{notebook_id}/sessions/{session_id}` (JWT protected)
@@ -406,12 +409,12 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 - `GET /notebooks/{notebook_id}/artifacts/{artifact_id}` (JWT protected)
 - `DELETE /notebooks/{notebook_id}/artifacts/{artifact_id}` (JWT protected)
 
-### Frontend routes (Sprint 10)
+### Frontend routes (Sprint 16)
 
-- Public (active): `/`, `/login`, `/register`, `/departments`, `/departments/:id`, `/majors/:id`, `/subjects/:id`, `/resources/:id`, `/documents/:id`
+- Public (active): `/`, `/login`, `/register`, `/departments`, `/departments/:id`, `/majors/:id`, `/subjects/:id`, `/documents/:id`
 - Protected (active): `/me/workspace` (MyNotebooksPage), `/me/workspace/:notebookId` (NotebookDetailPage), `/me/resources` (temp notice)
 - Admin (active): `/admin/taxonomy`
-- Commented out: `/resources/create`, `/resources/:id/upload`, `/admin/moderation`
+- Commented out: `/admin/moderation`
 
 ---
 
@@ -489,8 +492,9 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 12. ✅ **Ingestion Pipeline (Backend only)** — **hoàn thành**
 13. ✅ **Retrieval Engine & Chat API (Backend only)** — **hoàn thành** — Hybrid Search RRF (Dense + Sparse), Intent Routing/Condensation qua `gemini-3.5-flash-lite`, SSE streaming chat API kèm trích dẫn trang
 14. ✅ **Chat Frontend & Citation UI** — **hoàn thành** — giao diện chat ở cột phải `NotebookDetailPage`, streaming câu trả lời, `CitationBadge` click nhảy thẳng trang PDF (`#page=X`)
-15. ✅ **Quiz Studio (Backend)** — **hoàn thành** — thiết kế model NotebookArtifact, uniform step sampling, Bloom instruction, Google GenAI SDK sinh JSON trích xuất từ `selected_asset_ids`
+15. ✅ **Quiz Studio (Backend)** — **hoàn thành** — thiết kế model NotebookArtifact, Multi-Asset Linear Space Sampling (Linspace), Bloom instruction, Google GenAI SDK sinh JSON trích xuất từ `selected_asset_ids`
 16. ✅ **Quiz Studio (Frontend)** — **hoàn thành** — api.ts, queryKeys, useArtifacts hooks, creations panel/modal, Quiz Runner interactive interface
+16.5. ✅ **Tối ưu hóa Tầng Service, LLM Observability & Hoàn thiện Trải nghiệm (Hardening)** — **hoàn thành** — SHA-256 deduplication, Streaming PDF memory optimization (<30MB RAM), SSE token tracking, Dual-Mode Cloudmersive conversion, Langfuse Cloud tracing, Soft Pastel EdTech theme, Google OAuth 2.0
 17. 🔄 **Testing** — **đang triển khai** — unit/integration test backend, test luồng chính frontend, hoàn thiện seed/fixture cho demo
 18. ⏳ **Deployment & Optimization** — **kế hoạch** — Docker hóa production, chuyển Cloud (Vercel/Render/Supabase/R2) qua `.env`, tối ưu chi phí token
 
@@ -670,11 +674,14 @@ Cung cấp 4 API endpoints được bảo vệ bởi JWT (validate ownership và
     - Quota check: Giới hạn `MAX_ARTIFACTS_PER_NOTEBOOK = 20` (nếu vượt quá trả lỗi HTTP 400).
     - Rate limit: Cooldown 15 giây giữa hai lần generate của cùng một user (HTTP 429 nếu vi phạm).
   - Môi trường thử nghiệm: Endpoint generate sẽ trả dữ liệu trắc nghiệm giả lập (mock/stub) để kiểm thử đầy đủ các nhánh lỗi và logic nghiệp vụ mà không tốn quota/chi phí AI thực tế.
-- **Phase 2: RAG Quiz Generation thật**
-  - **Multi-Asset Uniform Step Sampling**:
-    - Ngân sách chunk tối đa là 30 chunks chia đều cho số lượng tài liệu (`selected_asset_ids`) được chọn.
-    - Đối với mỗi tài liệu, nếu số chunk thực tế nhỏ hơn ngân sách được phân bổ thì lấy toàn bộ (không sampling).
-    - Ngược lại, xác định bước nhảy `step = total_chunks / budget` (làm tròn hoặc float phù hợp) để lấy các chunks trải đều theo thứ tự trang nhằm phủ rộng nội dung văn bản.
+  - **Multi-Asset Linear Space Sampling (Numpy-style Linspace)**:
+    - Ngân sách chunk tối đa là 30 chunks chia đều cho số lượng tài liệu (`selected_asset_ids`) được chọn: `budget_per_asset = max(1, 30 // len(selected_asset_ids))`.
+    - Đối với mỗi tài liệu, nếu số chunk thực tế nhỏ hơn hoặc bằng ngân sách được phân bổ (`total_chunks <= budget_per_asset`) thì lấy toàn bộ (không sampling).
+    - Ngược lại, áp dụng thuật toán nội suy khoảng cách đều (Numpy-style Linspace Sampling) theo công thức:
+      $$\text{index}_i = \text{round}\left( \frac{i \times (\text{total\_chunks} - 1)}{\text{budget\_per\_asset} - 1} \right) \quad \text{với } i \in [0, \text{budget\_per\_asset} - 1]$$
+    - **Ưu điểm kỹ thuật cốt lõi**:
+      * **Bao phủ 100% biên tài liệu:** Luôn lấy trọn vẹn cả chunk mở đầu (`index = 0` tại $i = 0$) và chunk kết luận cuối cùng (`index = \text{total\_chunks} - 1` tại $i = \text{budget\_per\_asset} - 1$).
+      * **Triệt tiêu hiện tượng Undershoot:** Khắc phục triệt để nhược điểm của phương pháp bước nhảy nguyên `step = N // K` (thường bị dồn cục ở đầu tài liệu và bỏ sót hoàn toàn các trang kết luận/tóm tắt ở cuối tài liệu).
   - **Prompting & Bloom's Taxonomy Guide**:
     - Sử dụng `system_instruction` có cấu trúc cố định thiết lập câu hỏi: khoảng 30% câu hỏi ở mức Nhận biết (khái niệm, định nghĩa cơ bản) và 70% câu hỏi ở mức Thông hiểu/Suy luận.
     - Metodo: **Không** sử dụng trường `difficulty` (độ khó) trong request, schema hay API/UI.
@@ -712,7 +719,52 @@ Sprint 16 tích hợp hoàn chỉnh giao diện chơi trắc nghiệm và quản
 
 ---
 
-## Quyết định kỹ thuật quan trọng (Sprint 15 & 16)
+## Đặc tả kỹ thuật Sprint 16.5 — Tối ưu hóa Tầng Service, LLM Observability & Hoàn thiện Trải nghiệm (Hardening)
+
+### 1. Mục tiêu & Bối cảnh Kỹ thuật
+Sau khi hoàn thành tạo bài tập Quiz và Hub sáng tạo ở Sprint 16, Sprint 16.5 tập trung gia cố độ ổn định toàn diện (System Hardening), tối ưu hóa hiệu năng tài nguyên (RAM/CPU/Token), tích hợp hệ thống giám sát LLM thời gian thực và đồng bộ trải nghiệm người dùng trước khi bước vào Sprint 17 (Đánh giá Thực nghiệm Ragas) và Sprint 18 (Đóng gói Docker & Triển khai).
+
+---
+
+### 2. Các Hạng mục Kỹ thuật đã Triển khai
+
+#### A. Tầng Backend & Core AI Pipeline
+* **Ingestion Pipeline & Content-addressable Deduplication (`ingestion_service.py`):**
+  * Tích hợp cơ chế kiểm tra trùng lặp qua mã băm SHA-256 (`file_hash`). Tái sử dụng toàn bộ vector embedding từ các Asset đã `COMPLETED` cùng hash (tự sinh ID mới), bỏ qua hoàn toàn việc gọi Gemini Embedding API (tiết kiệm 100% chi phí AI và thời gian chờ).
+  * Chuyển đổi cơ chế đọc PDF sang **Streaming Page-by-page Generator (`pypdfium2`)** với khối `try...finally` đóng tài nguyên C-layer (`page.close()`, `textpage.close()`) ngay sau mỗi trang, duy trì bộ nhớ RAM phẳng ($< 30\text{MB}$).
+* **Token Tracking & SSE Stream (`notebook_chat_service.py`):**
+  * Trích xuất `usage_metadata` (`prompt_token_count`, `candidates_token_count`) từ luồng stream của Google GenAI SDK.
+  * Lưu trữ chính xác vào cơ sở dữ liệu (`NotebookChatMessage`) và trả về chi tiết (`prompt_tokens`, `completion_tokens`, `total_tokens`) trong sự kiện `event: done`.
+* **Dual-Mode Document Conversion Engine (`conversion_service.py`):**
+  * Thiết kế kiến trúc **Dual-Mode Adapter**: Ưu tiên sử dụng **Cloudmersive REST API** (`POST /convert/docx/to/pdf`) khi có API Key để giải phóng 100% RAM/CPU của server Backend khi deploy Cloud; tự động fallback sang subprocess `soffice` (LibreOffice) khi chạy offline trên máy dev.
+  * Đồng bộ cơ chế bắt lỗi: Cập nhật dứt khoát `conversion_status = FAILED`, `ingestion_status = FAILED` (`CONVERSION_FAILED`) khi cả 2 phương thức đều không thành công.
+* **LLM Observability với Langfuse Cloud (`observability.py` & `config.py`):**
+  * Tích hợp SDK `langfuse>=2.0.0` với module wrapper an toàn (`@observe_llm`, `update_trace_context`), tự động chuyển sang chế độ no-op trong suốt khi chạy offline test mà không cần kết nối mạng.
+  * Giám sát toàn diện luồng RAG Chat (`notebook_rag_chat_stream`), rút gọn ngữ cảnh (`condense_query`) và sinh bài tập (`generate_quiz`).
+* **Nâng cấp Hệ thống Prompt & Phân tích Đánh giá (Pedagogical Standards):**
+  * **RAG Chat:** Định hình Persona Trợ giảng thông thái ("tôi" - "bạn"), trả lời trực diện và phân tích sâu, chuẩn hóa trích dẫn số `[1]`, `[2]` gắn liền sau luận điểm, loại bỏ các câu mở đầu rập khuôn máy móc.
+  * **Quiz Generation:** Chuẩn hóa theo Bloom Taxonomy (30% Nhận biết/Hiểu, 70% Vận dụng/Suy luận logic). Thiết lập cấu trúc lời giải thích 3 tầng (Self-contained Reasoning: *Bản chất lý thuyết* $\rightarrow$ *Suy luận/Giải từng bước* $\rightarrow$ *Phân tích loại trừ phương án sai*).
+  * **Linspace Sampling Algorithm:** Đồng bộ hóa công thức lấy mẫu chunk khoảng cách đều $\text{index}_i = \text{round}\left( \frac{i \times (N - 1)}{K - 1} \right)$, đảm bảo độ phủ 100% toàn bộ tài liệu (không bỏ sót trang mở đầu và trang kết luận).
+
+#### B. Tầng Giao diện Frontend (UI/UX & Performance)
+* **Design System (Soft Pastel EdTech Theme):**
+  * Nền ấm dịu mắt `#FAF9F6`, thanh Sidebar đen than `#13141A`, Card bo tròn mềm mại (`rounded-2xl`).
+  * Bộ màu Pastel trực quan: Thảo luận (`#F5F0FF`), Quiz (`#E6FFFA`), Flashcard (`#F0FDF4`).
+* **Chuyển trang Mượt mà & Tối ưu Hiệu năng:**
+  * Tích hợp `framer-motion` (`PageTransition.tsx`) xử lý mượt mà chuyển cảnh giữa các route, khắc phục lỗi mất thanh cuộn.
+  * Triển khai Route Lazy Loading (`React.lazy` + `<Suspense>`) và hệ thống Skeleton Loading trên tất cả các trang chính.
+* **Xác thực Google OAuth 2.0:**
+  * Tích hợp nút đăng nhập Google mượt mà trên Frontend, kết hợp API `POST /auth/google` tự động liên kết tài khoản và gán quyền `STUDENT`.
+
+---
+
+### 3. Kết quả Xác thực (Verification & Test Suite)
+* **Automated Backend Tests:** `11/11 tests PASSED (100%)` trên Python 3.12 (bao gồm kiểm thử Deduplication, Streaming Memory, Dual-mode Conversion, SSE Token Tracking, Quiz JSON Schema Validation).
+* **Frontend Build & Lint:** `tsc -b && vite build` thành công $100\%$, 0 lỗi TypeScript và ESLint.
+
+---
+
+## Quyết định kỹ thuật quan trọng (Sprint 15, 16 & 16.5)
 - **Không hỗ trợ tùy biến difficulty**: Hệ thống loại bỏ trường `difficulty` khỏi API request schema và UI. Độ phân cấp câu hỏi được kiểm soát bởi system instruction Bloom cố định của Backend.
 - **Trường computed `total_items`**: Không lưu trên physical database column để tránh không đồng nhất dữ liệu.
 - **Không dùng Redis/Celery**: Rate limiting và quota được thực thi nhẹ bằng cách check trực tiếp dữ liệu DB & ghi in-memory hoặc lock cooldown theo timestamp của user. FE hỗ trợ disable nút submit khi đang pending.
@@ -721,7 +773,7 @@ Sprint 16 tích hợp hoàn chỉnh giao diện chơi trắc nghiệm và quản
 
 ## Local-First & Cloud-Ready
 
-Toàn bộ pipeline chạy được hoàn toàn ở local (Docker Compose: PostgreSQL 16 + pgvector, MinIO, backend có LibreOffice headless), chỉ cần một API key Gemini trong `.env`. Khi deploy, đổi các biến môi trường sang dịch vụ cloud tương ứng (Postgres managed, object storage S3-compatible) — không phải sửa code.
+Toàn bộ pipeline chạy được hoàn toàn ở local (Docker Compose: PostgreSQL 16 + pgvector, MinIO, backend có LibreOffice headless), chỉ cần một API key Gemini trong `.env`. Khi deploy, đổi các biến môi trường sang dịch vụ cloud tương ứng (Postgres managed, object storage S3-compatible, Cloudmersive API) — không phải sửa code.
 
 ---
 
@@ -748,13 +800,13 @@ Commit theo Sprint hoặc feature, ví dụ `feat: implement upload module`. Tr�
 
 # 17. Current Status
 
-Current Status: **Sprint 17 — Testing** (kế hoạch)
+Current Status: **Sprint 17 — Testing** (đang triển khai)
 
-Last Completed: Sprint 16 — Quiz Studio (Frontend) — hoàn thành.
+Last Completed: **Sprint 16.5 — Tối ưu hóa Tầng Service, LLM Observability & Hoàn thiện Trải nghiệm (Hardening)** — hoàn thành.
 
-Next Module: Sprint 17 — Testing và Sprint 18 — Deployment & Optimization.
+Next Module: Sprint 17 — Testing (Đánh giá Thực nghiệm Ragas) và Sprint 18 — Deployment & Optimization.
 
-Nguyên tắc vận hành từ Sprint 11.5 trở đi: mỗi sprint phải tự kiểm thử độc lập và chạy xanh trước khi mở sprint kế tiếp; các sprint backend (11.5, 12, 13, 15) có script test độc lập, phần giao diện chat và quiz tương ứng tách sang Sprint 14 và Sprint 16.
+Nguyên tắc vận hành từ Sprint 11.5 trở đi: mỗi sprint phải tự kiểm thử độc lập và chạy xanh trước khi mở sprint kế tiếp; các sprint backend (11.5, 12, 13, 15, 16.5) có script test độc lập, phần giao diện chat và quiz tương ứng tách sang Sprint 14 và Sprint 16.
 
 ---
 

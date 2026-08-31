@@ -47,7 +47,7 @@ export function ChatSessionHistoryPopover({ notebookId }: ChatSessionHistoryPopo
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className={`p-1.5 rounded-xl transition ${isOpen ? 'bg-indigo-50 text-indigo-600' : 'text-slate-450 hover:bg-slate-100 hover:text-slate-700'}`}
+                className={`p-1.5 rounded-xl transition ${isOpen ? 'bg-sky-50 text-sky-600' : 'text-slate-450 hover:bg-slate-100 hover:text-slate-700'}`}
                 title="Lịch sử trò chuyện"
             >
                 <History className="h-4 w-4" />
@@ -74,7 +74,7 @@ export function ChatSessionHistoryPopover({ notebookId }: ChatSessionHistoryPopo
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Tìm kiếm phiên trò chuyện..."
-                            className="w-full pl-9 pr-4 py-1.5 text-xs rounded-xl border border-slate-200 placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition"
+                            className="w-full pl-9 pr-4 py-1.5 text-xs rounded-xl border border-slate-200 placeholder-slate-400 focus:outline-none focus:border-sky-500 transition"
                         />
                     </div>
 
@@ -82,7 +82,7 @@ export function ChatSessionHistoryPopover({ notebookId }: ChatSessionHistoryPopo
                     <div className="max-h-60 overflow-y-auto space-y-1 pr-1 font-sans">
                         {isLoading ? (
                             <div className="py-8 flex items-center justify-center">
-                                <Loader2 className="h-4 w-4 text-indigo-600 animate-spin" />
+                                <Loader2 className="h-4 w-4 text-sky-600 animate-spin" />
                             </div>
                         ) : filteredSessions.length === 0 ? (
                             <div className="py-8 text-center text-xs text-slate-400 italic">
@@ -94,12 +94,12 @@ export function ChatSessionHistoryPopover({ notebookId }: ChatSessionHistoryPopo
                                 return (
                                     <div
                                         key={s.id}
-                                        className={`group flex items-center justify-between gap-1.5 p-2 rounded-xl transition ${isActive ? 'bg-indigo-50/70 border border-indigo-100/50 shadow-3xs' : 'hover:bg-slate-50 border border-transparent'}`}
+                                        className={`group flex items-center justify-between gap-1.5 p-2 rounded-xl transition ${isActive ? 'bg-sky-50/70 border border-sky-100/50 shadow-3xs' : 'hover:bg-slate-50 border border-transparent'}`}
                                     >
                                         <button
                                             type="button"
                                             onClick={() => handleSelectSession(s.id)}
-                                            className={`flex-1 text-left text-xs truncate font-medium ${isActive ? 'text-indigo-700' : 'text-slate-700 hover:text-slate-900'}`}
+                                            className={`flex-1 text-left text-xs truncate font-medium ${isActive ? 'text-slate-900 font-bold' : 'text-slate-700 hover:text-slate-900'}`}
                                             title={s.title}
                                         >
                                             {s.title}
@@ -112,7 +112,7 @@ export function ChatSessionHistoryPopover({ notebookId }: ChatSessionHistoryPopo
                                                     e.stopPropagation()
                                                     setSelectedSessionForRename(s)
                                                 }}
-                                                className="p-1 rounded text-slate-400 hover:bg-white hover:text-indigo-650 hover:shadow-3xs transition border border-transparent hover:border-slate-100"
+                                                className="p-1 rounded text-slate-400 hover:bg-white hover:text-sky-600 hover:shadow-3xs transition border border-transparent hover:border-slate-100"
                                                 title="Đổi tên"
                                             >
                                                 <Edit2 className="h-3 w-3" />

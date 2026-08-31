@@ -7,6 +7,12 @@ class UserRole(str, Enum):
     ADMIN = "ADMIN"
 
 
+class ChatMessageRole(str, Enum):
+    USER = "user"
+    ASSISTANT = "assistant"
+    SYSTEM = "system"
+
+
 class ResourceType(str, Enum):
     EXAM = "EXAM"
     SLIDE = "SLIDE"

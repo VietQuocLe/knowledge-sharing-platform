@@ -24,13 +24,13 @@ export function QuizHeader({
 
             {/* Actions & Stats */}
             <div className="flex items-center gap-3 shrink-0 justify-between sm:justify-end">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold bg-indigo-50 border border-indigo-100 text-indigo-700 select-none shadow-3xs">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold bg-sky-50 border border-sky-200 text-slate-800 select-none shadow-3xs">
                     Điểm số: {correctCount} / {totalQuestions}
                 </span>
 
                 <button
                     onClick={onReset}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-indigo-650 hover:bg-slate-50 border border-slate-200 active:bg-slate-100 px-3 py-1.5 rounded-xl transition cursor-pointer shadow-3xs"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-sky-600 hover:bg-slate-50 border border-slate-200 active:bg-slate-100 px-3 py-1.5 rounded-xl transition cursor-pointer shadow-3xs"
                     title="Làm lại tất cả câu hỏi"
                 >
                     <RotateCcw className="h-3.5 w-3.5" />

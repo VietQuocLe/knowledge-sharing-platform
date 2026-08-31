@@ -124,7 +124,7 @@ export function NotebookChatPanel({ notebookId, onClose }: NotebookChatPanelProp
                 return (
                     <>
                         {children.slice(0, -2)}
-                        <span className="inline-block w-1.5 h-3.5 bg-indigo-600 animate-pulse ml-0.5 align-middle rounded-xs" />
+                        <span className="inline-block w-1.5 h-3.5 bg-sky-600 animate-pulse ml-0.5 align-middle rounded-xs" />
                     </>
                 )
             }
@@ -189,9 +189,17 @@ export function NotebookChatPanel({ notebookId, onClose }: NotebookChatPanelProp
         const textarea = textareaRef.current
         if (textarea) {
             textarea.style.height = 'auto'
-            textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`
+            const nextHeight = Math.max(36, Math.min(textarea.scrollHeight, 150))
+            textarea.style.height = `${nextHeight}px`
         }
     }, [chatInput])
+
+    // Auto-focus textarea on mount, activeSessionId change, and when streaming ends
+    useEffect(() => {
+        if (!isStreaming) {
+            textareaRef.current?.focus()
+        }
+    }, [activeSessionId, isStreaming])
 
     // Track previous sessionId to detect transitions and abort if switching/deleting active session
     const prevSessionIdRef = useRef<number | null>(activeSessionId)
@@ -322,11 +330,11 @@ export function NotebookChatPanel({ notebookId, onClose }: NotebookChatPanelProp
     }
 
     return (
-        <div className="w-[360px] md:w-[400px] border-l border-slate-200 bg-slate-50/50 flex flex-col h-full shrink-0 shadow-3xs animate-in slide-in-from-right duration-250 font-sans">
+        <div className="w-[360px] md:w-[400px] border-l border-slate-200/80 bg-[#FAF9F6]/80 flex flex-col h-full min-h-0 self-stretch shrink-0 shadow-3xs animate-in slide-in-from-right duration-250 font-sans">
             {/* Header Panel */}
             <div className="bg-white border-b border-slate-100 px-5 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-2 max-w-[60%]">
-                    <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600 shrink-0">
+                    <div className="p-1.5 rounded-lg bg-[#F0F7FF] text-[#0284C7] shrink-0">
                         <Sparkles className="h-4 w-4" />
                     </div>
                     <div className="min-w-0">
@@ -362,7 +370,7 @@ export function NotebookChatPanel({ notebookId, onClose }: NotebookChatPanelProp
                 {activeSessionId === null ? (
                     /* Draft Screen Panel */
                     <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
-                        <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 mb-4 animate-pulse">
+                        <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F0F7FF] border border-[#BAE6FD] text-[#0284C7] mb-4 animate-pulse">
                             <Bot className="h-6 w-6" />
                         </div>
                         <h4 className="text-sm font-bold text-slate-800 mb-1">Hỏi đáp tài liệu thông minh</h4>
@@ -377,7 +385,7 @@ export function NotebookChatPanel({ notebookId, onClose }: NotebookChatPanelProp
                                     key={idx}
                                     type="button"
                                     onClick={() => handleSend(s)}
-                                    className="w-full text-left p-3.5 text-xs text-slate-650 rounded-2xl bg-white border border-slate-200/80 hover:border-indigo-250 hover:bg-indigo-50/30 hover:shadow-xs transition duration-200 leading-snug cursor-pointer active:scale-[0.99]"
+                                    className="w-full text-left p-3.5 text-xs text-slate-800 font-medium rounded-2xl bg-white border border-slate-200/80 hover:border-[#BAE6FD] hover:bg-[#F0F7FF]/40 hover:shadow-xs transition duration-200 leading-snug cursor-pointer active:scale-[0.99]"
                                 >
                                     {s}
                                 </button>
@@ -393,7 +401,7 @@ export function NotebookChatPanel({ notebookId, onClose }: NotebookChatPanelProp
 
                         {isLoadingMessages ? (
                             <div className="flex-1 flex items-center justify-center">
-                                <Loader2 className="h-6 w-6 text-indigo-600 animate-spin" />
+                                <Loader2 className="h-6 w-6 text-[#0284C7] animate-spin" />
                             </div>
                         ) : (
                             <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-3.5">
@@ -409,7 +417,7 @@ export function NotebookChatPanel({ notebookId, onClose }: NotebookChatPanelProp
                                             <div
                                                 key={m.id}
                                                 className={isUser
-                                                    ? "self-end bg-indigo-600 text-white rounded-2xl rounded-tr-xs px-3.5 py-2.5 shadow-sm text-xs leading-relaxed max-w-[85%] break-words whitespace-pre-wrap"
+                                                    ? "self-end bg-black text-white rounded-2xl rounded-tr-xs px-3.5 py-2.5 shadow-sm text-xs leading-relaxed max-w-[85%] break-words whitespace-pre-wrap"
                                                     : "self-start bg-white border border-slate-200/80 text-slate-850 rounded-2xl rounded-tl-xs p-3.5 shadow-xs text-xs leading-relaxed max-w-[85%]"
                                                 }
                                             >
@@ -418,9 +426,9 @@ export function NotebookChatPanel({ notebookId, onClose }: NotebookChatPanelProp
                                                 ) : !m.content ? (
                                                     <div className="flex items-center gap-2 text-slate-400 py-1">
                                                         <div className="flex gap-1 shrink-0">
-                                                            <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-bounce [animation-delay:-0.3s]"></span>
-                                                            <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-bounce [animation-delay:-0.15s]"></span>
-                                                            <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-bounce"></span>
+                                                            <span className="h-1.5 w-1.5 rounded-full bg-[#0284C7] animate-bounce [animation-delay:-0.3s]"></span>
+                                                            <span className="h-1.5 w-1.5 rounded-full bg-[#0284C7] animate-bounce [animation-delay:-0.15s]"></span>
+                                                            <span className="h-1.5 w-1.5 rounded-full bg-[#0284C7] animate-bounce"></span>
                                                         </div>
                                                         <span className="text-[11px] italic font-medium text-slate-500">Đang tìm tài liệu & suy nghĩ...</span>
                                                     </div>
@@ -435,7 +443,7 @@ export function NotebookChatPanel({ notebookId, onClose }: NotebookChatPanelProp
                                                                 const hasNewline = String(children).includes('\n')
                                                                 if (!hasNewline && !className) {
                                                                     return (
-                                                                        <code className="bg-slate-100 text-indigo-600 px-1.5 py-0.5 rounded text-[10.5px] font-semibold break-words">
+                                                                        <code className="bg-[#F0F7FF] text-slate-800 border border-[#BAE6FD]/60 px-1.5 py-0.5 rounded text-[10.5px] font-semibold break-words">
                                                                             {children}
                                                                         </code>
                                                                     )
@@ -481,14 +489,14 @@ export function NotebookChatPanel({ notebookId, onClose }: NotebookChatPanelProp
                                                                         <button
                                                                             type="button"
                                                                             onClick={() => handleOpenCitation(citation)}
-                                                                            className="inline-flex items-center justify-center px-1.5 py-0.5 mx-0.5 text-[10px] font-bold rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-600 hover:text-indigo-700 border border-indigo-200 transition cursor-pointer active:scale-95 whitespace-nowrap"
+                                                                            className="inline-flex items-center justify-center px-1.5 py-0.5 mx-0.5 text-[10px] font-bold rounded-md bg-sky-50 hover:bg-sky-100 text-sky-600 hover:text-sky-700 border border-sky-200 transition cursor-pointer active:scale-95 whitespace-nowrap"
                                                                         >
                                                                             [{citationIndex}]
                                                                         </button>
                                                                     )
                                                                 }
                                                                 return (
-                                                                    <a href={href} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">
+                                                                    <a href={href} target="_blank" rel="noopener noreferrer" className="text-sky-600 hover:underline">
                                                                         {children}
                                                                     </a>
                                                                 )
@@ -507,7 +515,7 @@ export function NotebookChatPanel({ notebookId, onClose }: NotebookChatPanelProp
                                                                 key={c.index}
                                                                 type="button"
                                                                 onClick={() => handleOpenCitation(c)}
-                                                                className="text-[9px] font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 hover:border-indigo-200 transition px-2 py-0.5 rounded border border-indigo-100 cursor-pointer flex items-center gap-1 active:scale-95"
+                                                                className="text-[9px] font-semibold text-sky-600 bg-sky-50 hover:bg-sky-100 hover:border-sky-200 transition px-2 py-0.5 rounded border border-sky-100 cursor-pointer flex items-center gap-1 active:scale-95"
                                                             >
                                                                 [{c.index}] {c.file_name} (Trang {c.page_number})
                                                             </button>
@@ -553,8 +561,7 @@ export function NotebookChatPanel({ notebookId, onClose }: NotebookChatPanelProp
                         }}
                         disabled={isStreaming}
                         placeholder={isStreaming ? "Đang chờ AI trả lời..." : "Hỏi đáp về tài liệu..."}
-                        className="flex-1 bg-transparent text-xs focus:outline-none text-slate-700 placeholder-slate-400 disabled:cursor-not-allowed resize-none max-h-[120px] py-1.5 leading-relaxed min-h-[36px]"
-                        style={{ height: '36px' }}
+                        className="flex-1 bg-transparent text-xs focus:outline-none text-slate-700 placeholder-slate-400 disabled:cursor-not-allowed resize-none max-h-[150px] py-1.5 leading-relaxed min-h-[36px]"
                     />
 
                     {isStreaming ? (
@@ -570,7 +577,7 @@ export function NotebookChatPanel({ notebookId, onClose }: NotebookChatPanelProp
                         <button
                             type="submit"
                             disabled={isStreaming || !chatInput.trim()}
-                            className="p-1.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed transition shadow-3xs cursor-pointer flex items-center justify-center mb-1 shrink-0"
+                            className="p-1.5 rounded-xl bg-black text-white hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed transition shadow-3xs cursor-pointer flex items-center justify-center mb-1 shrink-0"
                             title="Gửi"
                         >
                             <Send className="h-3.5 w-3.5" />

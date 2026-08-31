@@ -64,7 +64,7 @@ export function PdfPreviewModal({
                                     href={fileUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition"
+                                    className="p-2 text-slate-500 hover:text-sky-600 hover:bg-slate-100 rounded-lg transition"
                                     title="Mở trong tab mới"
                                 >
                                     <ExternalLink className="h-4 w-4" />
@@ -72,7 +72,7 @@ export function PdfPreviewModal({
                                 <a
                                     href={fileUrl}
                                     download={fileName}
-                                    className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition"
+                                    className="p-2 text-slate-500 hover:text-sky-600 hover:bg-slate-100 rounded-lg transition"
                                     title="Tải về"
                                 >
                                     <Download className="h-4 w-4" />

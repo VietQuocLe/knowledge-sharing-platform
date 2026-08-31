@@ -23,11 +23,11 @@ export function NotebookCard({ notebook }: NotebookCardProps) {
         <>
             <Link
                 to={`/me/workspace/${notebook.id}`}
-                className="flex flex-col justify-between h-44 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-indigo-500 hover:shadow-md group relative"
+                className="flex flex-col justify-between h-44 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition hover:border-[#BAE6FD] hover:shadow-md group relative"
             >
                 <div>
                     <div className="flex items-start justify-between">
-                        <div className={`p-2.5 rounded-xl transition group-hover:scale-110 ${hasSubject ? 'bg-indigo-50 text-indigo-600' : 'bg-amber-50 text-amber-500'
+                        <div className={`p-2.5 rounded-2xl border transition group-hover:scale-105 shadow-3xs ${hasSubject ? 'bg-[#F0F7FF] border-[#BAE6FD] text-[#0284C7]' : 'bg-[#FEF9C3] border-amber-200 text-amber-700'
                             }`}>
                             {hasSubject ? (
                                 <BookOpen className="h-5 w-5" />
@@ -82,7 +82,7 @@ export function NotebookCard({ notebook }: NotebookCardProps) {
                         </div>
                     </div>
 
-                    <h3 className="mt-4 font-semibold text-slate-800 line-clamp-1 group-hover:text-indigo-600 transition">
+                    <h3 className="mt-4 font-semibold text-slate-800 line-clamp-1 group-hover:text-slate-950 transition">
                         {notebook.title}
                     </h3>
                 </div>

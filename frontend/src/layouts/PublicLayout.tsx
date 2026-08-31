@@ -8,7 +8,6 @@ import {
   PlusCircle,
   LogIn,
   LogOut,
-  UserPlus,
   Menu,
   X,
   PanelLeftClose,
@@ -17,6 +16,7 @@ import { useAuth } from '../features/auth/context/AuthContext'
 import { type AuthUser } from '../features/auth/api'
 import { SubjectSearchInput } from '../features/taxonomy'
 import { useSidebar } from '../hooks/useSidebar'
+import { PageTransition } from '../components/PageTransition'
 
 interface PublicAuthControlsProps {
   user: AuthUser | null
@@ -50,14 +50,6 @@ function AuthControls({ user, onLogout, onClose }: PublicAuthControlsProps) {
       >
         <LogIn className="h-3.5 w-3.5" />
         <span className="hidden sm:inline">Đăng nhập</span>
-      </Link>
-      <Link
-        to="/register"
-        onClick={onClose}
-        className="flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 shadow-sm transition cursor-pointer"
-      >
-        <UserPlus className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">Đăng ký</span>
       </Link>
     </div>
   )
@@ -206,7 +198,7 @@ export function PublicLayout() {
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Đóng góp tài liệu"
-                className="flex items-center justify-center w-full py-2.5 bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl transition cursor-pointer"
+                className="flex items-center justify-center w-full py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl transition cursor-pointer"
               >
                 <PlusCircle className="h-4 w-4 pointer-events-none" />
               </a>
@@ -220,7 +212,7 @@ export function PublicLayout() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={closeMobileMenu}
-                  className="flex items-center justify-center gap-1.5 w-full py-2 bg-indigo-500 hover:bg-indigo-400 text-white rounded-lg text-xs font-semibold shadow-sm transition cursor-pointer"
+                  className="flex items-center justify-center gap-1.5 w-full py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-semibold shadow-sm transition cursor-pointer"
                 >
                   <PlusCircle className="h-3.5 w-3.5 pointer-events-none" />
                   Đóng góp tài liệu
@@ -234,13 +226,13 @@ export function PublicLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex font-sans antialiased text-slate-800">
+    <div className="min-h-screen bg-[#FAF9F6] flex font-sans antialiased text-slate-800">
       {/* ======================================================== */}
       {/* 1. DESKTOP LEFT SIDEBAR                                   */}
       {/* ======================================================== */}
       <aside
         className={`
-          hidden md:flex flex-col bg-slate-900 sticky top-0 h-screen z-30
+          hidden md:flex flex-col bg-[#13141A] sticky top-0 h-screen z-30
           transition-all duration-300
           ${isCollapsed ? 'w-20 cursor-col-resize' : 'w-64'}
         `}
@@ -259,7 +251,7 @@ export function PublicLayout() {
             onClick={closeMobileMenu}
             aria-hidden="true"
           />
-          <aside className="fixed inset-y-0 left-0 z-50 w-72 flex flex-col bg-slate-900 md:hidden shadow-2xl">
+          <aside className="fixed inset-y-0 left-0 z-50 w-72 flex flex-col bg-[#13141A] md:hidden shadow-2xl">
             {sidebarContent(false)}
           </aside>
         </>
@@ -270,7 +262,7 @@ export function PublicLayout() {
       {/* ======================================================== */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile sticky bar */}
-        <div className="md:hidden sticky top-0 z-20 flex items-center gap-2 bg-white px-3 h-14">
+        <div className="md:hidden sticky top-0 z-20 flex items-center gap-2 bg-[#FAF9F6]/90 backdrop-blur-md border-b border-slate-200/60 px-3 h-14">
           <button
             type="button"
             onClick={toggleMobileMenu}
@@ -294,7 +286,9 @@ export function PublicLayout() {
         </div>
 
         <main className="flex-1 px-6 pb-8 md:px-8 md:pb-10 max-w-7xl w-full mx-auto">
-          <Outlet />
+          <PageTransition>
+            <Outlet />
+          </PageTransition>
         </main>
       </div>
     </div>

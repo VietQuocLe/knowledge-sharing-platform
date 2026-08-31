@@ -23,7 +23,7 @@ class DocumentCreate(DocumentBase):
 
 class DocumentResponse(DocumentBase):
     id: int
-    created_by: int
+    created_by: int | None = None
     status: DocumentStatus
     created_at: datetime
     assets: list[AssetResponse] = Field(default_factory=list)

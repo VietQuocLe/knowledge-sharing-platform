@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Building2, ArrowRight, GraduationCap, Layers } from 'lucide-react'
+import { GraduationCap, ArrowRight } from 'lucide-react'
 import { taxonomyApi } from '../features/taxonomy/api'
 import { taxonomyKeys } from '../features/taxonomy/queryKeys'
 import { Card } from '../components/ui/Card'
-import { Spinner } from '../components/ui/Spinner'
+import { DepartmentCardSkeleton } from '../components/ui/Skeleton'
 import { ErrorMessage } from '../components/ui/ErrorMessage'
 
 export function HomePage() {
@@ -13,27 +13,6 @@ export function HomePage() {
     queryFn: taxonomyApi.getDepartments,
   })
 
-  const getDepartmentIcon = (deptId: number) => {
-    switch (deptId) {
-      case 1:
-        return <GraduationCap className="h-5.5 w-5.5" />
-      case 2:
-        return <Building2 className="h-5.5 w-5.5" />
-      default:
-        return <Layers className="h-5.5 w-5.5" />
-    }
-  }
-
-  const getDepartmentDescription = (deptId: number) => {
-    switch (deptId) {
-      case 1:
-        return 'Kho lưu trữ tài liệu về Cấu trúc dữ liệu, Lập trình, Trí tuệ nhân tạo và các công nghệ mới.'
-      case 2:
-        return 'Tổng hợp giáo trình, đề cương bài giảng và tài liệu ôn tập khối ngành Kinh tế, Quản trị, Marketing.'
-      default:
-        return 'Tài nguyên tài liệu ôn tập và đề ý kiến bài giảng trực thuộc các chuyên ngành đào tạo.'
-    }
-  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-10 font-sans">
@@ -56,35 +35,36 @@ export function HomePage() {
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-16">
-            <Spinner size="lg" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <DepartmentCardSkeleton key={i} />
+            ))}
           </div>
         ) : error ? (
           <ErrorMessage message="Không thể tải danh sách khoa. Vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau." />
         ) : departments && departments.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {departments.map((department) => (
-              <Link key={department.id} to={`/departments/${department.id}`} className="group block">
+              <Link key={department.id} to={`/departments/${department.id}`} className="group block h-full">
                 <Card
                   hoverable
-                  className="h-full flex flex-col justify-between p-5 border-slate-200 bg-white hover:border-indigo-300 hover:shadow-md transition-all duration-300 rounded-2xl group cursor-pointer"
+                  className="h-full flex flex-col justify-between p-6 border-slate-200/80 bg-white hover:border-[#BAE6FD] hover:shadow-md transition-all duration-250 rounded-2xl cursor-pointer space-y-4"
                 >
                   <div className="space-y-4">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 shadow-3xs">
-                      {getDepartmentIcon(department.id)}
+                    {/* Ảnh bìa / icon minh họa */}
+                    <div className="h-32 w-full bg-slate-50 border border-slate-200/60 rounded-xl flex items-center justify-center text-slate-400 group-hover:text-[#0284C7] group-hover:bg-[#F0F7FF]/50 transition duration-200">
+                      <GraduationCap className="h-12 w-12 group-hover:scale-105 transition duration-200" />
                     </div>
-                    <div>
-                      <h3 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition-colors duration-200">
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-bold tracking-tight text-slate-900 group-hover:text-sky-800 transition-colors duration-200 leading-snug">
                         {department.name}
                       </h3>
-                      <p className="text-xs text-slate-500 leading-relaxed mt-1.5 line-clamp-2">
-                        {getDepartmentDescription(department.id)}
-                      </p>
                     </div>
                   </div>
-                  <div className="mt-6 pt-3 border-t border-slate-50 flex items-center justify-between text-2xs font-bold text-slate-450 uppercase group-hover:text-indigo-600 transition-colors duration-200">
-                    <span>Ngành trực thuộc &amp; Môn học</span>
-                    <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1 text-slate-400 group-hover:text-indigo-600" />
+
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-sky-600 group-hover:text-sky-700">
+                    <span>Khám phá ngành &amp; môn học</span>
+                    <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-1" />
                   </div>
                 </Card>
               </Link>

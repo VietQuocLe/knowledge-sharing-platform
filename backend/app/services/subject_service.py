@@ -2,7 +2,6 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.models.department import Department
 from app.models.major import Major, major_subject
 from app.models.subject import Subject
 from app.schemas.subject import SubjectCreate, SubjectUpdate
@@ -85,14 +84,6 @@ def _get_majors_or_404(db: Session, major_ids: list[int]) -> list[Major]:
     return list(majors)
 
 
-def _get_department_or_404(db: Session, department_id: int) -> Department:
-    department = db.execute(
-        select(Department).where(Department.id == department_id)
-    ).scalar_one_or_none()
-    if department is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Department not found")
-    return department
-
 
 def create(db: Session, data: SubjectCreate) -> Subject:
     existing = db.execute(
@@ -101,10 +92,9 @@ def create(db: Session, data: SubjectCreate) -> Subject:
     if existing is not None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Subject already exists")
 
-    _get_department_or_404(db, data.department_id)
     majors = _get_majors_or_404(db, data.major_ids)
 
-    subject = Subject(code=data.code, name=data.name, department_id=data.department_id)
+    subject = Subject(code=data.code, name=data.name)
     subject.majors = majors
     db.add(subject)
     db.commit()
@@ -131,11 +121,9 @@ def update(db: Session, subject_id: int, data: SubjectUpdate) -> Subject:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Subject already exists")
         subject.name = data.name
 
-    _get_department_or_404(db, data.department_id)
-    subject.department_id = data.department_id
-
-    majors = _get_majors_or_404(db, data.major_ids)
-    subject.majors = majors
+    if data.major_ids is not None:
+        majors = _get_majors_or_404(db, data.major_ids)
+        subject.majors = majors
 
     db.commit()
     db.refresh(subject)

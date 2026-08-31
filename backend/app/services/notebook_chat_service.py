@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.core.config import settings
+from app.core.observability import observe_llm, update_trace_context
+from app.models.enums import ChatMessageRole
 from app.models.notebook import Notebook
 from app.models.notebook_chat import NotebookChatMessage, NotebookChatSession
 from app.models.user import User
@@ -275,6 +277,7 @@ class CondensationResult(BaseModel):
     )
 
 
+@observe_llm(name="condense_query")
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
@@ -328,7 +331,7 @@ def condense_query_and_route(history: list[NotebookChatMessage], raw_query: str)
     recent_history = history[-6:] if history else []
     history_text = ""
     for msg in recent_history:
-        role_label = "User" if msg.role == "user" else "Assistant"
+        role_label = "User" if msg.role == ChatMessageRole.USER else "Assistant"
         history_text += f"{role_label}: {msg.content}\n"
 
     try:
@@ -364,6 +367,7 @@ def get_session_lock(session_id: int) -> asyncio.Lock:
     return _session_locks[session_id]
 
 
+@observe_llm(name="notebook_rag_chat_stream")
 async def stream_chat_response(
     db: Session,
     notebook_id: int,
@@ -375,8 +379,13 @@ async def stream_chat_response(
 ):
     """
     Orchestrates the query condensation, scoped retrieval, Gemini text streaming,
-    citations clean-up, and write-on-complete message persistence.
+    citations clean-up, token tracking, and write-on-complete message persistence.
     """
+    update_trace_context(
+        user_id=str(user.id),
+        session_id=str(session_id),
+        tags=["rag-chat", f"notebook-{notebook_id}"],
+    )
     try:
         # 1. First-turn computation
         message_count = db.scalar(
@@ -419,6 +428,8 @@ async def stream_chat_response(
         yield f"event: citations\ndata: {json.dumps(citations)}\n\n"
 
         assistant_reply = ""
+        prompt_tokens: int | None = None
+        completion_tokens: int | None = None
 
         # 5. Handle response generation
         if short_circuit:
@@ -430,19 +441,26 @@ async def stream_chat_response(
             
             if needs_rag:
                 system_instruction = (
-                    "Bạn là một trợ lý RAG thông minh.\n"
-                    "Hãy trả lời câu hỏi của người dùng bằng tiếng Việt, DỰA TRÊN NGỮ CẢNH tài liệu dưới đây.\n"
-                    "Yêu cầu chung:\n"
-                    "1. Trả lời rõ ràng, mạch lạc, trực tiếp.\n"
-                    "2. Sử dụng định dạng trích dẫn đánh số [1], [2]... để dẫn nguồn trực tiếp từ các đoạn văn bản tương ứng trong context.\n"
-                    "3. Nếu thông tin không có trong tài liệu/ngữ cảnh dưới đây, hãy trả lời đúng nguyên văn câu sau: "
+                    "Bạn là một trợ giảng / cố vấn học tập thông thái, nhiệt tình và rõ ràng (chuẩn NotebookLM & Studocu).\n"
+                    "Nhiệm vụ của bạn là giải thích kiến thức và trả lời câu hỏi của người học bằng tiếng Việt, DỰA TRÊN NGỮ CẢNH tài liệu dưới đây.\n\n"
+                    "QUY TẮC PHẢN HỒI & PHONG CÁCH DIỄN ĐẠT:\n"
+                    "1. Vai trò & Giọng văn (Tone & Persona):\n"
+                    "   - Xưng hô tự nhiên, lịch thiệp ('tôi' - 'bạn'). Giải thích sâu sắc, dễ hiểu, trực diện vào trọng tâm câu hỏi trước, sau đó phân tích chi tiết kèm ví dụ minh họa hoặc công thức rõ ràng.\n"
+                    "   - Tránh tuyệt đối các từ ngữ máy móc, sáo rỗng hoặc mở đầu rập khuôn như: 'Dựa vào tài liệu được cung cấp...', 'Theo như trang X trong slide...', 'Như trong context đã nêu...'. Hãy trình bày tri thức một cách tự nhiên và mạch lạc.\n"
+                    "2. Quy tắc Trích dẫn Nguồn (Citation Standard):\n"
+                    "   - Đặt nhãn trích dẫn số trong ngoặc vuông như [1], [2] ngay sau từng câu/luận điểm có căn cứ từ tài liệu nguồn tương ứng.\n"
+                    "3. Định dạng Markdown Thẩm mỹ:\n"
+                    "   - Dùng **in đậm** các từ khóa/khái niệm cốt lõi để người học dễ nắm bắt (scannable reading).\n"
+                    "   - Phân chia các đoạn văn ngắn gọn, sử dụng bullet points (-), bảng biểu so sánh hoặc khối code/công thức toán ($...$ hoặc $$...$$) khi thích hợp.\n"
+                    "4. Xử lý câu hỏi ngoài phạm vi tài liệu (Anti-Hallucination Guard):\n"
+                    "   - Nếu thông tin hoàn toàn không có trong tài liệu/ngữ cảnh dưới đây, hãy trả lời đúng nguyên văn câu sau: "
                     "'Tôi xin lỗi, thông tin này không có trong tài liệu của bạn.' và TRÁNH tự bịa đặt hay sử dụng kiến thức ngoài.\n\n"
                     f"Ngữ cảnh tài liệu:\n{context_str}"
                 )
             else:
                 system_instruction = (
-                    "Bạn là một trợ lý thông minh.\n"
-                    "Hãy trò chuyện xã giao, trả lời câu hỏi tổng quát bằng tiếng Việt một cách tự nhiên và lịch sự."
+                    "Bạn là một trợ giảng / cố vấn học tập thông minh, thân thiện và nhiệt tình.\n"
+                    "Hãy trò chuyện xã giao, trả lời câu hỏi tổng quát bằng tiếng Việt một cách tự nhiên, lịch thiệp ('tôi' - 'bạn') và mạch lạc."
                 )
 
             contents = []
@@ -450,7 +468,7 @@ async def stream_chat_response(
                 # Retrieve history and append in types.Content list format
                 recent_history = history[-6:]
                 for msg in recent_history:
-                    role_name = "user" if msg.role == "user" else "model"
+                    role_name = "user" if msg.role == ChatMessageRole.USER else "model"
                     contents.append(
                         types.Content(
                             role=role_name,
@@ -481,6 +499,15 @@ async def stream_chat_response(
                         logger.info("Client disconnected. Breaking Gemini stream.")
                         break
                     
+                    if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
+                        um = chunk.usage_metadata
+                        p_cnt = getattr(um, "prompt_token_count", None)
+                        if isinstance(p_cnt, int):
+                            prompt_tokens = p_cnt
+                        c_cnt = getattr(um, "candidates_token_count", None)
+                        if isinstance(c_cnt, int):
+                            completion_tokens = c_cnt
+                    
                     text_chunk = chunk.text or ""
                     if text_chunk:
                         assistant_reply += text_chunk
@@ -498,12 +525,7 @@ async def stream_chat_response(
                         except Exception:
                             pass
 
-        # 6. Check client disconnection before database write
-        if await request.is_disconnected():
-            logger.info("Client disconnected before saving messages. Aborting save.")
-            return
-
-        # 7. Write-on-complete: insert user + assistant messages in a single transaction
+        # 6. Write-on-complete: insert user + assistant messages in a single transaction
         used_indices = set(int(x) for x in re.findall(r"\[(\d+)\]", assistant_reply))
         cleaned_citations = [
             c for c in citations if c["index"] in used_indices
@@ -511,7 +533,7 @@ async def stream_chat_response(
 
         user_msg = NotebookChatMessage(
             session_id=session_id,
-            role="user",
+            role=ChatMessageRole.USER,
             content=raw_query,
             condensed_query=condensed_query,
         )
@@ -519,9 +541,11 @@ async def stream_chat_response(
 
         ass_msg = NotebookChatMessage(
             session_id=session_id,
-            role="assistant",
+            role=ChatMessageRole.ASSISTANT,
             content=assistant_reply,
             citations=cleaned_citations,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
         )
         db.add(ass_msg)
 
@@ -534,17 +558,29 @@ async def stream_chat_response(
         db.refresh(user_msg)
         db.refresh(ass_msg)
 
-        # 8. Trigger auto-title if first turn
+        # 7. Trigger auto-title if first turn
         if is_first_turn:
             background_tasks.add_task(auto_title_session_task, session_id)
 
-        # 9. Yield done event
-        done_payload = {
-            "session_id": session_id,
-            "message_id": ass_msg.id,
-            "condensed_query": condensed_query,
-        }
-        yield f"event: done\ndata: {json.dumps(done_payload)}\n\n"
+        # 8. Yield done event with full token usage details (if client still connected)
+        try:
+            total_tokens = (
+                (prompt_tokens or 0) + (completion_tokens or 0)
+                if (prompt_tokens is not None or completion_tokens is not None)
+                else None
+            )
+            done_payload = {
+                "session_id": session_id,
+                "message_id": ass_msg.id,
+                "condensed_query": condensed_query,
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": total_tokens,
+            }
+            if not await request.is_disconnected():
+                yield f"event: done\ndata: {json.dumps(done_payload)}\n\n"
+        except Exception as e:
+            logger.debug(f"Could not send done event to client: {e}")
 
     except Exception as e:
         logger.exception("Error during streaming chat orchestration")

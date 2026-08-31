@@ -1,0 +1,162 @@
+{
+  "chat_session": {
+    "title": "Thảo luận Chuẩn hóa CSDL & Đại số quan hệ",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Giải thích cho tôi các dạng chuẩn 1NF, 2NF, 3NF và BCNF kèm điều kiện phụ thuộc hàm và ví dụ minh họa."
+      },
+      {
+        "role": "assistant",
+        "content": "Chào bạn! Chuẩn hóa cơ sở dữ liệu là quá trình tổ chức lại các thuộc tính và quan hệ nhằm giảm thiểu dư thừa dữ liệu (redundancy) và loại bỏ các bất thường khi thao tác dữ liệu (anomalies) [1].\n\nDưới đây là chi tiết các dạng chuẩn từ 1NF đến BCNF:\n\n### 1. Dạng chuẩn 1 (1NF - First Normal Form)\n- **Điều kiện:** Tất cả các thuộc tính đều chứa các giá trị nguyên tố (atomic values), không chứa thuộc tính lặp hay đa trị [1].\n- **Ví dụ:** Nếu cột `Số điện thoại` chứa chuỗi `'0901234567, 0912345678'`, quan hệ chưa đạt 1NF. Cần tách mỗi số điện thoại thành một dòng riêng biệt.\n\n### 2. Dạng chuẩn 2 (2NF - Second Normal Form)\n- **Điều kiện:** Đã đạt 1NF và **mọi thuộc tính không khóa đều phụ thuộc hàm đầy đủ vào khóa chính** (không phụ thuộc vào một phần của khóa chính) [2].\n- **Áp dụng:** Khi khóa chính là khóa kết hợp (composite key gồm >= 2 thuộc tính).\n\n### 3. Dạng chuẩn 3 (3NF - Third Normal Form)\n- **Điều kiện:** Đã đạt 2NF và **không có thuộc tính không khóa nào phụ thuộc bắc cầu vào khóa chính** (Nếu $X \\rightarrow Y$ và $Y \\rightarrow Z$ với $X$ là khóa, $Y$ không là khóa thì $Z$ phụ thuộc bắc cầu) [1].\n\n### 4. Dạng chuẩn Boyce-Codd (BCNF)\n- **Điều kiện:** Với mọi phụ thuộc hàm không tầm thường $X \\rightarrow Y$, $X$ bắt buộc phải là một **siêu khóa (superkey)** [1].\n\n> [!TIP]\n> Trong thiết kế thực tế, hầu hết các hệ thống cơ sở dữ liệu ứng dụng đều chuẩn hóa đến **3NF hoặc BCNF** để cân bằng giữa tính toàn vẹn dữ liệu và hiệu năng truy vấn.",
+        "citations": [
+          {
+            "index": 1,
+            "file_name": "Chuong8_Chuan hoa CSDL.pdf",
+            "page_number": 3
+          },
+          {
+            "index": 2,
+            "file_name": "Chuong8_Chuan hoa CSDL.pdf",
+            "page_number": 8
+          }
+        ],
+        "prompt_tokens": 520,
+        "completion_tokens": 410
+      }
+    ]
+  },
+  "artifact": {
+    "title": "Bộ câu hỏi ôn tập: Chuẩn hóa CSDL & Đại số quan hệ",
+    "artifact_type": "QUIZ",
+    "content": {
+      "title": "Bộ câu hỏi ôn tập: Chuẩn hóa CSDL & Đại số quan hệ",
+      "questions": [
+        {
+          "id": 1,
+          "question": "Một quan hệ R được gọi là đạt Dạng chuẩn 1 (1NF) khi thỏa mãn điều kiện nào sau đây?",
+          "options": [
+            {
+              "key": "A",
+              "text": "Mọi thuộc tính đều mang giá trị nguyên tố (đơn trị), không chứa thuộc tính đa trị hoặc lặp"
+            },
+            {
+              "key": "B",
+              "text": "Mọi thuộc tính không khóa phụ thuộc hàm đầy đủ vào khóa chính"
+            },
+            {
+              "key": "C",
+              "text": "Không tồn tại phụ thuộc hàm bắc cầu giữa các thuộc tính không khóa"
+            },
+            {
+              "key": "D",
+              "text": "Với mọi phụ thuộc hàm X -> Y, X phải là một siêu khóa"
+            }
+          ],
+          "correct_answer": "A",
+          "explanation": "### Phân tích kiến thức\n- **1NF (First Normal Form)** là dạng chuẩn cơ bản nhất yêu cầu mọi miền giá trị của các thuộc tính phải là giá trị nguyên tử (atomic).\n\n### Lý do đáp án đúng\n- **A đúng**: Định nghĩa chuẩn của 1NF là loại bỏ các nhóm lặp và thuộc tính đa trị.\n\n### Nhận xét các phương án khác\n- B là điều kiện của 2NF.\n- C là điều kiện của 3NF.\n- D là điều kiện của BCNF."
+        },
+        {
+          "id": 2,
+          "question": "Phát biểu nào sau đây là ĐÚNG về Dạng chuẩn 2 (2NF)?",
+          "options": [
+            {
+              "key": "A",
+              "text": "Chỉ áp dụng cho quan hệ có khóa chính là khóa đơn (1 thuộc tính)"
+            },
+            {
+              "key": "B",
+              "text": "Đạt 1NF và mọi thuộc tính không khóa phụ thuộc hàm đầy đủ vào khóa chính"
+            },
+            {
+              "key": "C",
+              "text": "Cho phép tồn tại phụ thuộc hàm từng phần vào khóa chính"
+            },
+            {
+              "key": "D",
+              "text": "Tất cả các phụ thuộc hàm đều phải có vế trái là khóa ứng viên"
+            }
+          ],
+          "correct_answer": "B",
+          "explanation": "### Phân tích kiến thức\n- **2NF (Second Normal Form)** nhằm loại bỏ phụ thuộc hàm từng phần (partial dependency).\n\n### Lý do đáp án đúng\n- **B đúng**: Một quan hệ đạt 2NF khi đã ở 1NF và không có thuộc tính không khóa nào phụ thuộc vào một tập con thực sự của bất kỳ khóa chính nào.\n\n### Nhận xét các phương án khác\n- A sai vì nếu khóa chính là đơn thuộc tính thì khi đạt 1NF quan hệ đã tự động đạt 2NF.\n- C sai vì 2NF cấm phụ thuộc từng phần.\n- D là đặc điểm của BCNF."
+        },
+        {
+          "id": 3,
+          "question": "Trong quan hệ R(A, B, C, D) với khóa chính là AB và tập phụ thuộc hàm F = { AB -> C, C -> D }. Quan hệ R đạt dạng chuẩn cao nhất nào?",
+          "options": [
+            {
+              "key": "A",
+              "text": "1NF"
+            },
+            {
+              "key": "B",
+              "text": "2NF"
+            },
+            {
+              "key": "C",
+              "text": "3NF"
+            },
+            {
+              "key": "D",
+              "text": "BCNF"
+            }
+          ],
+          "correct_answer": "B",
+          "explanation": "### Phân tích kiến thức\n- Khóa chính là $AB$. Các thuộc tính không khóa là $C, D$.\n- $AB \\rightarrow C$: phụ thuộc hàm đầy đủ vào khóa chính -> Đạt 2NF.\n- Ta có $AB \\rightarrow C$ và $C \\rightarrow D$ (với $C$ không là siêu khóa), dẫn tới $D$ phụ thuộc bắc cầu vào khóa $AB$.\n\n### Lý do đáp án đúng\n- **B đúng**: Do có phụ thuộc bắc cầu $AB \\rightarrow C \\rightarrow D$ nên quan hệ vi phạm 3NF, do đó dạng chuẩn cao nhất đạt được là 2NF.\n\n### Nhận xét các phương án khác\n- A sai vì quan hệ đã đạt đến 2NF.\n- C và D sai vì vi phạm điều kiện không bắc cầu của 3NF."
+        },
+        {
+          "id": 4,
+          "question": "Phép toán nào sau đây trong Đại số quan hệ là phép toán một ngôi (unary operator)?",
+          "options": [
+            {
+              "key": "A",
+              "text": "Phép chọn (Select) và Phép chiếu (Project)"
+            },
+            {
+              "key": "B",
+              "text": "Phép tích Descartes và Phép kết nối (Join)"
+            },
+            {
+              "key": "C",
+              "text": "Phép hợp (Union) và Phép giao (Intersection)"
+            },
+            {
+              "key": "D",
+              "text": "Phép trừ (Difference) và Phép chia (Division)"
+            }
+          ],
+          "correct_answer": "A",
+          "explanation": "### Phân tích kiến thức\n- Phép toán một ngôi là phép toán chỉ nhận đầu vào là **một quan hệ duy nhất**.\n\n### Lý do đáp án đúng\n- **A đúng**: Phép chọn (Select) và Phép chiếu (Project) chỉ thực hiện trên một quan hệ R duy nhất.\n\n### Nhận xét các phương án khác\n- B, C, D đều là các phép toán hai ngôi (binary operators) yêu cầu hai quan hệ đầu vào."
+        },
+        {
+          "id": 5,
+          "question": "Điều kiện để thực hiện được phép Hợp (Union), phép Giao (Intersection) và phép Trừ (Difference) giữa hai quan hệ R và S là gì?",
+          "options": [
+            {
+              "key": "A",
+              "text": "Hai quan hệ phải có cùng số lượng bộ (cùng số dòng)"
+            },
+            {
+              "key": "B",
+              "text": "Hai quan hệ phải có cùng khóa chính"
+            },
+            {
+              "key": "C",
+              "text": "Hai quan hệ phải khả hợp (Union-compatible: cùng bậc và miền giá trị các thuộc tính tương ứng tương thích)"
+            },
+            {
+              "key": "D",
+              "text": "Hai quan hệ phải có ít nhất một thuộc tính chung"
+            }
+          ],
+          "correct_answer": "C",
+          "explanation": "### Phân tích kiến thức\n- Các phép toán tập hợp trong đại số quan hệ đòi hỏi tính khả hợp (Union-compatibility).\n\n### Lý do đáp án đúng\n- **C đúng**: Hai quan hệ R và S được gọi là khả hợp nếu có cùng số lượng thuộc tính và miền giá trị của các thuộc tính tương ứng là tương thích.\n\n### Nhận xét các phương án khác\n- A, B, D không phải là điều kiện tiên quyết trong lý thuyết đại số quan hệ."
+        }
+      ]
+    },
+    "metadata": {
+      "num_questions": 5
+    }
+  }
+}
+

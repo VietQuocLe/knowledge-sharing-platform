@@ -38,11 +38,6 @@ export function SubjectSearchInput({ onSelect, placeholder = "Tìm kiếm môn h
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
-    // Reset active index when results change
-    useEffect(() => {
-        setActiveIndex(-1)
-    }, [subjects])
-
     const handleSelect = (subject: { id: number; name: string; code: string }) => {
         if (onSelect) {
             onSelect(subject)
@@ -76,13 +71,13 @@ export function SubjectSearchInput({ onSelect, placeholder = "Tìm kiếm môn h
 
     const highlightMatch = (text: string, highlight: string) => {
         if (!highlight.trim()) return <span>{text}</span>
-        const regex = new RegExp(`(${highlight.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi')
+        const regex = new RegExp(`(${highlight.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi')
         const parts = text.split(regex)
         return (
             <span>
                 {parts.map((part, i) =>
                     regex.test(part) ? (
-                        <strong key={i} className="font-bold text-indigo-700 bg-indigo-50/80">
+                        <strong key={i} className="font-bold text-slate-950 bg-sky-100/80 px-0.5 rounded-xs">
                             {part}
                         </strong>
                     ) : (
@@ -102,11 +97,12 @@ export function SubjectSearchInput({ onSelect, placeholder = "Tìm kiếm môn h
                     onChange={(e) => {
                         setQuery(e.target.value)
                         setIsOpen(true)
+                        setActiveIndex(-1)
                     }}
                     onFocus={() => setIsOpen(true)}
                     onKeyDown={handleKeyDown}
                     placeholder={placeholder}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-4 pr-10 text-xs text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-4 pr-10 text-xs text-slate-800 placeholder-slate-400 focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 transition"
                 />
                 {query ? (
                     <button
@@ -138,7 +134,7 @@ export function SubjectSearchInput({ onSelect, placeholder = "Tìm kiếm môn h
                                     <li
                                         key={subject.id}
                                         onClick={() => handleSelect(subject)}
-                                        className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition ${isSelected ? 'bg-indigo-50/60 text-indigo-900' : 'text-slate-700 hover:bg-indigo-50/60'
+                                        className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition ${isSelected ? 'bg-sky-50/70 text-slate-950 font-medium' : 'text-slate-700 hover:bg-sky-50/70'
                                             }`}
                                     >
                                         <BookOpen className="h-4 w-4 shrink-0 text-slate-400" />

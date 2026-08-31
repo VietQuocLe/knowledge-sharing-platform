@@ -2,12 +2,16 @@ from datetime import datetime
 from typing import Any
 from pydantic import BaseModel, ConfigDict, field_validator
 
+from app.models.enums import ChatMessageRole
+
 
 class NotebookChatMessageBase(BaseModel):
-    role: str
+    role: ChatMessageRole = ChatMessageRole.USER
     content: str
     citations: Any | None = None
     condensed_query: str | None = None
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -15,8 +19,13 @@ class NotebookChatMessageBase(BaseModel):
 class NotebookChatMessageCreate(NotebookChatMessageBase):
     @field_validator("role")
     @classmethod
-    def validate_role(cls, v: str) -> str:
-        if v not in ("user", "assistant"):
+    def validate_role(cls, v: ChatMessageRole | str) -> ChatMessageRole:
+        if isinstance(v, str):
+            try:
+                v = ChatMessageRole(v)
+            except ValueError:
+                raise ValueError("Role must be 'user' or 'assistant'")
+        if v not in (ChatMessageRole.USER, ChatMessageRole.ASSISTANT):
             raise ValueError("Role must be 'user' or 'assistant'")
         return v
 

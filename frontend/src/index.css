@@ -3,3 +3,12 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    overflow-wrap: break-word;
+    word-break: normal;
+    background-color: #FAF9F6;
+    color: #1E293B;
+  }
+}
