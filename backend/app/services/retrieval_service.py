@@ -6,6 +6,7 @@ from google.genai import types
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.core.config import settings
+from app.core.observability import observe_llm
 from app.models.asset import Asset
 from app.models.asset_embedding import AssetEmbedding
 from app.services.notebook_service import get_scoped_asset_ids
@@ -13,22 +14,27 @@ from app.services.notebook_service import get_scoped_asset_ids
 logger = logging.getLogger(__name__)
 
 
+@observe_llm(name="generate_query_embedding", as_type="generation")
 @retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=1, max=3),
+    stop=stop_after_attempt(settings.GEMINI_RETRIEVAL_EMBED_RETRY_ATTEMPTS),
+    wait=wait_exponential(
+        multiplier=settings.GEMINI_RETRIEVAL_EMBED_RETRY_MULTIPLIER,
+        min=settings.GEMINI_RETRIEVAL_EMBED_RETRY_MIN_WAIT,
+        max=settings.GEMINI_RETRIEVAL_EMBED_RETRY_MAX_WAIT,
+    ),
     reraise=True,
 )
 def generate_query_embedding(query: str) -> list[float]:
     """
     Generates query embedding using settings.GEMINI_EMBEDDING_MODEL
-    with task_type='RETRIEVAL_QUERY' and output_dimensionality=768.
+    with task_type='RETRIEVAL_QUERY' and output_dimensionality=settings.EMBEDDING_DIMENSION.
     """
     client = genai.Client(api_key=settings.GOOGLE_API_KEY)
     response = client.models.embed_content(
         model=settings.GEMINI_EMBEDDING_MODEL,
         contents=query,
         config=types.EmbedContentConfig(
-            output_dimensionality=768,
+            output_dimensionality=settings.EMBEDDING_DIMENSION,
             task_type="RETRIEVAL_QUERY",
         ),
     )
@@ -66,7 +72,7 @@ def hybrid_retrieval(db: Session, notebook_id: int, query: str) -> dict:
 
     dense_results = []
     if query_vector is not None:
-        # Note: Filter before ranking: WHERE asset_id IN (:scoped_ids) is within LIMIT 20 query
+        # Note: Filter before ranking: WHERE asset_id IN (:scoped_ids) is within LIMIT query
         dense_stmt = (
             select(
                 AssetEmbedding,
@@ -77,13 +83,13 @@ def hybrid_retrieval(db: Session, notebook_id: int, query: str) -> dict:
                 AssetEmbedding.embedding.isnot(None),
             )
             .order_by("distance")
-            .limit(20)
+            .limit(settings.RAG_DENSE_SEARCH_TOP_K)
         )
         dense_results = db.execute(dense_stmt).all()
         logger.info(f"Hybrid retrieval: Dense search returned {len(dense_results)} chunks scoped to assets: {[r[0].asset_id for r in dense_results]}")
 
     # 3. Sparse query (TSV full-text search)
-    # Note: Filter before ranking: WHERE asset_id IN (:scoped_ids) is within LIMIT 20 query
+    # Note: Filter before ranking: WHERE asset_id IN (:scoped_ids) is within LIMIT query
     sparse_stmt = (
         select(
             AssetEmbedding,
@@ -99,13 +105,12 @@ def hybrid_retrieval(db: Session, notebook_id: int, query: str) -> dict:
             ),
         )
         .order_by(text("rank_score DESC"))
-        .limit(20)
+        .limit(settings.RAG_SPARSE_SEARCH_TOP_K)
     )
     sparse_results = db.execute(sparse_stmt).all()
     logger.info(f"Hybrid retrieval: Sparse search returned {len(sparse_results)} chunks scoped to assets: {[r[0].asset_id for r in sparse_results]}")
 
     # 4. RRF Merging
-    # k = 60
     rrf_dict = {}
 
     for rank, row in enumerate(dense_results, 1):
@@ -117,7 +122,7 @@ def hybrid_retrieval(db: Session, notebook_id: int, query: str) -> dict:
                 "dense_rank": rank,
                 "sparse_rank": None,
             }
-        rrf_dict[chunk.id]["rrf_score"] += 1.0 / (60.0 + rank)
+        rrf_dict[chunk.id]["rrf_score"] += 1.0 / (settings.RAG_RRF_K + rank)
 
     for rank, row in enumerate(sparse_results, 1):
         chunk = row[0]
@@ -128,14 +133,14 @@ def hybrid_retrieval(db: Session, notebook_id: int, query: str) -> dict:
                 "dense_rank": None,
                 "sparse_rank": rank,
             }
-        rrf_dict[chunk.id]["rrf_score"] += 1.0 / (60.0 + rank)
+        rrf_dict[chunk.id]["rrf_score"] += 1.0 / (settings.RAG_RRF_K + rank)
 
     # Sort all candidates by RRF score DESC
     sorted_candidates = sorted(rrf_dict.values(), key=lambda x: x["rrf_score"], reverse=True)
-    # Filter to top 5 candidates
-    top_5_candidates = sorted_candidates[:5]
+    # Filter to top candidates
+    top_candidates = sorted_candidates[:settings.RAG_RRF_TOP_K]
 
-    if not top_5_candidates:
+    if not top_candidates:
         return {
             "status": "success",
             "chunks": [],
@@ -144,8 +149,8 @@ def hybrid_retrieval(db: Session, notebook_id: int, query: str) -> dict:
 
     # 5. Adjacent Chunk Stitching
     # Chunks are adjacent if same asset_id, same page_number, and chunk_index is contiguous (e.g. index i and i+1)
-    chunks_for_stitch = [item["chunk"] for item in top_5_candidates]
-    id_to_item = {item["chunk"].id: item for item in top_5_candidates}
+    chunks_for_stitch = [item["chunk"] for item in top_candidates]
+    id_to_item = {item["chunk"].id: item for item in top_candidates}
 
     # Sort chunks by asset_id, page_number, and chunk_index to identify adjacent blocks
     chunks_sorted = sorted(chunks_for_stitch, key=lambda c: (c.asset_id, c.page_number, c.chunk_index))
@@ -180,8 +185,8 @@ def hybrid_retrieval(db: Session, notebook_id: int, query: str) -> dict:
     # Sort the stitched blocks back by their best score DESC to preserve RRF priority order
     stitched_blocks = sorted(stitched_blocks, key=lambda b: b["best_score"], reverse=True)
 
-    # 6. Token Budget Enforcement (3000 tokens maximum)
-    max_budget = 3000
+    # 6. Token Budget Enforcement
+    max_budget = settings.RAG_CONTEXT_MAX_TOKENS
     accumulated_tokens = 0
     final_blocks = []
 

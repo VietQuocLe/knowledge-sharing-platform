@@ -13,6 +13,7 @@ import httpx
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from app.core.config import settings
+from app.core.observability import observe_llm, update_trace_context, update_current_observation
 from app.models.asset import Asset
 from app.models.asset_embedding import AssetEmbedding
 from app.models.enums import AssetIngestionStatus
@@ -26,12 +27,12 @@ _EMBEDDING_SEMAPHORE = threading.Semaphore(1)
 
 class EmbeddingRateLimiter:
     """
-    Sliding-window (60s) rate and token limiter for Gemini Embedding API.
-    Tracks both (a) request count (RPM) and (b) token consumption (TPM) in a 60-second window.
+    Sliding-window rate and token limiter for Gemini Embedding API.
+    Tracks both (a) request count (RPM) and (b) token consumption (TPM) in a sliding window.
     """
 
-    def __init__(self, window_seconds: float = 60.0):
-        self.window_seconds = window_seconds
+    def __init__(self, window_seconds: float | None = None):
+        self.window_seconds = window_seconds if window_seconds is not None else settings.GEMINI_EMBEDDING_WINDOW_SECONDS
         self._history: list[tuple[float, int]] = []  # List of (timestamp, token_count)
         self._lock = threading.Lock()
 
@@ -40,15 +41,15 @@ class EmbeddingRateLimiter:
         Blocks until capacity (RPM and TPM) is available within the sliding window,
         then records the new request and token allocation.
         """
-        rpm_limit = getattr(settings, "GEMINI_EMBEDDING_RPM_LIMIT", 80)
-        tpm_limit = getattr(settings, "GEMINI_EMBEDDING_TPM_LIMIT", 26000)
+        rpm_limit = settings.GEMINI_EMBEDDING_RPM_LIMIT
+        tpm_limit = settings.GEMINI_EMBEDDING_TPM_LIMIT
 
         while True:
             with self._lock:
                 now = time.time()
                 cutoff = now - self.window_seconds
 
-                # Clean up entries older than 60s
+                # Clean up entries older than sliding window
                 self._history = [entry for entry in self._history if entry[0] > cutoff]
 
                 current_requests = len(self._history)
@@ -101,10 +102,15 @@ def _is_retryable_gemini_error(exception: BaseException) -> bool:
     return False
 
 
+@observe_llm(name="generate_embeddings_batch", as_type="generation")
 @retry(
     retry=retry_if_exception(_is_retryable_gemini_error),
-    stop=stop_after_attempt(6),
-    wait=wait_exponential(multiplier=2, min=5, max=60),
+    stop=stop_after_attempt(settings.GEMINI_EMBEDDING_RETRY_ATTEMPTS),
+    wait=wait_exponential(
+        multiplier=settings.GEMINI_EMBEDDING_RETRY_MULTIPLIER,
+        min=settings.GEMINI_EMBEDDING_RETRY_MIN_WAIT,
+        max=settings.GEMINI_EMBEDDING_RETRY_MAX_WAIT,
+    ),
     reraise=True
 )
 def _embed_batch_with_retry(
@@ -129,13 +135,30 @@ def _embed_batch_with_retry(
             task_type="RETRIEVAL_DOCUMENT",
         )
     )
+
+    update_current_observation(
+        model=settings.GEMINI_EMBEDDING_MODEL,
+        input={"chunks_count": len(contents)},
+        usage={"total_tokens": estimated_tokens},
+        metadata={"batch_size": len(contents), "estimated_tokens": estimated_tokens},
+    )
+
     return [emb.values for emb in response.embeddings]
 
 
-def chunk_text_by_words(text: str, chunk_size_words: int = 600, overlap_words: int = 100) -> list[str]:
+def chunk_text_by_words(
+    text: str,
+    chunk_size_words: int | None = None,
+    overlap_words: int | None = None,
+) -> list[str]:
     """
     Splits text into chunks of specified word count with word overlap.
     """
+    if chunk_size_words is None:
+        chunk_size_words = settings.INGESTION_CHUNK_SIZE_WORDS
+    if overlap_words is None:
+        overlap_words = settings.INGESTION_CHUNK_OVERLAP_WORDS
+
     words = text.split()
     if not words:
         return []
@@ -173,6 +196,7 @@ def extract_pdf_pages_stream(file_data: bytes):
                 page.close()
 
 
+@observe_llm(name="document_ingestion")
 def ingest_asset(asset_id: int, db: Session) -> bool:
     """
     Main ingestion workflow for an asset (extraction, chunking, embedding, db save).
@@ -182,6 +206,13 @@ def ingest_asset(asset_id: int, db: Session) -> bool:
     if not asset:
         logger.error(f"Asset {asset_id} not found.")
         return False
+
+    update_trace_context(
+        tags=["ingestion", f"asset-{asset_id}"],
+        asset_id=asset_id,
+        file_name=asset.file_name,
+        file_path=asset.file_path,
+    )
 
     # 2. Update status to PROCESSING, reset chunk count, and delete old embeddings (Idempotency check)
     asset.ingestion_status = AssetIngestionStatus.PROCESSING
@@ -245,6 +276,11 @@ def ingest_asset(asset_id: int, db: Session) -> bool:
             logger.info(
                 f"Deduplication completed successfully for asset {asset_id}: cloned {len(new_embeddings)} chunks without calling Gemini API."
             )
+            update_trace_context(
+                dedup_hit=True,
+                cloned_from_asset_id=existing_asset.id,
+                chunk_count=len(new_embeddings),
+            )
             return True
 
         # 7. Extract text with streaming generator and page-aware chunking
@@ -257,7 +293,11 @@ def ingest_asset(asset_id: int, db: Session) -> bool:
             total_chars += len(page_text)
             if not page_text:
                 continue
-            page_chunks = chunk_text_by_words(page_text, chunk_size_words=600, overlap_words=100)
+            page_chunks = chunk_text_by_words(
+                page_text,
+                chunk_size_words=settings.INGESTION_CHUNK_SIZE_WORDS,
+                overlap_words=settings.INGESTION_CHUNK_OVERLAP_WORDS,
+            )
             for chunk_txt in page_chunks:
                 words = chunk_txt.split()
                 token_count = max(1, int(len(words) * 1.3))
@@ -270,11 +310,17 @@ def ingest_asset(asset_id: int, db: Session) -> bool:
                 chunk_index += 1
 
         # 8. Scanned Guard check
-        if total_chars < 100:
+        if total_chars < settings.INGESTION_MIN_PDF_CHAR_THRESHOLD:
             asset.ingestion_status = AssetIngestionStatus.FAILED
             asset.ingestion_error = "SCANNED_DOCUMENT_UNSUPPORTED"
             db.commit()
-            logger.warning(f"Asset {asset_id} ingestion failed: total characters {total_chars} < 100.")
+            logger.warning(
+                f"Asset {asset_id} ingestion failed: total characters {total_chars} < {settings.INGESTION_MIN_PDF_CHAR_THRESHOLD}."
+            )
+            update_trace_context(
+                scanned_guard_failed=True,
+                total_chars=total_chars,
+            )
             return False
 
         if not chunks_info:
@@ -284,8 +330,8 @@ def ingest_asset(asset_id: int, db: Session) -> bool:
         logger.info(f"Generating embeddings for {len(chunks_info)} chunks in token-budgeted batches")
         client = get_genai_client()
 
-        tpm_budget = getattr(settings, "GEMINI_EMBEDDING_TPM_BUDGET_PER_BATCH", 24000)
-        max_chunks_cap = getattr(settings, "GEMINI_EMBEDDING_MAX_CHUNKS_PER_BATCH", 80)
+        tpm_budget = settings.GEMINI_EMBEDDING_TPM_BUDGET_PER_BATCH
+        max_chunks_cap = settings.GEMINI_EMBEDDING_MAX_CHUNKS_PER_BATCH
 
         batches: list[dict[str, Any]] = []
         current_batch_chunks: list[dict[str, Any]] = []
@@ -353,11 +399,18 @@ def ingest_asset(asset_id: int, db: Session) -> bool:
         asset.ingestion_error = None
         db.commit()
         logger.info(f"Ingestion completed successfully for asset {asset_id} with {len(chunks_info)} chunks.")
+        update_trace_context(
+            dedup_hit=False,
+            total_chars=total_chars,
+            chunk_count=len(chunks_info),
+            total_batches=len(batches),
+        )
         return True
 
     except Exception as e:
         db.rollback()
         logger.exception(f"Unexpected error during ingestion for asset {asset_id}")
+        update_trace_context(error=str(e))
         # Re-fetch local asset record from DB since the previous instance was expired by rollback
         asset_record = db.get(Asset, asset_id)
         if asset_record:

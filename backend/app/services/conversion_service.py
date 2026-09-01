@@ -30,7 +30,7 @@ def _convert_via_cloudmersive(docx_bytes: bytes, filename: str) -> bytes:
     }
 
     logger.info(f"Calling Cloudmersive API to convert '{filename}' ({len(docx_bytes)} bytes)...")
-    with httpx.Client(timeout=60.0) as client:
+    with httpx.Client(timeout=settings.CLOUDMERSIVE_TIMEOUT_SECONDS) as client:
         response = client.post(url, headers=headers, files=files)
         response.raise_for_status()
         pdf_bytes = response.content
@@ -74,7 +74,13 @@ def _convert_via_local_soffice(docx_bytes: bytes) -> bytes:
         ]
 
         logger.info(f"Running local LibreOffice conversion cmd: {' '.join(cmd)}")
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60, check=True)
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=settings.LIBREOFFICE_TIMEOUT_SECONDS,
+            check=True,
+        )
         logger.info(f"LibreOffice stdout: {result.stdout}")
         if result.stderr:
             logger.info(f"LibreOffice stderr: {result.stderr}")

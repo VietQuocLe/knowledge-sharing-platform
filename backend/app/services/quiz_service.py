@@ -70,7 +70,7 @@ def extract_context_from_assets(db: Session, selected_asset_ids: List[int]) -> s
         asset_groups[embedding.asset_id].append(embedding)
 
     # 2. Multi-Asset Linear Space Sampling
-    total_budget = 30
+    total_budget = settings.QUIZ_GENERATION_CHUNK_BUDGET
     budget_per_asset = max(1, total_budget // len(selected_asset_ids))
 
     selected_chunks = []
@@ -80,7 +80,7 @@ def extract_context_from_assets(db: Session, selected_asset_ids: List[int]) -> s
         sampled_asset_chunks = linear_space_sampling(asset_chunks, budget_per_asset)
         selected_chunks.extend(sampled_asset_chunks)
 
-    # Cap total selected chunks at 30 just in case
+    # Cap total selected chunks at total_budget just in case
     selected_chunks = selected_chunks[:total_budget]
 
     # 3. Format Context
@@ -93,8 +93,12 @@ def extract_context_from_assets(db: Session, selected_asset_ids: List[int]) -> s
 
 @observe_llm(name="generate_quiz")
 @retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=2, max=10),
+    stop=stop_after_attempt(settings.GEMINI_QUIZ_RETRY_ATTEMPTS),
+    wait=wait_exponential(
+        multiplier=settings.GEMINI_QUIZ_RETRY_MULTIPLIER,
+        min=settings.GEMINI_QUIZ_RETRY_MIN_WAIT,
+        max=settings.GEMINI_QUIZ_RETRY_MAX_WAIT,
+    ),
     reraise=True,
 )
 def _call_gemini_with_retry(context_text: str, num_questions: int) -> QuizContentPayload:

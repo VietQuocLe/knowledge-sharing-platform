@@ -3,6 +3,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select, func, or_
 from sqlalchemy.orm import Session, defer
 
+from app.core.config import settings
 from app.models.artifact import NotebookArtifact
 from app.models.notebook import Notebook, NotebookSavedDocument
 from app.models.asset import Asset
@@ -24,7 +25,7 @@ def generate_quiz_mock(db: Session, notebook_id: int, user_id: int, payload: Qui
             detail="You do not have permission to access/modify this notebook",
         )
 
-    # Bước 2 (Cooldown 15s Guard)
+    # Bước 2 (Cooldown Guard)
     stmt = (
         select(NotebookArtifact)
         .where(NotebookArtifact.user_id == user_id)
@@ -41,8 +42,8 @@ def generate_quiz_mock(db: Session, notebook_id: int, user_id: int, payload: Qui
             last_created = last_created.astimezone(timezone.utc)
 
         diff = (now_utc - last_created).total_seconds()
-        if diff < 15:
-            remaining = int(15 - diff)
+        if diff < settings.ARTIFACT_GENERATION_COOLDOWN_SECONDS:
+            remaining = int(settings.ARTIFACT_GENERATION_COOLDOWN_SECONDS - diff)
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail=f"Thao tác quá nhanh. Vui lòng thử lại sau {remaining} giây.",
@@ -51,10 +52,10 @@ def generate_quiz_mock(db: Session, notebook_id: int, user_id: int, payload: Qui
     # Bước 3 (Quota Limit Guard)
     count_stmt = select(func.count()).select_from(NotebookArtifact).where(NotebookArtifact.notebook_id == notebook_id)
     cnt = db.execute(count_stmt).scalar() or 0
-    if cnt >= 20:
+    if cnt >= settings.MAX_ARTIFACTS_PER_NOTEBOOK:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Notebook đã đạt giới hạn tối đa 20 bài tập",
+            detail=f"Notebook đã đạt giới hạn tối đa {settings.MAX_ARTIFACTS_PER_NOTEBOOK} bài tập",
         )
 
     # Bước 4 (All-or-Nothing Asset Check)
@@ -86,7 +87,16 @@ def generate_quiz_mock(db: Session, notebook_id: int, user_id: int, payload: Qui
         )
 
     # Bước 5 (RAG Generator)
+    from app.core.observability import update_trace_context
     from app.services.quiz_service import extract_context_from_assets, _call_gemini_with_retry
+
+    update_trace_context(
+        user_id=str(user_id),
+        tags=["quiz-generation", f"notebook-{notebook_id}"],
+        notebook_id=notebook_id,
+        selected_asset_ids=payload.selected_asset_ids,
+        num_questions=payload.num_questions,
+    )
 
     context_text = extract_context_from_assets(db, payload.selected_asset_ids)
     quiz_payload = _call_gemini_with_retry(context_text, payload.num_questions)

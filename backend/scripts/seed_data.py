@@ -50,9 +50,9 @@ logger = logging.getLogger("seed_data")
 
 # ─── CONSTANTS & CONFIGURATION ────────────────────────────────────────────────
 
-SEED_ADMIN_EMAIL = "admin@ou.edu.vn"
-SEED_ADMIN_PASSWORD = "Admin@123456"
-SEED_ADMIN_FULL_NAME = "Quản trị viên Hệ thống"
+SEED_ADMIN_EMAIL = settings.ADMIN_EMAIL
+SEED_ADMIN_PASSWORD = settings.ADMIN_PASSWORD
+SEED_ADMIN_FULL_NAME = settings.ADMIN_FULL_NAME
 
 SEED_USER_EMAIL = "user@ou.edu.vn"
 SEED_USER_PASSWORD = "User@123456"
@@ -405,7 +405,7 @@ def scan_and_ingest_assets(db: Session, demo_user: User, subjects_map: dict[str,
             failed_count += 1
 
         db.commit()
-        time.sleep(1.0)
+        time.sleep(settings.GEMINI_RETRIEVAL_EMBED_RETRY_MIN_WAIT)
 
     print("\n" + "=" * 70)
     print(f" 📊 TỔNG KẾT INGEST: Tổng: {total_files} | Hoàn thành: {ingested_count} | Bỏ qua: {skipped_count} | Lỗi: {failed_count}")
@@ -455,6 +455,11 @@ def run_seed() -> None:
         sys.exit(1)
     finally:
         db.close()
+        try:
+            from app.core.observability import flush_langfuse
+            flush_langfuse()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

@@ -279,8 +279,12 @@ class CondensationResult(BaseModel):
 
 @observe_llm(name="condense_query")
 @retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=2, max=10),
+    stop=stop_after_attempt(settings.GEMINI_CONDENSE_RETRY_ATTEMPTS),
+    wait=wait_exponential(
+        multiplier=settings.GEMINI_CONDENSE_RETRY_MULTIPLIER,
+        min=settings.GEMINI_CONDENSE_RETRY_MIN_WAIT,
+        max=settings.GEMINI_CONDENSE_RETRY_MAX_WAIT,
+    ),
     reraise=True,
 )
 def _call_gemini_condense(raw_query: str, history_text: str) -> CondensationResult:
@@ -324,11 +328,11 @@ def _call_gemini_condense(raw_query: str, history_text: str) -> CondensationResu
 
 def condense_query_and_route(history: list[NotebookChatMessage], raw_query: str) -> dict:
     """
-    Condenses raw_query against a sliding window (max 6 messages) of chat history,
+    Condenses raw_query against a sliding window of chat history,
     and routes intent to decide if RAG retrieval is required.
     """
-    # Sliding window: max 6 recent messages
-    recent_history = history[-6:] if history else []
+    # Sliding window of recent messages
+    recent_history = history[-settings.CHAT_HISTORY_SLIDING_WINDOW_SIZE:] if history else []
     history_text = ""
     for msg in recent_history:
         role_label = "User" if msg.role == ChatMessageRole.USER else "Assistant"
@@ -466,7 +470,7 @@ async def stream_chat_response(
             contents = []
             if not is_first_turn:
                 # Retrieve history and append in types.Content list format
-                recent_history = history[-6:]
+                recent_history = history[-settings.CHAT_HISTORY_SLIDING_WINDOW_SIZE:]
                 for msg in recent_history:
                     role_name = "user" if msg.role == ChatMessageRole.USER else "model"
                     contents.append(
