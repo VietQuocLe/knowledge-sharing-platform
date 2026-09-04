@@ -29,3 +29,9 @@ langfuse>=2.0.0
 
 # Document Processing
 pypdfium2>=4.30.0
+llama-index-core
+underthesea
+
+# RAG Evaluation
+ragas
+langchain-google-genai

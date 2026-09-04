@@ -21,7 +21,7 @@ from app.models.user import User
 from app.models.notebook import Notebook
 from app.models.asset import Asset
 from app.models.enums import AssetIngestionStatus
-from app.services.notebook_chat_service import get_session_lock, stream_chat_response
+from app.rag.chat.service import get_session_lock, stream_chat_response
 from app.core.security import create_access_token
 
 def create_mock_genai_client():
@@ -108,9 +108,9 @@ async def run_tests():
         mock_chunk_2.usage_metadata.candidates_token_count = 25
         mock_response.__iter__.return_value = [mock_chunk_1, mock_chunk_2]
         
-        with patch("app.services.notebook_chat_service.condense_query_and_route") as mock_condense, \
-             patch("app.services.notebook_chat_service.genai.Client") as mock_client_cls, \
-             patch("app.services.retrieval_service.hybrid_retrieval") as mock_hybrid:
+        with patch("app.rag.chat.service.condense_query_and_route") as mock_condense, \
+             patch("app.rag.chat.service.genai.Client") as mock_client_cls, \
+             patch("app.rag.chat.service.hybrid_retrieval") as mock_hybrid:
              
             mock_condense.return_value = {"needs_rag": True, "condensed_query": "What is FastAPI?"}
             mock_hybrid.return_value = {
@@ -208,9 +208,9 @@ async def run_tests():
         mock_chunk_2.text = "How can I help you?"
         mock_response.__iter__.return_value = [mock_chunk_1, mock_chunk_2]
         
-        with patch("app.services.notebook_chat_service.condense_query_and_route") as mock_condense, \
-             patch("app.services.notebook_chat_service.genai.Client") as mock_client_cls, \
-             patch("app.services.retrieval_service.hybrid_retrieval") as mock_hybrid:
+        with patch("app.rag.chat.service.condense_query_and_route") as mock_condense, \
+             patch("app.rag.chat.service.genai.Client") as mock_client_cls, \
+             patch("app.rag.chat.service.hybrid_retrieval") as mock_hybrid:
              
             mock_condense.return_value = {"needs_rag": False, "condensed_query": "Hello."}
             mock_genai_client = create_mock_genai_client()
@@ -290,9 +290,9 @@ async def run_tests():
         # BackgroundTasks tracker
         bg_tasks = BackgroundTasksMock()
         
-        with patch("app.services.notebook_chat_service.genai.Client") as mock_client_cls, \
-             patch("app.services.notebook_chat_service.condense_query_and_route") as mock_condense, \
-             patch("app.services.retrieval_service.hybrid_retrieval") as mock_hybrid:
+        with patch("app.rag.chat.service.genai.Client") as mock_client_cls, \
+             patch("app.rag.chat.service.condense_query_and_route") as mock_condense, \
+             patch("app.rag.chat.service.hybrid_retrieval") as mock_hybrid:
              
             mock_condense.return_value = {"needs_rag": False, "condensed_query": "hello limit"}
             mock_hybrid.return_value = {"status": "success", "context": "", "chunks": []}
@@ -342,7 +342,7 @@ async def run_tests():
         db.commit()
         db.refresh(empty_session)
         
-        with patch("app.services.notebook_chat_service.genai.Client") as mock_client_cls:
+        with patch("app.rag.chat.service.genai.Client") as mock_client_cls:
             mock_genai_client = create_mock_genai_client()
             mock_client_cls.return_value = mock_genai_client
             

@@ -1,0 +1,35 @@
+[
+  {
+    "id": "csdl_q01",
+    "notebook_id": 1,
+    "question": "[TODO: Thay bằng câu hỏi thực tế về Cơ sở dữ liệu - ví dụ: Hệ quản trị cơ sở dữ liệu là gì?]",
+    "ground_truth": "[TODO: Thay bằng câu trả lời mẫu chuẩn xác của chuyên gia từ tài liệu Chuong2_Moi truong cua CSDL.pdf]",
+    "metadata": {
+      "topic": "Cơ sở dữ liệu - Chương 2",
+      "expected_asset_id": 2,
+      "difficulty": "easy"
+    }
+  },
+  {
+    "id": "csdl_q02",
+    "notebook_id": 1,
+    "question": "[TODO: Thay bằng câu hỏi thực tế - ví dụ: Hãy phân biệt kiến trúc 3 mức lược đồ của hệ CSDL?]",
+    "ground_truth": "[TODO: Thay bằng câu trả lời mẫu chuẩn xác về 3 mức kiến trúc: mức trong, mức quan niệm và mức ngoài]",
+    "metadata": {
+      "topic": "Cơ sở dữ liệu - Chương 2",
+      "expected_asset_id": 2,
+      "difficulty": "medium"
+    }
+  },
+  {
+    "id": "mmt_q01",
+    "notebook_id": 2,
+    "question": "[TODO: Thay bằng câu hỏi thực tế về Mạng máy tính - ví dụ: Mô hình OSI gồm những tầng nào?]",
+    "ground_truth": "[TODO: Thay bằng câu trả lời chuẩn xác về 7 tầng của mô hình OSI]",
+    "metadata": {
+      "topic": "Mạng máy tính - Chương 1",
+      "expected_asset_id": 3,
+      "difficulty": "medium"
+    }
+  }
+]

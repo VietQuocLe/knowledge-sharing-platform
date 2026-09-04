@@ -18,7 +18,7 @@ from app.models.asset_embedding import AssetEmbedding
 from app.models.enums import AssetIngestionStatus
 from app.models.notebook import Notebook
 from app.models.user import User
-from app.services.ingestion_service import extract_pdf_pages_stream, ingest_asset
+from app.rag.ingestion.pipeline import extract_pdf_pages_stream, ingest_asset
 
 
 @pytest.fixture
@@ -85,9 +85,9 @@ def test_ingestion_and_deduplication(db_session):
         mock_pages = [(1, "Knowledge sharing platform is a great educational project " * 10)]
         fake_embedding = [0.1] * 768
 
-        with patch("app.services.ingestion_service.download_object", return_value=fake_pdf_content), \
-             patch("app.services.ingestion_service.extract_pdf_pages_stream", return_value=mock_pages), \
-             patch("app.services.ingestion_service._embed_batch_with_retry", return_value=[fake_embedding]) as mock_embed:
+        with patch("app.rag.ingestion.pipeline.download_object", return_value=fake_pdf_content), \
+             patch("app.rag.ingestion.pipeline.extract_pdf_pages_stream", return_value=mock_pages), \
+             patch("app.rag.ingestion.pipeline._embed_batch_with_retry", return_value=[fake_embedding]) as mock_embed:
 
             # Ingest Asset 1 (First Time - Full Embedding)
             success_1 = ingest_asset(asset_1.id, db_session)
@@ -115,8 +115,8 @@ def test_ingestion_and_deduplication(db_session):
         db_session.commit()
         db_session.refresh(asset_2)
 
-        with patch("app.services.ingestion_service.download_object", return_value=fake_pdf_content), \
-             patch("app.services.ingestion_service._embed_batch_with_retry") as mock_embed_2:
+        with patch("app.rag.ingestion.pipeline.download_object", return_value=fake_pdf_content), \
+             patch("app.rag.ingestion.pipeline._embed_batch_with_retry") as mock_embed_2:
 
             # Ingest Asset 2 (Deduplication - Should NOT call embedding API)
             success_2 = ingest_asset(asset_2.id, db_session)
@@ -138,9 +138,44 @@ def test_ingestion_and_deduplication(db_session):
                 assert e1.chunk_index == e2.chunk_index
                 assert e1.content == e2.content
                 assert e1.page_number == e2.page_number
+                assert e1.token_count == e2.token_count
+                # Verify e1 has 3-field metadata and NO token_count in JSONB
+                assert "node_id" in e1.metadata_
+                assert e1.metadata_["node_id"] == f"asset_{asset_1.id}_chunk_{e1.chunk_index}"
+                assert "prev_chunk_index" in e1.metadata_
+                assert "next_chunk_index" in e1.metadata_
+                assert "token_count" not in e1.metadata_
+                # Verify e2 (dedup clone) has metadata_ == {}
+                assert e2.metadata_ == {}
 
     finally:
         # Cleanup
         db_session.delete(user)
         db_session.commit()
+
+
+def test_safe_sent_tokenize_fallback():
+    """
+    Verifies that safe_sent_tokenize catches underthesea exceptions (e.g. ASCII tables, corrupted tokens)
+    and smoothly falls back to regex sentence splitting without raising exceptions.
+    """
+    from app.rag.ingestion.pipeline import safe_sent_tokenize, _chunking_context
+
+    anomalous_text = "+---+----------------+---+\n| ID | Description    | Val |\n+---+----------------+---+\nCâu một. Câu hai!"
+    
+    # Set context
+    token = _chunking_context.set((999, 1))
+    try:
+        # Case 1: Normal execution
+        sentences_normal = safe_sent_tokenize("Đây là câu thứ nhất. Đây là câu thứ hai!")
+        assert len(sentences_normal) == 2
+
+        # Case 2: underthesea raises an unexpected Exception -> falls back to regex
+        with patch("underthesea.sent_tokenize", side_effect=Exception("Parsing crash")):
+            sentences_fallback = safe_sent_tokenize(anomalous_text)
+            assert len(sentences_fallback) >= 2
+            assert any("Câu một" in s for s in sentences_fallback)
+            assert any("Câu hai" in s for s in sentences_fallback)
+    finally:
+        _chunking_context.reset(token)
 

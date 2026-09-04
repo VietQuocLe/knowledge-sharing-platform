@@ -48,6 +48,7 @@ Status
 ✅ Sprint 15 — Quiz Studio (Backend) — **hoàn thành**
 ✅ Sprint 16 — Quiz Studio (Frontend) — **hoàn thành**
 ✅ Sprint 16.5 — Tối ưu hóa Tầng Service, LLM Observability & Hoàn thiện Trải nghiệm (Hardening) — **hoàn thành**
+✅ Sprint 16.6 — Centralized Settings & LLMOps Observability Hardening — **hoàn thành**
 🔄 Sprint 17 — Testing — **đang triển khai**
 ⏳ Sprint 18 — Deployment & Optimization — **kế hoạch**
 
@@ -253,6 +254,26 @@ soffice --headless --norestore --convert-to pdf --outdir <tmpdir> <input.docx>
       - Cập nhật checker `isViewingQuiz` trong `AppLayout.tsx` chuyển sang đọc từ query parameter `artifact` đồng bộ.
   - `npm run build` ✅ Hoàn tất biên dịch sạch lỗi 100%.
 
+- **Sprint 16.6 — Centralized Settings & LLMOps Observability Hardening — hoàn thành:**
+  - **Phase 1 — Tập trung hoá cấu hình (Centralized Settings):**
+    - Thêm 22+ trường `Settings` vào `backend/app/core/config.py` (Pydantic Settings): chunking params, retry/backoff Tenacity, quota limits, batch sizes, RAG search params, Langfuse config, Cloudmersive config — **tất cả có default values**, không còn magic number nào hardcode trong service layer.
+    - Loại bỏ toàn bộ `getattr(settings, ...)` fallback trong services; các service `ingestion_service.py`, `retrieval_service.py`, `notebook_chat_service.py`, `quiz_service.py`, `artifact_service.py`, `conversion_service.py` trỏ trực tiếp vào `settings.*`.
+    - Làm sạch `backend/.env.example` theo chuẩn tinh gọn: chỉ giữ biến **phải** ghi đè theo môi trường (DB, MinIO, JWT, API Keys, Model Names). Tất cả hằng số thuật toán (retry backoff, batch sizes, chunk sizes…) nằm hoàn toàn trong `config.py`.
+  - **Phase 2 — Langfuse LLMOps Metadata Enrichment:**
+    - Nâng cấp `backend/app/core/observability.py`: Tự động inject metadata mặc định `chat_model`, `embedding_model`, `environment` ("development"/"production") vào **mọi** trace context.
+    - Bọc root trace `@observe_llm(name="document_ingestion")` cho `ingest_asset` trong `ingestion_service.py`; bọc generation span `@observe_llm(name="generate_embeddings_batch", as_type="generation")` cho `_embed_batch_with_retry`.
+    - Bọc generation span `@observe_llm(name="generate_query_embedding", as_type="generation")` trong `retrieval_service.py`.
+    - Gắn trace context `user_id`, `notebook_id` trong `generate_quiz_mock` (`artifact_service.py`).
+  - **Phase 3 — Script Seed Data & CLI Tracing:**
+    - Refactor `backend/scripts/seed_data.py`: Đồng bộ `SEED_ADMIN_EMAIL/PASSWORD/FULL_NAME` với `settings.ADMIN_*`; thay `time.sleep(1.0)` hardcode bằng `settings.GEMINI_RETRIEVAL_EMBED_RETRY_MIN_WAIT`.
+    - Tạo file proxy `backend/app/seed_data.py` để chạy được cả `python -m app.seed_data`.
+    - Thêm `flush_langfuse()` vào khối `finally` của `run_seed()` để đảm bảo tất cả trace được đẩy lên Langfuse Cloud trước khi tiến trình CLI kết thúc.
+  - **Langfuse v4 SDK Compatibility Fix:**
+    - Cập nhật import trong `observability.py` hỗ trợ đồng thời Langfuse v4+ (`from langfuse import observe, get_client`) và v2/v3 (`from langfuse.decorators import observe, langfuse_context`). Không để lỗi import `langfuse_context` vô hiệu hóa `_IS_LANGFUSE_ENABLED` khi `observe` đã sẵn sàng.
+    - Cập nhật `update_current_observation()` sử dụng `client.update_current_generation(...)` (v4 API) và `update_current_span(...)` fallback; `flush_langfuse()` sử dụng `client.flush()` của Langfuse v4.
+    - **Verified:** `_IS_LANGFUSE_ENABLED: True`, `observe: <bound method LangfuseDecorator.observe ...>` với `langfuse==4.15.1`.
+  - **Test Suite:** `11/11 tests PASSED (100%)` sau toàn bộ các thay đổi.
+
 ## Infrastructure
 
 - Docker Compose chạy PostgreSQL `pgvector/pgvector:pg16` và MinIO
@@ -272,8 +293,9 @@ soffice --headless --norestore --convert-to pdf --outdir <tmpdir> <input.docx>
 
 - FastAPI, SQLAlchemy 2.0, PostgreSQL 16 (JSONB) và pgvector
 - MinIO Python SDK
-- pwdlib (Argon2id), PyJWT, Pydantic Settings
+- pwdlib (Argon2id), PyJWT, Pydantic Settings v2
 - `python-multipart` cho multipart upload
+- `langfuse>=4.x` cho LLM Observability (auto-detect v4 vs v2/v3 import)
 
 ## Frontend (implemented)
 
@@ -305,23 +327,24 @@ soffice --headless --norestore --convert-to pdf --outdir <tmpdir> <input.docx>
 
 # 7. Current Project Structure
 
-> Cập nhật sau Sprint 10. Model `Resource` cũ đã xóa hoàn toàn.
+> Cập nhật sau Sprint 16.6. Model `Resource` cũ đã xóa hoàn toàn.
 
 ```text
 knowledge-sharing-platform/
 ├── backend/
 │   ├── app/
 │   │   ├── api/       # health, auth, config, departments, majors, subjects, documents, notebooks (mounted artifacts endpoints)
-│   │   ├── core/      # config, database, security
+│   │   ├── core/      # config.py (Pydantic Settings 22+ fields), database.py, security.py, observability.py (Langfuse v4 wrapper)
 │   │   ├── models/    # base, enums, user, department, major, subject,
 │   │   │              # document, notebook, asset, asset_embedding, notebook_chat, artifact
 │   │   ├── schemas/   # auth, department, major, subject, document, asset, notebook, notebook_chat, artifact
 │   │   ├── services/  # auth, department, major, subject, document, asset, storage, startup,
 │   │   │              # notebook, conversion, ingestion, retrieval, notebook_chat, artifact, quiz
-│   │   ├── main.py, seed.py
-│   │   ├── tests/     # test_quiz_generation.py, test_notebook_artifact.py, etc.
+│   │   ├── main.py, seed.py, seed_data.py (proxy cho python -m app.seed_data)
+│   ├── scripts/       # seed_data.py (CLI script, dùng settings.ADMIN_*)
+│   ├── tests/         # test_chat_sse.py, test_conversion.py, test_ingestion_dedup.py, test_quiz_generation.py
 │   ├── alembic/
-│   ├── Dockerfile, requirements.txt, .env.example
+│   ├── Dockerfile, requirements.txt, .env, .env.example
 ├── frontend/src/
 │   ├── api/           # apiClient, getApiErrorMessage
 │   ├── components/ui/ # Button, Input, Modal, Spinner, ErrorMessage, PaginationBar
@@ -376,7 +399,7 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 - Không có luồng duyệt (`PENDING_REVIEW`) cho đến khi nhánh Admin được mở lại.
 - Download file qua presigned URL MinIO (15 phút) thay vì backend proxy — không cần JWT.
 
-### Current API endpoints (Sprint 15)
+### Current API endpoints (Sprint 16.6)
 
 - `GET /health`
 - `POST /auth/register`, `POST /auth/login`, `GET /auth/me`
@@ -495,6 +518,7 @@ Business logic nằm trong Service Layer; router chỉ bind request/dependency v
 15. ✅ **Quiz Studio (Backend)** — **hoàn thành** — thiết kế model NotebookArtifact, Multi-Asset Linear Space Sampling (Linspace), Bloom instruction, Google GenAI SDK sinh JSON trích xuất từ `selected_asset_ids`
 16. ✅ **Quiz Studio (Frontend)** — **hoàn thành** — api.ts, queryKeys, useArtifacts hooks, creations panel/modal, Quiz Runner interactive interface
 16.5. ✅ **Tối ưu hóa Tầng Service, LLM Observability & Hoàn thiện Trải nghiệm (Hardening)** — **hoàn thành** — SHA-256 deduplication, Streaming PDF memory optimization (<30MB RAM), SSE token tracking, Dual-Mode Cloudmersive conversion, Langfuse Cloud tracing, Soft Pastel EdTech theme, Google OAuth 2.0
+16.6. ✅ **Centralized Settings & LLMOps Observability Hardening** — **hoàn thành** — 22+ Pydantic Settings fields thay thế toàn bộ magic numbers; Langfuse v4.x SDK compatibility; `@observe_llm` cho document_ingestion, embeddings batch, query_embedding; seed_data CLI flush; `.env.example` tinh gọn
 17. 🔄 **Testing** — **đang triển khai** — unit/integration test backend, test luồng chính frontend, hoàn thiện seed/fixture cho demo
 18. ⏳ **Deployment & Optimization** — **kế hoạch** — Docker hóa production, chuyển Cloud (Vercel/Render/Supabase/R2) qua `.env`, tối ưu chi phí token
 
@@ -764,7 +788,55 @@ Sau khi hoàn thành tạo bài tập Quiz và Hub sáng tạo ở Sprint 16, Sp
 
 ---
 
-## Quyết định kỹ thuật quan trọng (Sprint 15, 16 & 16.5)
+## Đặc tả kỹ thuật Sprint 16.6 — Centralized Settings & LLMOps Observability Hardening
+
+### 1. Mục tiêu
+Loại bỏ toàn bộ "magic numbers" hardcode trong service layer AI, tập trung 100% tham số cấu hình vào `backend/app/core/config.py` (Pydantic Settings), đồng thời hoàn thiện hệ thống LLMOps với Langfuse Cloud.
+
+### 2. Centralized Settings — `config.py` (Nhóm mới thêm)
+
+| Nhóm | Biến tiêu biểu | Default |
+|:-----|:---------------|:--------|
+| Embedding Batch | `GEMINI_EMBEDDING_MAX_CHUNKS_PER_BATCH` | 80 |
+| Embedding Batch | `GEMINI_EMBEDDING_TPM_BUDGET_PER_BATCH` | 24000 |
+| Ingestion Chunking | `INGESTION_CHUNK_SIZE_WORDS` | 600 |
+| Ingestion Chunking | `INGESTION_CHUNK_OVERLAP_WORDS` | 100 |
+| Ingestion Retry | `GEMINI_EMBEDDING_RETRY_ATTEMPTS` | 6 |
+| Ingestion Retry | `GEMINI_EMBEDDING_RETRY_MAX_WAIT` | 60.0 |
+| RAG Retrieval | `RAG_DENSE_SEARCH_TOP_K`, `RAG_SPARSE_SEARCH_TOP_K` | 20 |
+| RAG Retrieval | `RAG_RRF_K`, `RAG_RRF_TOP_K` | 60.0, 5 |
+| RAG Retrieval | `RAG_CONTEXT_MAX_TOKENS` | 3000 |
+| Chat Condensation | `CHAT_HISTORY_SLIDING_WINDOW_SIZE` | 6 |
+| Quiz | `QUIZ_GENERATION_CHUNK_BUDGET` | 30 |
+| Observability | `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST` | — |
+| Conversion | `CLOUDMERSIVE_API_KEY`, `CLOUDMERSIVE_TIMEOUT_SECONDS` | — |
+
+**Nguyên tắc `.env.example`:** Chỉ chứa biến **bắt buộc ghi đè** theo môi trường (DB credentials, MinIO, JWT, API Keys, Model Names). Tất cả hằng số thuật toán giữ default trong `config.py`.
+
+### 3. Observability Coverage (`observability.py` — Langfuse v4 Compatible)
+
+- **Import strategy:** Ưu tiên `from langfuse import observe, get_client` (v4+); fallback `from langfuse.decorators import observe, langfuse_context` (v2/v3). Không để lỗi import làm vô hiệu hóa `_IS_LANGFUSE_ENABLED`.
+- **Context helpers:**
+  - `observe_llm(name=..., as_type=...)` — decorator bọc sync/async/async-gen, auto-inject default metadata.
+  - `update_trace_context(**kwargs)` — cập nhật metadata trace (v4: `client.update_current_span()`; v3: `langfuse_context.update_current_trace()`).
+  - `update_current_observation(**kwargs)` — cập nhật generation span (v4: `client.update_current_generation(model=..., usage_details=...)`).
+  - `flush_langfuse()` — flush safe (v4: `client.flush()`; v3: `langfuse_context.flush()`); no-op khi disabled.
+- **Default metadata tự động:** `environment` ("development"/"production"), `chat_model`, `embedding_model` inject vào mọi trace.
+- **Traces đã cover:**
+  - `document_ingestion` (root span) → `generate_embeddings_batch` (generation span) — `ingestion_service.py`
+  - `generate_query_embedding` (generation span) — `retrieval_service.py`
+  - `notebook_rag_chat_stream`, `condense_query`, `generate_quiz` — `notebook_chat_service.py`, `artifact_service.py`
+
+### 4. Seed Data CLI (`backend/scripts/seed_data.py`)
+
+- Đồng bộ admin credentials từ `settings.ADMIN_EMAIL/PASSWORD/FULL_NAME`.
+- `time.sleep()` hardcode thay bằng `settings.GEMINI_RETRIEVAL_EMBED_RETRY_MIN_WAIT`.
+- `flush_langfuse()` trong khối `finally` đảm bảo traces được đẩy hoàn chỉnh lên Langfuse Cloud trước khi script kết thúc.
+- `backend/app/seed_data.py` — file proxy đơn giản hỗ trợ `python -m app.seed_data`.
+
+---
+
+## Quyết định kỹ thuật quan trọng (Sprint 15, 16, 16.5 & 16.6)
 - **Không hỗ trợ tùy biến difficulty**: Hệ thống loại bỏ trường `difficulty` khỏi API request schema và UI. Độ phân cấp câu hỏi được kiểm soát bởi system instruction Bloom cố định của Backend.
 - **Trường computed `total_items`**: Không lưu trên physical database column để tránh không đồng nhất dữ liệu.
 - **Không dùng Redis/Celery**: Rate limiting và quota được thực thi nhẹ bằng cách check trực tiếp dữ liệu DB & ghi in-memory hoặc lock cooldown theo timestamp của user. FE hỗ trợ disable nút submit khi đang pending.
@@ -802,11 +874,17 @@ Commit theo Sprint hoặc feature, ví dụ `feat: implement upload module`. Tr�
 
 Current Status: **Sprint 17 — Testing** (đang triển khai)
 
-Last Completed: **Sprint 16.5 — Tối ưu hóa Tầng Service, LLM Observability & Hoàn thiện Trải nghiệm (Hardening)** — hoàn thành.
+Last Completed: **Sprint 16.6 — Centralized Settings & LLMOps Observability Hardening** — hoàn thành.
+
+Highlights of last completed sprint:
+- **22+ Pydantic Settings fields** tập trung toàn bộ config AI pipeline trong `config.py`; không còn magic number nào trong service layer.
+- **Langfuse v4.15.1 compatibility**: `observability.py` tự động detect v4 (`from langfuse import observe, get_client`) vs v2/v3 fallback; `_IS_LANGFUSE_ENABLED = True` đã xác nhận hoạt động.
+- **Tracing coverage đầy đủ**: document ingestion pipeline, embeddings batch, query embedding, quiz generation đều có `@observe_llm` span; seed_data CLI flush traces trước khi thoát.
+- **Test Suite**: 11/11 tests PASSED (100%) trên Python 3.12.
 
 Next Module: Sprint 17 — Testing (Đánh giá Thực nghiệm Ragas) và Sprint 18 — Deployment & Optimization.
 
-Nguyên tắc vận hành từ Sprint 11.5 trở đi: mỗi sprint phải tự kiểm thử độc lập và chạy xanh trước khi mở sprint kế tiếp; các sprint backend (11.5, 12, 13, 15, 16.5) có script test độc lập, phần giao diện chat và quiz tương ứng tách sang Sprint 14 và Sprint 16.
+Nguyên tắc vận hành từ Sprint 11.5 trở đi: mỗi sprint phải tự kiểm thử độc lập và chạy xanh trước khi mở sprint kế tiếp; các sprint backend (11.5, 12, 13, 15, 16.5, 16.6) có script test độc lập, phần giao diện chat và quiz tương ứng tách sang Sprint 14 và Sprint 16.
 
 ---
 
@@ -822,7 +900,7 @@ Nguyên tắc vận hành từ Sprint 11.5 trở đi: mỗi sprint phải tự k
 
 ### Hoãn vô thời hạn
 
-- **Deduplication theo SHA-256:** Sprint 12 chỉ tính và lưu `file_hash`, **không** dùng để tái sử dụng embedding của file trùng nội dung. Logic dedup (upload file đã có hash → trỏ sang chunk sẵn có thay vì embed lại) hoãn lại để giữ Sprint 12 gọn và dễ kiểm thử.
+- ~~**Deduplication theo SHA-256:**~~ **ĐÃ TRIỂN KHAI (Sprint 16.5)** — SHA-256 `file_hash` lưu khi upload; khi ingest phát hiện hash trùng, tái sử dụng toàn bộ `AssetEmbedding` sẵn có (không gọi Gemini API, tiết kiệm 100% chi phí embedding).
 - **Reranker (Cross-Encoder):** Hoãn vô thời hạn / Idea Backlog - Nhằm ưu tiên độ trễ (latency) thấp và vì tập dữ liệu (dataset) tài liệu nhỏ của đồ án cá nhân, hệ thống không tích hợp mô hình Reranker phân cấp dạng Cross-Encoder. Truy hồi Hybrid RRF Top-5 là đủ đáp ứng chất lượng.
 
 ### Nợ kỹ thuật tồn đọng từ audit Sprint 7

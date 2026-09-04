@@ -18,7 +18,7 @@ from app.models.notebook import Notebook, NotebookSavedDocument
 from app.models.asset import Asset
 from app.models.asset_embedding import AssetEmbedding
 from app.models.enums import AssetIngestionStatus, AssetConversionStatus
-from app.services.retrieval_service import hybrid_retrieval, get_scoped_asset_ids
+from app.rag.retrieval.retriever import hybrid_retrieval, get_scoped_asset_ids
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("test_hybrid_search")
@@ -164,7 +164,7 @@ def run_tests():
         # ==========================================
         logger.info("--- VERIFICATION 2: Query Isolation Between Notebooks ---")
         # Direct mock call to test vectors
-        with patch("app.services.retrieval_service.generate_query_embedding") as mock_emb:
+        with patch("app.rag.retrieval.retriever.generate_query_embedding") as mock_emb:
             mock_emb.return_value = [0.11] * 768
 
             # Search in Notebook A
@@ -191,7 +191,7 @@ def run_tests():
         db.commit()
         db.expire_all()
 
-        with patch("app.services.retrieval_service.generate_query_embedding") as mock_emb:
+        with patch("app.rag.retrieval.retriever.generate_query_embedding") as mock_emb:
             mock_emb.return_value = [0.11] * 768 # close to emb_a1_1, emb_a1_2, emb_a1_3
 
             ret_stitch = hybrid_retrieval(db, notebook_id=nb_a.id, query="mô hình học máy dữ liệu")
@@ -242,7 +242,7 @@ def run_tests():
         db.commit()
         db.expire_all()
 
-        with patch("app.services.retrieval_service.generate_query_embedding") as mock_emb:
+        with patch("app.rag.retrieval.retriever.generate_query_embedding") as mock_emb:
             mock_emb.return_value = [0.11] * 768
             
             ret_budget = hybrid_retrieval(db, notebook_id=nb_a.id, query="học máy")
@@ -278,6 +278,10 @@ def run_tests():
             logger.warning(f"Error during test cleanup: {e}")
             db.rollback()
         db.close()
+
+
+def test_hybrid_search():
+    run_tests()
 
 
 if __name__ == "__main__":

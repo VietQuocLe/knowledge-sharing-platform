@@ -60,23 +60,40 @@ class Settings(BaseSettings):
     # Gemini / Embedding
     GOOGLE_API_KEY: str = ""
     GOOGLE_CLIENT_ID: str = ""
-    GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"
+    # General AI Settings
     EMBEDDING_DIMENSION: int = 768
     GEMINI_CHAT_MODEL: str = "gemini-3.1-flash-lite"
+    EMBEDDING_PROVIDER: str = "gemini"  # "gemini" | "jina"
+
+    # ─── Embedding: Gemini Settings ───
+    GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"
     GEMINI_EMBEDDING_RPM_LIMIT: int = 80
     GEMINI_EMBEDDING_TPM_LIMIT: int = 26000
     GEMINI_EMBEDDING_TPM_BUDGET_PER_BATCH: int = 24000
     GEMINI_EMBEDDING_MAX_CHUNKS_PER_BATCH: int = 80
-
-    # Document Ingestion & Chunking
-    INGESTION_CHUNK_SIZE_WORDS: int = 600
-    INGESTION_CHUNK_OVERLAP_WORDS: int = 100
-    INGESTION_MIN_PDF_CHAR_THRESHOLD: int = 100
     GEMINI_EMBEDDING_WINDOW_SECONDS: float = 60.0
     GEMINI_EMBEDDING_RETRY_ATTEMPTS: int = 6
     GEMINI_EMBEDDING_RETRY_MULTIPLIER: float = 2.0
     GEMINI_EMBEDDING_RETRY_MIN_WAIT: float = 5.0
     GEMINI_EMBEDDING_RETRY_MAX_WAIT: float = 60.0
+
+    # ─── Embedding: Jina Settings (Tối ưu cho Jina v3 Free Tier: 500 RPM, 50 chunks/batch) ───
+    JINA_EMBEDDING_MODEL: str = "jina-embeddings-v3"
+    JINA_EMBEDDING_TIMEOUT_SECONDS: float = 15.0
+    JINA_EMBEDDING_RPM_LIMIT: int = 120                 # Jina free tier hỗ trợ tới 500 RPM, 120 RPM giúp ingest nhanh
+    JINA_EMBEDDING_TPM_LIMIT: int = 100000              # Jina không bị bóp 30k TPM như Gemini, đặt 100k TPM
+    JINA_EMBEDDING_TPM_BUDGET_PER_BATCH: int = 25000    # ~25.000 tokens mỗi batch gửi sang Jina
+    JINA_EMBEDDING_MAX_CHUNKS_PER_BATCH: int = 50       # 50 chunks/batch gửi HTTP payload nhỏ gọn, tránh timeout
+    JINA_EMBEDDING_WINDOW_SECONDS: float = 60.0
+    JINA_EMBEDDING_RETRY_ATTEMPTS: int = 5              # Tự động thử lại 5 lần khi gặp 429 hoặc timeout
+    JINA_EMBEDDING_RETRY_MULTIPLIER: float = 2.0
+    JINA_EMBEDDING_RETRY_MIN_WAIT: float = 2.0
+    JINA_EMBEDDING_RETRY_MAX_WAIT: float = 30.0
+
+    # Document Ingestion & Chunking (Dùng chung)
+    INGESTION_CHUNK_SIZE_WORDS: int = 600
+    INGESTION_CHUNK_OVERLAP_WORDS: int = 100
+    INGESTION_MIN_PDF_CHAR_THRESHOLD: int = 100
 
     # RAG Retrieval & Hybrid Search
     GEMINI_RETRIEVAL_EMBED_RETRY_ATTEMPTS: int = 3
@@ -88,6 +105,14 @@ class Settings(BaseSettings):
     RAG_RRF_K: float = 60.0
     RAG_RRF_TOP_K: int = 5
     RAG_CONTEXT_MAX_TOKENS: int = 3000
+
+    # Two-Stage Reranking (Jina AI)
+    ENABLE_RERANKER: bool = True
+    JINA_API_KEY: str | None = None
+    JINA_RERANK_MODEL: str = "jina-reranker-v2-base-multilingual"
+    JINA_RERANK_TIMEOUT_SECONDS: float = 5.0
+    RAG_RRF_POOL_SIZE: int = 15
+    RAG_RERANK_TOP_N: int = 5
 
     # Notebook Chat & Condensation
     CHAT_HISTORY_SLIDING_WINDOW_SIZE: int = 6
@@ -132,6 +157,42 @@ class Settings(BaseSettings):
     @property
     def MAX_UPLOAD_FILE_SIZE_MB(self) -> int:
         return self.MAX_FILE_SIZE_MB
+
+    @property
+    def ACTIVE_EMBEDDING_RPM_LIMIT(self) -> int:
+        return self.JINA_EMBEDDING_RPM_LIMIT if self.EMBEDDING_PROVIDER.lower() == "jina" else self.GEMINI_EMBEDDING_RPM_LIMIT
+
+    @property
+    def ACTIVE_EMBEDDING_TPM_LIMIT(self) -> int:
+        return self.JINA_EMBEDDING_TPM_LIMIT if self.EMBEDDING_PROVIDER.lower() == "jina" else self.GEMINI_EMBEDDING_TPM_LIMIT
+
+    @property
+    def ACTIVE_EMBEDDING_TPM_BUDGET_PER_BATCH(self) -> int:
+        return self.JINA_EMBEDDING_TPM_BUDGET_PER_BATCH if self.EMBEDDING_PROVIDER.lower() == "jina" else self.GEMINI_EMBEDDING_TPM_BUDGET_PER_BATCH
+
+    @property
+    def ACTIVE_EMBEDDING_MAX_CHUNKS_PER_BATCH(self) -> int:
+        return self.JINA_EMBEDDING_MAX_CHUNKS_PER_BATCH if self.EMBEDDING_PROVIDER.lower() == "jina" else self.GEMINI_EMBEDDING_MAX_CHUNKS_PER_BATCH
+
+    @property
+    def ACTIVE_EMBEDDING_WINDOW_SECONDS(self) -> float:
+        return self.JINA_EMBEDDING_WINDOW_SECONDS if self.EMBEDDING_PROVIDER.lower() == "jina" else self.GEMINI_EMBEDDING_WINDOW_SECONDS
+
+    @property
+    def ACTIVE_EMBEDDING_RETRY_ATTEMPTS(self) -> int:
+        return self.JINA_EMBEDDING_RETRY_ATTEMPTS if self.EMBEDDING_PROVIDER.lower() == "jina" else self.GEMINI_EMBEDDING_RETRY_ATTEMPTS
+
+    @property
+    def ACTIVE_EMBEDDING_RETRY_MULTIPLIER(self) -> float:
+        return self.JINA_EMBEDDING_RETRY_MULTIPLIER if self.EMBEDDING_PROVIDER.lower() == "jina" else self.GEMINI_EMBEDDING_RETRY_MULTIPLIER
+
+    @property
+    def ACTIVE_EMBEDDING_RETRY_MIN_WAIT(self) -> float:
+        return self.JINA_EMBEDDING_RETRY_MIN_WAIT if self.EMBEDDING_PROVIDER.lower() == "jina" else self.GEMINI_EMBEDDING_RETRY_MIN_WAIT
+
+    @property
+    def ACTIVE_EMBEDDING_RETRY_MAX_WAIT(self) -> float:
+        return self.JINA_EMBEDDING_RETRY_MAX_WAIT if self.EMBEDDING_PROVIDER.lower() == "jina" else self.GEMINI_EMBEDDING_RETRY_MAX_WAIT
 
 
 settings = Settings()

@@ -156,7 +156,7 @@ def run_tests():
         db.commit()
         
         # Mock auto-titling function call directly since the endpoint is not triggering it
-        with patch("app.services.notebook_chat_service.genai.Client") as mock_client_cls:
+        with patch("app.rag.chat.service.genai.Client") as mock_client_cls:
             mock_client = MagicMock()
             mock_client_cls.return_value = mock_client
             mock_resp = MagicMock()
@@ -164,7 +164,7 @@ def run_tests():
             mock_client.models.generate_content.return_value = mock_resp
             
             # Execute auto-titling service method directly
-            from app.services.notebook_chat_service import auto_title_session_task
+            from app.rag.chat.service import auto_title_session_task
             auto_title_session_task(default_session_id)
             
             db.expire_all()
@@ -266,6 +266,10 @@ def run_tests():
             logger.warning(f"Error during test cleanup: {e}")
             db.rollback()
         db.close()
+
+
+def test_notebook_chat():
+    run_tests()
 
 
 if __name__ == "__main__":

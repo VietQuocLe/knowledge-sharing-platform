@@ -13,7 +13,7 @@ backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, backend_dir)
 
 from app.models.notebook_chat import NotebookChatMessage
-from app.services.notebook_chat_service import condense_query_and_route
+from app.rag.chat.service import condense_query_and_route
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("test_condensation")
@@ -29,7 +29,7 @@ def run_tests():
     history = []
     
     # Now it queries Gemini to determine needs_rag, rather than bypassing.
-    with patch("app.services.notebook_chat_service.genai.Client") as mock_client_cls:
+    with patch("app.rag.chat.service.genai.Client") as mock_client_cls:
         mock_client = MagicMock()
         mock_client_cls.return_value = mock_client
         
@@ -58,7 +58,7 @@ def run_tests():
     raw_query = "Nó dùng để làm gì?"
     
     # Mock Gemini client call
-    with patch("app.services.notebook_chat_service.genai.Client") as mock_client_cls:
+    with patch("app.rag.chat.service.genai.Client") as mock_client_cls:
         mock_client = MagicMock()
         mock_client_cls.return_value = mock_client
         
@@ -83,7 +83,7 @@ def run_tests():
     history = [msg_user, msg_assistant]
     raw_query = "Cảm ơn bạn nhiều nhé!"
     
-    with patch("app.services.notebook_chat_service.genai.Client") as mock_client_cls:
+    with patch("app.rag.chat.service.genai.Client") as mock_client_cls:
         mock_client = MagicMock()
         mock_client_cls.return_value = mock_client
         
@@ -108,7 +108,7 @@ def run_tests():
     
     # We patch time.sleep to avoid waiting 14 seconds during retries
     with patch("time.sleep") as mock_sleep, \
-         patch("app.services.notebook_chat_service.genai.Client") as mock_client_cls:
+         patch("app.rag.chat.service.genai.Client") as mock_client_cls:
           
         mock_client = MagicMock()
         mock_client_cls.return_value = mock_client
@@ -129,7 +129,7 @@ def run_tests():
         
     # Also verify fallback with a long query (> 3 words) -> needs_rag = True
     with patch("time.sleep") as mock_sleep, \
-         patch("app.services.notebook_chat_service.genai.Client") as mock_client_cls:
+         patch("app.rag.chat.service.genai.Client") as mock_client_cls:
           
         mock_client = MagicMock()
         mock_client_cls.return_value = mock_client
@@ -145,6 +145,10 @@ def run_tests():
     logger.info("TEST 4 PASSED: Fallback triggers <=3 word count check and defaults needs_rag appropriately.")
 
     print("\nALL INTENT ROUTING & QUERY CONDENSATION TESTS PASSED SUCCESSFULLY!")
+
+
+def test_condensation():
+    run_tests()
 
 
 if __name__ == "__main__":
