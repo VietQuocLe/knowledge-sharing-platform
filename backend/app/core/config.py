@@ -43,8 +43,13 @@ class Settings(BaseSettings):
     # Upload System & Notebooks Quotas
     MAX_FILE_SIZE_MB: int = 30
     ALLOWED_UPLOAD_FILE_TYPES: list[str] = ["PDF", "DOCX"]
-    MAX_SOURCES_PER_NOTEBOOK: int = 10
-    MAX_ARTIFACTS_PER_NOTEBOOK: int = 20
+    FREE_MAX_SOURCES: int = 8
+    PRO_MAX_SOURCES: int = 20
+    FREE_MAX_ARTIFACTS: int = 10
+    PRO_MAX_ARTIFACTS: int = 20
+    PRO_PLAN_PRICE: int = 49000
+    MAX_SOURCES_PER_NOTEBOOK: int = 8  # Giữ tương thích ngược, mặc định gói Free
+    MAX_ARTIFACTS_PER_NOTEBOOK: int = 10  # Giữ tương thích ngược, mặc định gói Free
     ARTIFACT_GENERATION_COOLDOWN_SECONDS: int = 15
 
     # JWT
@@ -137,6 +142,13 @@ class Settings(BaseSettings):
     CLOUDMERSIVE_API_KEY: str | None = None
     CLOUDMERSIVE_TIMEOUT_SECONDS: float = 60.0
     LIBREOFFICE_TIMEOUT_SECONDS: int = 60
+
+    # VNPay Configuration
+    VNPAY_TMN_CODE: str = "2QX2851U"
+    VNPAY_SECURE_SECRET: str = "A4O2PBLT0L7I2RLLNQLR8H7Z22W77J6A"
+    VNPAY_PAYMENT_URL: str = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
+    VNPAY_RETURN_URL: str = "http://localhost:5173/payment/vnpay-return"
+    VNPAY_IPN_URL: str = "http://localhost:8000/payments/vnpay-ipn"
 
     model_config = SettingsConfigDict(
         env_file=".env",

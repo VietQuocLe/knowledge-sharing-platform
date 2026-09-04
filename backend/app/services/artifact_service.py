@@ -49,14 +49,10 @@ def generate_quiz_mock(db: Session, notebook_id: int, user_id: int, payload: Qui
                 detail=f"Thao tác quá nhanh. Vui lòng thử lại sau {remaining} giây.",
             )
 
-    # Bước 3 (Quota Limit Guard)
-    count_stmt = select(func.count()).select_from(NotebookArtifact).where(NotebookArtifact.notebook_id == notebook_id)
-    cnt = db.execute(count_stmt).scalar() or 0
-    if cnt >= settings.MAX_ARTIFACTS_PER_NOTEBOOK:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Notebook đã đạt giới hạn tối đa {settings.MAX_ARTIFACTS_PER_NOTEBOOK} bài tập",
-        )
+    # Bước 3 (Quota Limit Guard via QuotaService - Soft-cap)
+    from app.services import quota_service
+    user = notebook.owner or db.execute(select(User).where(User.id == user_id)).scalar_one()
+    quota_service.check_artifacts_quota(db, user, notebook_id)
 
     # Bước 4 (All-or-Nothing Asset Check)
     asset_stmt = select(Asset).where(

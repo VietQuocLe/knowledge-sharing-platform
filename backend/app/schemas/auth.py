@@ -1,6 +1,7 @@
+from datetime import datetime
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from app.models.enums import UserRole
+from app.models.enums import UserRole, SubscriptionTier
 
 
 class RegisterRequest(BaseModel):
@@ -9,11 +10,19 @@ class RegisterRequest(BaseModel):
     password: str = Field(min_length=8, max_length=128)
 
 
+class UserQuotas(BaseModel):
+    max_sources: int
+    max_artifacts: int
+
+
 class UserResponse(BaseModel):
     id: int
     email: EmailStr
     full_name: str
     role: UserRole
+    tier: SubscriptionTier
+    pro_expires_at: datetime | None = None
+    quotas: UserQuotas | None = None
     is_active: bool
 
     model_config = ConfigDict(from_attributes=True)

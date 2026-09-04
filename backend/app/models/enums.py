@@ -58,4 +58,12 @@ class ArtifactType(str, Enum):
     SUMMARY = "SUMMARY"
 
 
+class SubscriptionTier(str, Enum):
+    FREE = "FREE"
+    PRO = "PRO"
 
+
+class PaymentStatus(str, Enum):
+    PENDING = "PENDING"
+    SUCCESS = "SUCCESS"
+    CANCELLED = "CANCELLED"

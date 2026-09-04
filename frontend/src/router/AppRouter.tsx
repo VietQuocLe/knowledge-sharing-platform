@@ -19,6 +19,7 @@ const MyResourcesPage = lazy(() => import('../pages/MyResourcesPage').then(m => 
 const MyNotebooksPage = lazy(() => import('../pages/MyNotebooksPage').then(m => ({ default: m.MyNotebooksPage })))
 const NotebookDetailPage = lazy(() => import('../pages/NotebookDetailPage').then(m => ({ default: m.NotebookDetailPage })))
 const AdminTaxonomyPage = lazy(() => import('../pages/AdminTaxonomyPage').then(m => ({ default: m.AdminTaxonomyPage })))
+const PaymentReturnPage = lazy(() => import('../pages/PaymentReturnPage').then(m => ({ default: m.PaymentReturnPage })))
 
 function PageFallback() {
   return (
@@ -67,6 +68,7 @@ const router = createBrowserRouter([
       { path: '/me/resources', element: withSuspense(MyResourcesPage) },
       { path: '/me/workspace', element: withSuspense(MyNotebooksPage) },
       { path: '/me/workspace/:notebookId', element: withSuspense(NotebookDetailPage) },
+      { path: '/payment/vnpay-return', element: withSuspense(PaymentReturnPage) },
     ],
   },
   // ── Admin pages ───────────────────────────────────────────────────

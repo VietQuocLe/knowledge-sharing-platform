@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { BookOpen, Clock, FileText, MessageSquare, File, Plus, MoreVertical, Trash2, Download, ExternalLink, Eye, GraduationCap } from 'lucide-react'
+import { BookOpen, Clock, FileText, MessageSquare, File, Plus, MoreVertical, Trash2, Download, ExternalLink, Eye, GraduationCap, Crown } from 'lucide-react'
 import { useNotebookDetail, AddDocumentModal, useUnsaveDocument, useDeleteNotebookAsset, notebooksApi, NotebookChatPanel, NotebookCreationsHub, QuizRunner, GenerateArtifactModal } from '../features/notebooks'
 import { documentsApi, PdfPreviewModal } from '../features/documents'
+import { useAuth } from '../features/auth/context/AuthContext'
+import { PricingModal } from '../features/payments'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { Spinner } from '../components/ui/Spinner'
 import { ErrorMessage } from '../components/ui/ErrorMessage'
@@ -337,9 +339,11 @@ export function NotebookDetailPage() {
     const { notebookId } = useParams<{ notebookId: string }>()
     const parsedId = notebookId ? parseInt(notebookId, 10) : NaN
     const navigate = useNavigate()
+    const { user } = useAuth()
 
     const [isAiPanelOpen, setIsAiPanelOpen] = useState(true)
     const [isAddDocOpen, setIsAddDocOpen] = useState(false)
+    const [isPricingModalOpen, setIsPricingModalOpen] = useState(false)
     const [searchParams, setSearchParams] = useSearchParams()
 
     const activeArtifactId = (() => {
@@ -463,7 +467,13 @@ export function NotebookDetailPage() {
                                 <div className="flex flex-wrap gap-3">
                                     <button
                                         type="button"
-                                        onClick={() => setIsAddDocOpen(true)}
+                                        onClick={() => {
+                                            if (notebook.sources_count >= notebook.max_sources && user?.tier !== 'PRO') {
+                                                setIsPricingModalOpen(true)
+                                            } else {
+                                                setIsAddDocOpen(true)
+                                            }
+                                        }}
                                         className="px-4 py-2.5 text-xs font-bold text-white bg-black hover:bg-slate-800 active:bg-slate-900 rounded-xl shadow-xs transition flex items-center gap-2 cursor-pointer"
                                     >
                                         <Plus className="h-4 w-4" />
@@ -497,11 +507,30 @@ export function NotebookDetailPage() {
                                     </h2>
 
                                     {/* Compact Quota Indicator */}
-                                    <div className="flex items-center gap-3">
-                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FEF9C3] text-amber-800 border border-amber-200 text-xs font-semibold whitespace-nowrap">
+                                    <div className="flex items-center gap-2">
+                                        <span
+                                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold whitespace-nowrap ${
+                                                notebook.sources_count >= notebook.max_sources
+                                                    ? user?.tier === 'PRO'
+                                                        ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                                        : 'bg-amber-100 text-amber-900 border-amber-300'
+                                                    : 'bg-[#FEF9C3] text-amber-800 border-amber-200'
+                                            }`}
+                                        >
                                             <span className="font-bold">{notebook.sources_count}</span>
                                             <span className="text-[10px]"> / {notebook.max_sources} nguồn</span>
                                         </span>
+
+                                        {notebook.sources_count >= notebook.max_sources && user?.tier !== 'PRO' && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsPricingModalOpen(true)}
+                                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-[11px] font-bold shadow-2xs transition cursor-pointer"
+                                            >
+                                                <Crown className="h-3 w-3 text-amber-200" />
+                                                <span>Nâng cấp Pro (20 nguồn)</span>
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 
@@ -550,6 +579,7 @@ export function NotebookDetailPage() {
                 isOpen={isAddDocOpen}
                 onClose={() => setIsAddDocOpen(false)}
                 notebook={notebook}
+                onOpenPricing={() => setIsPricingModalOpen(true)}
             />
 
             {isGenerateModalOpen && (
@@ -571,6 +601,11 @@ export function NotebookDetailPage() {
                 fileUrl={previewState.fileUrl}
                 fileName={previewState.fileName}
                 isLoadingUrl={previewState.isLoadingUrl}
+            />
+
+            <PricingModal
+                isOpen={isPricingModalOpen}
+                onClose={() => setIsPricingModalOpen(false)}
             />
         </div>
     )

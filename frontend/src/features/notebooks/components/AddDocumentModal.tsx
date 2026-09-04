@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { X, Search, FileText, Loader2, UploadCloud, Paperclip } from 'lucide-react'
+import { X, Search, FileText, Loader2, UploadCloud, Paperclip, Sparkles, Crown } from 'lucide-react'
 import { Modal } from '../../../components/ui/Modal'
 import { useDocuments } from '../../documents/hooks/useDocuments'
 import { useSaveDocumentToNotebook } from '../hooks/useSaveDocumentToNotebook'
 import { useUploadNotebookAsset } from '../hooks/useUploadNotebookAsset'
+import { useAuth } from '../../auth/context/AuthContext'
 import type { NotebookDetail } from '../api'
 import { toast } from 'react-hot-toast'
 
@@ -11,9 +12,12 @@ interface AddDocumentModalProps {
     isOpen: boolean
     onClose: () => void
     notebook: NotebookDetail
+    onOpenPricing?: () => void
 }
 
-export function AddDocumentModal({ isOpen, onClose, notebook }: AddDocumentModalProps) {
+export function AddDocumentModal({ isOpen, onClose, notebook, onOpenPricing }: AddDocumentModalProps) {
+    const { user } = useAuth()
+    const isPro = user?.tier === 'PRO'
     const [activeTab, setActiveTab] = useState<'library' | 'upload'>('library')
     const [searchTerm, setSearchTerm] = useState('')
     const [selectedFiles, setSelectedFiles] = useState<File[]>([])
@@ -145,8 +149,30 @@ export function AddDocumentModal({ isOpen, onClose, notebook }: AddDocumentModal
 
                 {/* Quota limit warning */}
                 {isQuotaFull && (
-                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-100 text-rose-800 text-xs font-semibold leading-relaxed flex items-start gap-2">
-                        <span>⚠️ Sổ ghi chú đã đạt tối đa {notebook.max_sources} tài liệu. Hãy xóa bớt nguồn trước khi thêm mới.</span>
+                    <div className={`p-3 rounded-xl border text-xs font-semibold leading-relaxed flex items-center justify-between gap-3 ${
+                        isPro ? 'bg-rose-50 border-rose-100 text-rose-800' : 'bg-amber-50 border-amber-200 text-amber-900'
+                    }`}>
+                        <div className="flex items-start gap-2">
+                            <span>⚠️</span>
+                            <span>
+                                {isPro
+                                    ? `Sổ ghi chú đã đạt giới hạn tối đa ${notebook.max_sources} tài liệu (gói Pro). Hãy xóa bớt nguồn trước khi thêm mới.`
+                                    : `Sổ ghi chú đã đạt tối đa ${notebook.max_sources} tài liệu (gói Free). Nâng cấp Pro để mở rộng lên 20 tài liệu.`}
+                            </span>
+                        </div>
+                        {!isPro && onOpenPricing && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    onClose()
+                                    onOpenPricing()
+                                }}
+                                className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-[11px] font-bold shadow-2xs transition cursor-pointer"
+                            >
+                                <Crown className="h-3 w-3 text-amber-200" />
+                                <span>Nâng cấp Pro</span>
+                            </button>
+                        )}
                     </div>
                 )}
 

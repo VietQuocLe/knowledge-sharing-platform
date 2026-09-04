@@ -8,11 +8,12 @@ from sqlalchemy import Boolean, DateTime, Enum, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
-from app.models.enums import UserRole
+from app.models.enums import UserRole, SubscriptionTier
 
 if TYPE_CHECKING:
     from app.models.document import Document
     from app.models.notebook import Notebook
+    from app.models.payment import PaymentOrder
 
 
 class User(Base):
@@ -34,6 +35,17 @@ class User(Base):
         nullable=False,
     )
 
+    tier: Mapped[SubscriptionTier] = mapped_column(
+        Enum(SubscriptionTier, name="subscription_tier"),
+        default=SubscriptionTier.FREE,
+        nullable=False,
+    )
+
+    pro_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     created_at: Mapped[datetime] = mapped_column(
@@ -47,5 +59,10 @@ class User(Base):
 
     notebooks: Mapped[list["Notebook"]] = relationship(
         back_populates="owner",
+        cascade="all, delete-orphan",
+    )
+
+    payment_orders: Mapped[list["PaymentOrder"]] = relationship(
+        back_populates="user",
         cascade="all, delete-orphan",
     )

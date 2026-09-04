@@ -15,13 +15,31 @@ from app.models.user import User
 from app.schemas.auth import RegisterRequest, TokenResponse, UserResponse
 
 
-def create_user_token(user: User) -> TokenResponse:
+def build_user_response(user: User, db: Session | None = None) -> UserResponse:
+    from app.services import quota_service
+
+    effective_tier = quota_service.get_effective_user_tier(db, user) if db else user.tier
+    quotas = quota_service.get_user_quotas(effective_tier)
+
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        role=user.role,
+        tier=effective_tier,
+        pro_expires_at=user.pro_expires_at,
+        quotas=quotas,
+        is_active=user.is_active,
+    )
+
+
+def create_user_token(user: User, db: Session | None = None) -> TokenResponse:
     return TokenResponse(
         access_token=create_access_token(
             subject=str(user.id),
             role=user.role.value,
         ),
-        user=UserResponse.model_validate(user),
+        user=build_user_response(user, db),
     )
 
 
@@ -45,7 +63,7 @@ def register_user(db: Session, data: RegisterRequest) -> TokenResponse:
     db.commit()
     db.refresh(new_user)
 
-    return create_user_token(new_user)
+    return create_user_token(new_user, db)
 
 
 def authenticate_user(db: Session, *, email: str, password: str) -> TokenResponse:
@@ -70,7 +88,7 @@ def authenticate_user(db: Session, *, email: str, password: str) -> TokenRespons
             detail="Inactive user",
         )
 
-    return create_user_token(user)
+    return create_user_token(user, db)
 
 
 def login_with_google(db: Session, credential: str) -> TokenResponse:
@@ -123,7 +141,7 @@ def login_with_google(db: Session, credential: str) -> TokenResponse:
             detail="Inactive user",
         )
 
-    return create_user_token(user)
+    return create_user_token(user, db)
 
 
 def get_user_from_token(db: Session, token: str) -> User:

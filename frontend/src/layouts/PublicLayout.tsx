@@ -11,23 +11,48 @@ import {
   Menu,
   X,
   PanelLeftClose,
+  Crown,
+  Sparkles,
 } from 'lucide-react'
 import { useAuth } from '../features/auth/context/AuthContext'
 import { type AuthUser } from '../features/auth/api'
 import { SubjectSearchInput } from '../features/taxonomy'
 import { useSidebar } from '../hooks/useSidebar'
 import { PageTransition } from '../components/PageTransition'
+import { PricingModal } from '../features/payments'
 
 interface PublicAuthControlsProps {
   user: AuthUser | null
   onLogout: () => void
   onClose: () => void
+  onOpenPricing: () => void
 }
 
-function AuthControls({ user, onLogout, onClose }: PublicAuthControlsProps) {
+function AuthControls({ user, onLogout, onClose, onOpenPricing }: PublicAuthControlsProps) {
   if (user) {
+    const isPro = user.tier === 'PRO'
     return (
       <div className="flex items-center gap-2.5 shrink-0">
+        {isPro ? (
+          <div
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500/15 via-amber-400/20 to-yellow-500/15 border border-amber-400/40 text-amber-700 text-[11px] font-black tracking-wider uppercase shadow-2xs select-none"
+            title={user.pro_expires_at ? `Hạn dùng Pro: ${new Date(user.pro_expires_at).toLocaleDateString('vi-VN')}` : 'Hội viên Pro'}
+          >
+            <Crown className="h-3.5 w-3.5 text-amber-500" />
+            <span>PRO</span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={onOpenPricing}
+            className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white px-2.5 py-1.5 text-xs font-bold shadow-xs hover:shadow-sm transition cursor-pointer"
+          >
+            <Crown className="h-3.5 w-3.5 text-amber-200" />
+            <span className="hidden sm:inline">Nâng cấp Pro</span>
+            <span className="sm:hidden">Pro</span>
+          </button>
+        )}
+
         <span className="text-xs font-medium text-slate-600 hidden sm:inline-block truncate max-w-[120px]">
           {user.full_name || user.email}
         </span>
@@ -61,6 +86,7 @@ export function PublicLayout() {
   const hideSearch = location.pathname.startsWith('/me/workspace')
   const isAdmin = user?.role === 'ADMIN'
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isPricingModalOpen, setIsPricingModalOpen] = useState(false)
   const { isCollapsed, setIsCollapsed } = useSidebar()
 
   const contributeUrl = import.meta.env.VITE_CONTRIBUTE_FORM_URL
@@ -274,7 +300,12 @@ export function PublicLayout() {
           <div className="flex-1 min-w-0">
             {!hideSearch && <SubjectSearchInput />}
           </div>
-          <AuthControls user={user} onLogout={handleLogout} onClose={closeMobileMenu} />
+          <AuthControls
+            user={user}
+            onLogout={handleLogout}
+            onClose={closeMobileMenu}
+            onOpenPricing={() => setIsPricingModalOpen(true)}
+          />
         </div>
 
         {/* Desktop top bar */}
@@ -282,7 +313,12 @@ export function PublicLayout() {
           <div className="flex-1 max-w-md">
             {!hideSearch && <SubjectSearchInput />}
           </div>
-          <AuthControls user={user} onLogout={handleLogout} onClose={closeMobileMenu} />
+          <AuthControls
+            user={user}
+            onLogout={handleLogout}
+            onClose={closeMobileMenu}
+            onOpenPricing={() => setIsPricingModalOpen(true)}
+          />
         </div>
 
         <main className="flex-1 px-6 pb-8 md:px-8 md:pb-10 max-w-7xl w-full mx-auto">
@@ -291,6 +327,11 @@ export function PublicLayout() {
           </PageTransition>
         </main>
       </div>
+
+      <PricingModal
+        isOpen={isPricingModalOpen}
+        onClose={() => setIsPricingModalOpen(false)}
+      />
     </div>
   )
 }

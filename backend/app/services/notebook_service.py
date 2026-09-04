@@ -227,7 +227,9 @@ def get_notebook_by_id(db: Session, user: User, notebook_id: int) -> dict:
     # Sort sources by created_at descending (newest first)
     sources.sort(key=lambda s: s["created_at"], reverse=True)
 
-    from app.core.config import settings
+    from app.services import quota_service
+    effective_tier = quota_service.get_effective_user_tier(db, user)
+    quotas = quota_service.get_user_quotas(effective_tier)
 
     return {
         "id": notebook.id,
@@ -235,7 +237,7 @@ def get_notebook_by_id(db: Session, user: User, notebook_id: int) -> dict:
         "subject_id": notebook.subject_id,
         "subject_name": notebook.subject.name if notebook.subject else None,
         "sources_count": len(sources),
-        "max_sources": settings.MAX_SOURCES_PER_NOTEBOOK,
+        "max_sources": quotas.max_sources,
         "sources": sources,
         "created_at": notebook.created_at,
         "updated_at": notebook.updated_at,
@@ -282,14 +284,9 @@ def save_document(db: Session, user: User, notebook_id: int, document_id: int) -
             detail="Document is already saved in this notebook",
         )
 
-    # 4. Check unified sources limit
-    from app.core.config import settings
-    total_sources = get_notebook_source_count(db, notebook_id)
-    if total_sources >= settings.MAX_SOURCES_PER_NOTEBOOK:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Notebook source limit reached ({settings.MAX_SOURCES_PER_NOTEBOOK} sources maximum)",
-        )
+    # 4. Check unified sources limit via QuotaService (Soft-cap)
+    from app.services import quota_service
+    quota_service.check_sources_quota(db, user, notebook_id)
 
     # 5. Insert association link
     saved_doc = NotebookSavedDocument(
@@ -387,14 +384,9 @@ def upload_notebook_asset(
             detail="You do not have permission to access/modify this notebook",
         )
 
-    # 2. Check quota limit using get_notebook_source_count()
-    from app.core.config import settings
-    current_sources = get_notebook_source_count(db, notebook_id)
-    if current_sources >= settings.MAX_SOURCES_PER_NOTEBOOK:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Notebook source limit reached ({settings.MAX_SOURCES_PER_NOTEBOOK} sources maximum)",
-        )
+    # 2. Check quota limit using QuotaService (Soft-cap)
+    from app.services import quota_service
+    quota_service.check_sources_quota(db, user, notebook_id)
 
     # 3. Content-based validate file type and size limit
     content_type = validate_file_content(file_bytes, file_name)

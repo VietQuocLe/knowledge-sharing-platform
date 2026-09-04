@@ -9,6 +9,7 @@ from .asset import Asset
 from .asset_embedding import AssetEmbedding
 from .notebook_chat import NotebookChatSession, NotebookChatMessage
 from .artifact import NotebookArtifact
+from .payment import PaymentOrder
 
 __all__ = [
     "Base",
@@ -24,5 +25,6 @@ __all__ = [
     "NotebookChatSession",
     "NotebookChatMessage",
     "NotebookArtifact",
+    "PaymentOrder",
 ]
 

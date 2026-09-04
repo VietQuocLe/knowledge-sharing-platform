@@ -15,11 +15,19 @@ export type GoogleLoginPayload = {
   credential: string
 }
 
+export type UserQuotas = {
+  max_sources: number
+  max_artifacts: number
+}
+
 export type AuthUser = {
   id: number
   email: string
   full_name: string
   role: string
+  tier: 'FREE' | 'PRO'
+  pro_expires_at: string | null
+  quotas?: UserQuotas
   is_active: boolean
 }
 

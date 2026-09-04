@@ -52,8 +52,11 @@ def login(
 
 
 @router.get("/me", response_model=UserResponse)
-def read_current_user(current_user: User = Depends(get_current_user)):
-    return current_user
+def read_current_user(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return auth_service.build_user_response(current_user, db)
 
 
 @router.post("/google", response_model=TokenResponse)

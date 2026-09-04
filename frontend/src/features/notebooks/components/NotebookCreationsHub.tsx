@@ -1,6 +1,9 @@
-import { Inbox, Sparkles } from 'lucide-react'
+import { useState } from 'react'
+import { Inbox, Sparkles, Crown } from 'lucide-react'
 import { useArtifacts } from '../hooks/useArtifacts'
 import { ArtifactCard } from './ArtifactCard'
+import { useAuth } from '../../auth/context/AuthContext'
+import { PricingModal } from '../../payments'
 
 interface NotebookCreationsHubProps {
     notebookId: number
@@ -13,14 +16,28 @@ export function NotebookCreationsHub({
     onSelectArtifact,
     onOpenGenerateModal,
 }: NotebookCreationsHubProps) {
+    const { user } = useAuth()
     const { data: artifacts = [], isLoading, error } = useArtifacts(notebookId)
+    const [isPricingModalOpen, setIsPricingModalOpen] = useState(false)
 
     const handleSelectArtifact = (id: number) => {
         onSelectArtifact(id)
     }
 
     const quotaCount = artifacts.length
-    const totalQuota = 20
+    const totalQuota = user?.quotas?.max_artifacts ?? (user?.tier === 'PRO' ? 20 : 10)
+    const isQuotaFull = quotaCount >= totalQuota
+    const isPro = user?.tier === 'PRO'
+
+    const handleOpenGenerate = () => {
+        if (isQuotaFull && !isPro) {
+            setIsPricingModalOpen(true)
+            return
+        }
+        if (onOpenGenerateModal) {
+            onOpenGenerateModal()
+        }
+    }
 
     return (
         <div className="space-y-4 flex flex-col font-sans">
@@ -30,11 +47,30 @@ export function NotebookCreationsHub({
                     <Sparkles className="h-3.5 w-3.5 text-[#0284C7] shrink-0" />
                     Bản tạo AI (Creations Hub)
                 </h3>
-                <div className="flex items-center gap-3">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FEF9C3] text-amber-800 border border-amber-200 text-xs font-semibold whitespace-nowrap">
+                <div className="flex items-center gap-2">
+                    <span
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold whitespace-nowrap ${
+                            isQuotaFull
+                                ? isPro
+                                    ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                    : 'bg-amber-100 text-amber-900 border-amber-300'
+                                : 'bg-[#FEF9C3] text-amber-800 border-amber-200'
+                        }`}
+                    >
                         <span className="font-bold">{quotaCount}</span>
                         <span className="text-[10px]"> / {totalQuota} bài ôn tập</span>
                     </span>
+
+                    {isQuotaFull && !isPro && (
+                        <button
+                            type="button"
+                            onClick={() => setIsPricingModalOpen(true)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-[10px] font-bold shadow-2xs transition cursor-pointer"
+                        >
+                            <Crown className="h-3 w-3 text-amber-200" />
+                            <span>Mở 20 bài</span>
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -70,7 +106,7 @@ export function NotebookCreationsHub({
                         {onOpenGenerateModal && (
                             <button
                                 type="button"
-                                onClick={onOpenGenerateModal}
+                                onClick={handleOpenGenerate}
                                 className="px-3.5 py-1.5 text-[10px] font-bold text-white bg-black hover:bg-slate-800 rounded-xl shadow-xs transition cursor-pointer"
                             >
                                 Tạo bài tập ngay
@@ -79,6 +115,11 @@ export function NotebookCreationsHub({
                     </div>
                 )}
             </div>
+
+            <PricingModal
+                isOpen={isPricingModalOpen}
+                onClose={() => setIsPricingModalOpen(false)}
+            />
         </div>
     )
 }
