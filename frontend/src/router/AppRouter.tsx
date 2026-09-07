@@ -1,8 +1,7 @@
 import { lazy, Suspense, type ComponentType } from 'react'
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { AdminRoute } from '../components/AdminRoute'
 import { ProtectedRoute } from '../components/ProtectedRoute'
-import { AdminLayout } from '../layouts/AdminLayout'
 import { AppLayout } from '../layouts/AppLayout'
 import { AuthLayout } from '../layouts/AuthLayout'
 import { PublicLayout } from '../layouts/PublicLayout'
@@ -75,10 +74,12 @@ const router = createBrowserRouter([
   {
     element: (
       <AdminRoute>
-        <AdminLayout />
+        <AppLayout />
       </AdminRoute>
     ),
     children: [
+      // TEMP: redirect to taxonomy until Admin Dashboard is built (see Admin Revamp Plan)
+      { path: '/admin', element: <Navigate to="/admin/taxonomy" replace /> },
       { path: '/admin/taxonomy', element: withSuspense(AdminTaxonomyPage) },
     ],
   },
