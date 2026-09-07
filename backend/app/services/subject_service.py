@@ -2,6 +2,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.models.document import Document
 from app.models.major import Major, major_subject
 from app.models.subject import Subject
 from app.schemas.subject import SubjectCreate, SubjectUpdate
@@ -132,5 +133,15 @@ def update(db: Session, subject_id: int, data: SubjectUpdate) -> Subject:
 
 def delete(db: Session, subject_id: int) -> None:
     subject = get_by_id(db, subject_id)
+
+    doc_exists = db.execute(
+        select(Document.id).where(Document.subject_id == subject_id).limit(1)
+    ).scalar_one_or_none()
+    if doc_exists is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Không thể xóa Môn học vì vẫn còn Tài liệu trực thuộc. Vui lòng xóa các Tài liệu này trước.",
+        )
+
     db.delete(subject)
     db.commit()

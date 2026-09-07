@@ -67,7 +67,7 @@ def delete(db: Session, department_id: int) -> None:
     if major_exists is not None or subject_exists is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete department with associated majors/subjects",
+            detail="Không thể xóa Khoa vì vẫn còn Ngành trực thuộc. Vui lòng xóa hoặc chuyển các Ngành này trước.",
         )
 
     db.delete(department)

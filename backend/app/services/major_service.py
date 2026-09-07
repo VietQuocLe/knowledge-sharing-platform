@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.department import Department
-from app.models.major import Major
+from app.models.major import Major, major_subject
 from app.schemas.major import MajorCreate, MajorUpdate
 
 
@@ -82,5 +82,15 @@ def update(db: Session, major_id: int, data: MajorUpdate) -> Major:
 
 def delete(db: Session, major_id: int) -> None:
     major = get_by_id(db, major_id)
+
+    subject_exists = db.execute(
+        select(major_subject.c.subject_id).where(major_subject.c.major_id == major_id).limit(1)
+    ).scalar_one_or_none()
+    if subject_exists is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Không thể xóa Ngành vì vẫn còn Môn học trực thuộc. Vui lòng xóa hoặc chuyển các Môn học này trước.",
+        )
+
     db.delete(major)
     db.commit()
