@@ -1,0 +1,92 @@
+name: Backend CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - 'init-db/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - 'init-db/**'
+      - '.github/workflows/backend-ci.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-test:
+    name: Lint & Test Backend
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: knowledge_sharing_platform
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize PostgreSQL extensions (vector & unaccent)
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          PGPASSWORD=password psql -h localhost -p 5432 -U postgres -d knowledge_sharing_platform -f ../init-db/01-enable-pgvector.sql
+          PGPASSWORD=password psql -h localhost -p 5432 -U postgres -d knowledge_sharing_platform -f ../init-db/02-enable-unaccent.sql
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff
+
+      - name: Lint with Ruff (syntax and critical checks)
+        run: |
+          ruff check app --select=E9,F63,F7,F82
+
+      - name: Run Pytest test suite
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: knowledge_sharing_platform
+          JWT_SECRET_KEY: test_jwt_secret_key_for_ci_pipeline_32chars
+          MINIO_HOST: localhost
+          MINIO_PORT: 9000
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
+          ADMIN_EMAIL: admin@example.com
+          ADMIN_PASSWORD: adminpassword123
+          GOOGLE_API_KEY: fake_google_api_key_for_ci
+          JINA_API_KEY: fake_jina_api_key_for_ci
+          COHERE_API_KEY: fake_cohere_api_key_for_ci
+        run: |
+          pytest -v
