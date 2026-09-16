@@ -42,10 +42,9 @@ from app.rag.retrieval.retriever import hybrid_retrieval, get_scoped_asset_ids
 from app.rag.chat.service import condense_query_and_route
 
 
-# ⚠️ CẢNH BÁO: Bản sao thủ công của system prompt trong app/rag/chat/service.py (lines 448-469).
-# Nếu prompt production thay đổi (persona, format citation, câu từ chối...), PHẢI cập nhật
-# đồng bộ ở đây, nếu không Ragas sẽ âm thầm đánh giá sai pipeline so với những gì người dùng
-# thực tế nhận được.
+# WARNING: Manual copy of system prompt from app/rag/chat/service.py.
+# If production prompt changes (persona, citation format, refusal clause...),
+# synchronize here so Ragas evaluates accurate pipeline behavior.
 def build_rag_system_instruction(context_str: str, needs_rag: bool = True) -> str:
     """
     Local manual copy of production system instruction from app/rag/chat/service.py.
@@ -312,7 +311,7 @@ def run_evaluation(
 
             print(f"[{idx}/{len(items)}] Đang chạy RAG pipeline cho: '{q[:50]}...'")
 
-            # Gọi RAG pipeline chuẩn
+            # Execute standard RAG pipeline
             rag_output = execute_rag_pipeline(
                 db=db,
                 notebook_id=nb_id,

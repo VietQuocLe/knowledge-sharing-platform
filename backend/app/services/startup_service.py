@@ -36,6 +36,6 @@ def ensure_admin_exists(db: Session) -> None:
 
 def initialize_system(db: Session) -> None:
     """
-    Khởi tạo dữ liệu mặc định của hệ thống.
+    Initialize default system state and seed data.
     """
     ensure_admin_exists(db)

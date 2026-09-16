@@ -23,6 +23,7 @@ from app.schemas.notebook_chat import (
     NotebookChatSessionUpdate,
 )
 from app.rag.retrieval.retriever import hybrid_retrieval
+from app.rag.prompts import load_prompt_template, render_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -288,19 +289,7 @@ def _call_gemini_condense(raw_query: str, history_text: str) -> CondensationResu
     Calls Gemini API to condense the query under tenacity retry.
     """
     client = genai.Client(api_key=settings.GOOGLE_API_KEY)
-    
-    system_prompt = (
-        "Bạn là một trợ lý RAG chuyên về phân tích ý định câu hỏi và rút gọn ngữ cảnh.\n"
-        "Nhiệm vụ của bạn là đọc lịch sử hội thoại gần nhất và câu hỏi mới (raw query) của người dùng,\n"
-        "sau đó xác định:\n"
-        "1. `needs_rag` (bool): Câu hỏi mới có cần truy xuất kiến thức từ tài liệu (RAG) không. "
-        "Đặt là True nếu câu hỏi hỏi về kiến thức chuyên môn, nội dung tài liệu. "
-        "Đặt là False đối với các câu chào hỏi xã giao, cảm ơn, hỏi thăm thông thường, hoặc câu hỏi siêu dữ liệu không liên quan đến tài liệu học tập.\n"
-        "2. `condensed_query` (str): Câu hỏi mới được viết lại độc lập (standalone), loại bỏ các tham chiếu đại từ (ví dụ: 'nó', 'chúng', 'cái đó', 'bước trước') "
-        "bằng cách thay thế chúng bằng danh từ/ngữ cảnh chính xác thu được từ lịch sử hội thoại.\n"
-        "CHỈ THỊ CỰC KỲ QUAN TRỌNG: Bạn chỉ được phân giải đại từ và ngữ cảnh. KHÔNG ĐƯỢC tự ý thêm từ khóa suy đoán, giải nghĩa hay phát biểu lại câu hỏi ở định dạng khác. "
-        "Nếu câu hỏi mới đã đầy đủ nghĩa và không cần phân giải ngữ cảnh, hãy giữ nguyên câu hỏi mới đó làm `condensed_query`."
-    )
+    system_prompt = load_prompt_template("query_condense.md")
     
     prompt = (
         f"Lịch sử hội thoại gần đây:\n{history_text}\n"
@@ -439,28 +428,9 @@ async def stream_chat_response(
             client = genai.Client(api_key=settings.GOOGLE_API_KEY)
             
             if needs_rag:
-                system_instruction = (
-                    "Bạn là một trợ giảng / cố vấn học tập thông thái, nhiệt tình và rõ ràng (chuẩn NotebookLM & Studocu).\n"
-                    "Nhiệm vụ của bạn là giải thích kiến thức và trả lời câu hỏi của người học bằng tiếng Việt, DỰA TRÊN NGỮ CẢNH tài liệu dưới đây.\n\n"
-                    "QUY TẮC PHẢN HỒI & PHONG CÁCH DIỄN ĐẠT:\n"
-                    "1. Vai trò & Giọng văn (Tone & Persona):\n"
-                    "   - Xưng hô tự nhiên, lịch thiệp ('tôi' - 'bạn'). Giải thích sâu sắc, dễ hiểu, trực diện vào trọng tâm câu hỏi trước, sau đó phân tích chi tiết kèm ví dụ minh họa hoặc công thức rõ ràng.\n"
-                    "   - Tránh tuyệt đối các từ ngữ máy móc, sáo rỗng hoặc mở đầu rập khuôn như: 'Dựa vào tài liệu được cung cấp...', 'Theo như trang X trong slide...', 'Như trong context đã nêu...'. Hãy trình bày tri thức một cách tự nhiên và mạch lạc.\n"
-                    "2. Quy tắc Trích dẫn Nguồn (Citation Standard):\n"
-                    "   - Đặt nhãn trích dẫn số trong ngoặc vuông như [1], [2] ngay sau từng câu/luận điểm có căn cứ từ tài liệu nguồn tương ứng.\n"
-                    "3. Định dạng Markdown Thẩm mỹ:\n"
-                    "   - Dùng **in đậm** các từ khóa/khái niệm cốt lõi để người học dễ nắm bắt (scannable reading).\n"
-                    "   - Phân chia các đoạn văn ngắn gọn, sử dụng bullet points (-), bảng biểu so sánh hoặc khối code/công thức toán ($...$ hoặc $$...$$) khi thích hợp.\n"
-                    "4. Xử lý câu hỏi ngoài phạm vi tài liệu (Anti-Hallucination Guard):\n"
-                    "   - Nếu thông tin hoàn toàn không có trong tài liệu/ngữ cảnh dưới đây, hãy trả lời đúng nguyên văn câu sau: "
-                    "'Tôi xin lỗi, thông tin này không có trong tài liệu của bạn.' và TRÁNH tự bịa đặt hay sử dụng kiến thức ngoài.\n\n"
-                    f"Ngữ cảnh tài liệu:\n{context_str}"
-                )
+                system_instruction = render_prompt("rag_chat_system.md", context_str=context_str)
             else:
-                system_instruction = (
-                    "Bạn là một trợ giảng / cố vấn học tập thông minh, thân thiện và nhiệt tình.\n"
-                    "Hãy trò chuyện xã giao, trả lời câu hỏi tổng quát bằng tiếng Việt một cách tự nhiên, lịch thiệp ('tôi' - 'bạn') và mạch lạc."
-                )
+                system_instruction = load_prompt_template("chat_casual_system.md")
 
             contents = []
             if not is_first_turn:

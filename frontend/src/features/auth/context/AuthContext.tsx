@@ -70,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const currentUser = await authApi.me()
       setUser(currentUser)
     } catch {
-      // Giữ nguyên state nếu refresh lỗi
+      // Retain existing state if refresh fails
     }
   }
 

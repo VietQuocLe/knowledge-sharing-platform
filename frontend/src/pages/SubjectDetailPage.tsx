@@ -134,7 +134,7 @@ export function SubjectDetailPage() {
     )
   }
 
-  // Construct Breadcrumb segments: Trang chủ > [Department] > [Major] > [Subject]
+  // Construct breadcrumb segments: Home > [Department] > [Major] > [Subject]
   const breadcrumbItems = []
   if (department && primaryMajor && subject) {
     breadcrumbItems.push(

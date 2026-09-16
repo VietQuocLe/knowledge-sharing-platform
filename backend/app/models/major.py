@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from app.models.department import Department
     from app.models.subject import Subject
 
-# Bảng trung gian giải quyết bài toán: 1 môn đại cương thuộc nhiều ngành
+# Association table linking Majors and Subjects with category
 major_subject = Table(
     "major_subject",
     Base.metadata,
@@ -35,10 +35,10 @@ class Major(Base):
     
     name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
 
-    # Nối ngược lại Department (Khoa)
+    # Relationship with Department
     department: Mapped["Department"] = relationship(back_populates="majors")
 
-    # Nối với Subject (Môn học) thông qua bảng trung gian
+    # Relationship with Subjects via association table
     subjects: Mapped[list["Subject"]] = relationship(
         secondary=major_subject,
         back_populates="majors",

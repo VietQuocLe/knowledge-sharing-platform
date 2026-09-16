@@ -22,9 +22,9 @@ logger = logging.getLogger(__name__)
 
 def get_client_ip(request: Request) -> str:
     """
-    Trích xuất an toàn Client IP.
-    Xử lý đúng IP thật khi chạy sau Reverse Proxy (X-Forwarded-For)
-    và chuẩn hóa IPv6 ::1 hoặc localhost về 127.0.0.1 để VNPay không từ chối.
+    Safely extract client IP address.
+    Handles proxy headers (X-Forwarded-For) and normalizes IPv6 ::1 or localhost
+    to 127.0.0.1 for VNPay gateway compatibility.
     """
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
@@ -35,19 +35,19 @@ def get_client_ip(request: Request) -> str:
 
 def generate_order_code() -> str:
     """
-    Khóa cứng định dạng vnp_TxnRef (Hard Rule):
-    Format: 10 chữ số timestamp Unix + 6 ký tự hex ngẫu nhiên viết thường.
-    Độ dài đúng 16 ký tự, chỉ gồm [0-9a-z], đảm bảo tính duy nhất 100%.
+    Generate standard vnp_TxnRef order code:
+    Format: 10-digit Unix timestamp + 6-character random hex string.
+    Exactly 16 alphanumeric lowercase characters [0-9a-z], guaranteeing uniqueness.
     """
     return f"{int(time.time())}{uuid.uuid4().hex[:6]}"
 
 
 def create_payment_order(db: Session, user: User, ip_address: str) -> CheckoutCreateResponse:
     """
-    Tạo đơn hàng nâng cấp Pro và sinh URL thanh toán VNPay Sandbox.
-    Tự động hủy các đơn PENDING cũ của user để tránh rác hệ thống.
+    Creates a Pro upgrade payment order and generates VNPay payment URL.
+    Cancels any previous pending orders for the user to prevent stale entries.
     """
-    # 1. Tự động hủy các đơn hàng PENDING cũ của user
+    # 1. Cancel previous pending orders for user
     db.execute(
         update(PaymentOrder)
         .where(
@@ -57,7 +57,7 @@ def create_payment_order(db: Session, user: User, ip_address: str) -> CheckoutCr
         .values(status=PaymentStatus.CANCELLED)
     )
 
-    # 2. Sinh mã đơn hàng bất biến và lưu PaymentOrder
+    # 2. Generate immutable order code and record PaymentOrder
     order_code = generate_order_code()
     amount = settings.PRO_PLAN_PRICE
 
@@ -72,21 +72,21 @@ def create_payment_order(db: Session, user: User, ip_address: str) -> CheckoutCr
     db.commit()
     db.refresh(payment_order)
 
-    # 3. Chuẩn hóa ngày giờ theo GMT+7 (Asia/Ho_Chi_Minh)
+    # 3. Normalize timestamp to GMT+7 (Asia/Ho_Chi_Minh)
     tz_vn = timezone(timedelta(hours=7))
     now_vn = datetime.now(tz_vn)
     vnp_create_date = now_vn.strftime("%Y%m%d%H%M%S")
     vnp_expire_date = (now_vn + timedelta(minutes=15)).strftime("%Y%m%d%H%M%S")
 
-    # 4. Nội dung thanh toán không dấu (chống lỗi encoding Checksum 97)
+    # 4. Unaccented order info to avoid VNPay checksum encoding issues
     vnp_order_info = f"Thanh toan goi Pro 1 thang - Don hang {order_code}"
 
-    # 5. Build tham số VNPay 2.1.0
+    # 5. Build VNPay 2.1.0 query parameters
     vnp_params: dict[str, str] = {
         "vnp_Version": "2.1.0",
         "vnp_Command": "pay",
         "vnp_TmnCode": settings.VNPAY_TMN_CODE,
-        "vnp_Amount": str(amount * 100),  # VNPay nhân 100 số tiền
+        "vnp_Amount": str(amount * 100),  # VNPay amount multiplied by 100
         "vnp_CurrCode": "VND",
         "vnp_TxnRef": order_code,
         "vnp_OrderInfo": vnp_order_info,
@@ -98,13 +98,13 @@ def create_payment_order(db: Session, user: User, ip_address: str) -> CheckoutCr
         "vnp_ExpireDate": vnp_expire_date,
     }
 
-    # 6. Sắp xếp key alphabet và encode
+    # 6. Sort alphabetically by key and URL-encode
     sorted_items = sorted(
         [(k, str(v)) for k, v in vnp_params.items() if v is not None and str(v) != ""]
     )
     hash_data = urllib.parse.urlencode(sorted_items)
 
-    # 7. Ký HMAC-SHA512
+    # 7. Compute HMAC-SHA512 checksum
     secure_hash = hmac.new(
         settings.VNPAY_SECURE_SECRET.encode("utf-8"),
         hash_data.encode("utf-8"),
@@ -124,10 +124,10 @@ def create_payment_order(db: Session, user: User, ip_address: str) -> CheckoutCr
 
 def verify_vnpay_signature(params: dict) -> bool:
     """
-    Xác thực chữ ký HMAC-SHA512 của dữ liệu VNPay gửi về.
-    Bắt buộc kiểm tra vnp_TmnCode trước khi tính toán hash.
+    Verifies HMAC-SHA512 checksum of VNPay response data.
+    Validates vnp_TmnCode before computing hash.
     """
-    # 1. Xác thực Merchant Code
+    # 1. Validate Merchant Code
     if params.get("vnp_TmnCode") != settings.VNPAY_TMN_CODE:
         logger.warning("VNPay signature failed: TMN_CODE mismatch (%s != %s)",
                        params.get("vnp_TmnCode"), settings.VNPAY_TMN_CODE)
@@ -137,7 +137,7 @@ def verify_vnpay_signature(params: dict) -> bool:
     if not received_hash:
         return False
 
-    # 2. Lọc các tham số bắt đầu bằng vnp_, loại bỏ vnp_SecureHash và vnp_SecureHashType
+    # 2. Filter vnp_ parameters, excluding hash fields
     filtered_items = [
         (k, str(v))
         for k, v in params.items()
@@ -147,27 +147,27 @@ def verify_vnpay_signature(params: dict) -> bool:
         and str(v) != ""
     ]
 
-    # 3. Sắp xếp alphabet theo key và encode query string
+    # 3. Sort alphabetically and encode query string
     sorted_items = sorted(filtered_items)
     hash_data = urllib.parse.urlencode(sorted_items)
 
-    # 4. Tính toán hash HMAC-SHA512
+    # 4. Compute HMAC-SHA512 hash
     calculated_hash = hmac.new(
         settings.VNPAY_SECURE_SECRET.encode("utf-8"),
         hash_data.encode("utf-8"),
         hashlib.sha512,
     ).hexdigest()
 
-    # 5. So sánh an toàn chống timing attack
+    # 5. Constant-time comparison to prevent timing attacks
     return hmac.compare_digest(calculated_hash.lower(), received_hash.lower())
 
 
 def fulfill_payment_order(db: Session, order_code: str, vnp_data: dict) -> PaymentOrder | None:
     """
-    Idempotency Guard: Fulfill đơn hàng an toàn với Pessimistic Locking (SELECT ... FOR UPDATE).
-    Đảm bảo cả Return URL và IPN URL cùng gọi thì chỉ có 1 luồng thực thi gia hạn Pro.
+    Idempotent order fulfillment using pessimistic locking (SELECT ... FOR UPDATE).
+    Guarantees single fulfillment execution between Return URL and IPN Webhook.
     """
-    # Khóa dòng đơn hàng trong transaction
+    # Lock order row in transaction
     order = db.execute(
         select(PaymentOrder)
         .where(PaymentOrder.order_code == order_code)
@@ -175,20 +175,20 @@ def fulfill_payment_order(db: Session, order_code: str, vnp_data: dict) -> Payme
     ).scalar_one_or_none()
 
     if not order or order.status != PaymentStatus.PENDING:
-        # Đã được xử lý bởi luồng kia hoặc đã hủy -> Bỏ qua
+        # Already processed or cancelled -> Skip
         return order
 
-    # Validate số tiền thanh toán (VNPay nhân 100)
+    # Validate amount (VNPay amount is multiplied by 100)
     vnp_amount = int(vnp_data.get("vnp_Amount", 0)) // 100
     if order.amount != vnp_amount:
-        raise ValueError(f"Số tiền không khớp: order={order.amount}, vnpay={vnp_amount}")
+        raise ValueError(f"Amount mismatch: order={order.amount}, vnpay={vnp_amount}")
 
-    # Cập nhật trạng thái SUCCESS
+    # Update status to SUCCESS
     order.status = PaymentStatus.SUCCESS
     order.paid_at = datetime.now(timezone.utc)
     order.vnp_transaction_no = vnp_data.get("vnp_TransactionNo")
 
-    # Gia hạn Pro 30 ngày cho User (cộng nối tiếp nếu còn hạn)
+    # Extend Pro tier by 30 days (cumulative if active)
     user = db.execute(select(User).where(User.id == order.user_id)).scalar_one_or_none()
     if user:
         now_utc = datetime.now(timezone.utc)
@@ -215,11 +215,11 @@ def fulfill_payment_order(db: Session, order_code: str, vnp_data: dict) -> Payme
 
 def process_vnpay_ipn(db: Session, params: dict) -> JSONResponse:
     """
-    Xử lý Webhook IPN từ Server VNPay.
-    Quy chuẩn bất biến: LUÔN TRẢ VỀ HTTP 200 OK với body JSON chuẩn.
+    Processes VNPay IPN Webhook.
+    Always returns HTTP 200 with standard JSON response body.
     """
     try:
-        # 1. Xác thực chữ ký & Merchant code
+        # 1. Verify signature and merchant code
         if not verify_vnpay_signature(params):
             return JSONResponse(status_code=200, content={"RspCode": "97", "Message": "Invalid Checksum"})
 
@@ -227,7 +227,7 @@ def process_vnpay_ipn(db: Session, params: dict) -> JSONResponse:
         if not order_code:
             return JSONResponse(status_code=200, content={"RspCode": "01", "Message": "Order Not Found"})
 
-        # 2. Tìm đơn hàng
+        # 2. Find order
         order = db.execute(
             select(PaymentOrder).where(PaymentOrder.order_code == order_code)
         ).scalar_one_or_none()
@@ -235,16 +235,16 @@ def process_vnpay_ipn(db: Session, params: dict) -> JSONResponse:
         if not order:
             return JSONResponse(status_code=200, content={"RspCode": "01", "Message": "Order Not Found"})
 
-        # 3. Kiểm tra số tiền
+        # 3. Validate amount
         vnp_amount = int(params.get("vnp_Amount", 0)) // 100
         if order.amount != vnp_amount:
             return JSONResponse(status_code=200, content={"RspCode": "04", "Message": "Invalid Amount"})
 
-        # 4. Kiểm tra xem đơn đã được xác nhận trước đó chưa (bởi Return URL hoặc IPN trước)
+        # 4. Check if order was already confirmed
         if order.status != PaymentStatus.PENDING:
             return JSONResponse(status_code=200, content={"RspCode": "02", "Message": "Order already confirmed"})
 
-        # 5. Xử lý trạng thái giao dịch
+        # 5. Process transaction status
         vnp_response_code = params.get("vnp_ResponseCode")
         vnp_trans_status = params.get("vnp_TransactionStatus")
 
@@ -252,7 +252,7 @@ def process_vnpay_ipn(db: Session, params: dict) -> JSONResponse:
             fulfill_payment_order(db, order_code, params)
             return JSONResponse(status_code=200, content={"RspCode": "00", "Message": "Confirm Success"})
 
-        # Bất kỳ mã lỗi nào khác (24, 07, 09, 10, 11, 51, 65...) -> Chuyển CANCELLED ngay
+        # Any other error code -> Transition to CANCELLED
         order.status = PaymentStatus.CANCELLED
         db.add(order)
         db.commit()
@@ -265,8 +265,8 @@ def process_vnpay_ipn(db: Session, params: dict) -> JSONResponse:
 
 def process_vnpay_return(db: Session, user: User, params: dict) -> OrderStatusResponse:
     """
-    Xử lý khi trình duyệt redirect về từ cổng VNPay (Dual-Fulfill Engine cho Localhost).
-    Bắt buộc verify chữ ký, thực hiện fulfill an toàn nếu đơn vẫn PENDING.
+    Processes user browser return redirect from VNPay (Dual-Fulfill Engine for localhost).
+    Verifies signature and idempotently fulfills pending order.
     """
     if not verify_vnpay_signature(params):
         raise HTTPException(
@@ -281,7 +281,7 @@ def process_vnpay_return(db: Session, user: User, params: dict) -> OrderStatusRe
             detail="Thiếu mã giao dịch (vnp_TxnRef).",
         )
 
-    # Chống IDOR: Chỉ tìm đơn thuộc quyền sở hữu của user
+    # Anti-IDOR: Find order owned by current user (or admin)
     stmt = select(PaymentOrder).where(
         PaymentOrder.order_code == order_code,
         PaymentOrder.user_id == user.id,
@@ -300,10 +300,10 @@ def process_vnpay_return(db: Session, user: User, params: dict) -> OrderStatusRe
     vnp_trans_status = params.get("vnp_TransactionStatus")
 
     if vnp_response_code == "00" and vnp_trans_status == "00":
-        # Thành công -> Fulfill (nếu đơn chưa được IPN fulfill trước đó)
+        # Success -> Fulfill order if not yet fulfilled by IPN
         fulfill_payment_order(db, order_code, params)
     else:
-        # Bất kỳ mã lỗi nào khác -> Chuyển CANCELLED nếu vẫn PENDING
+        # Any other response code -> Transition to CANCELLED if still PENDING
         if order.status == PaymentStatus.PENDING:
             order.status = PaymentStatus.CANCELLED
             db.add(order)
@@ -325,8 +325,8 @@ def process_vnpay_return(db: Session, user: User, params: dict) -> OrderStatusRe
 
 def get_order_status_safe(db: Session, order_code: str, user: User) -> OrderStatusResponse:
     """
-    Tra cứu trạng thái đơn hàng an toàn chống IDOR và Enumeration Attack:
-    Nếu không phải đơn của chính user (hoặc Admin), trả HTTP 404 NOT FOUND đồng nhất.
+    Retrieves order status safely against IDOR and Enumeration attacks.
+    Returns HTTP 404 if order does not belong to user (unless admin).
     """
     stmt = select(PaymentOrder).where(
         PaymentOrder.order_code == order_code,
@@ -342,7 +342,7 @@ def get_order_status_safe(db: Session, order_code: str, user: User) -> OrderStat
             detail="Đơn hàng không tồn tại hoặc bạn không có quyền truy cập.",
         )
 
-    # Lấy thông tin user sở hữu đơn
+    # Retrieve order owner user
     owner = user if order.user_id == user.id else db.execute(select(User).where(User.id == order.user_id)).scalar_one()
 
     return OrderStatusResponse(

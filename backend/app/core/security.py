@@ -5,7 +5,7 @@ from pwdlib import PasswordHash
 
 from app.core.config import settings
 
-# pwdlib PasswordHash.recommended() dùng Argon2id mặc định
+# PasswordHash.recommended() uses Argon2id by default
 password_hasher = PasswordHash.recommended()
 
 
@@ -19,9 +19,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def create_access_token(subject: str, role: str) -> str:
     """
-    subject: thường là user.id (dạng str)
-    role: user.role.value, đưa vào payload để sau này check quyền
-          mà không cần query DB lại ở mỗi request.
+    subject: typically user.id (as str)
+    role: user.role.value included in payload for stateless RBAC checks.
     """
     now = datetime.now(timezone.utc)
     expire = now + timedelta(minutes=settings.JWT_EXPIRE_MINUTES)
@@ -37,7 +36,6 @@ def create_access_token(subject: str, role: str) -> str:
 
 def decode_access_token(token: str) -> dict:
     """
-    Raises jwt.PyJWTError nếu token invalid/expired.
-    Caller (service layer) chịu trách nhiệm bắt exception này.
+    Decodes and validates JWT token. Raises jwt.PyJWTError if invalid or expired.
     """
     return jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])

@@ -24,7 +24,7 @@ export function AddDocumentModal({ isOpen, onClose, notebook, onOpenPricing }: A
     const [isUploading, setIsUploading] = useState(false)
 
     // TanStack queries/mutations
-    // Mặc định tải tài liệu theo môn của Notebook; khi người dùng tìm kiếm thì mở rộng tìm trên toàn thư viện
+    // Default to notebook subject docs; broaden to entire library on active search
     const isSearching = searchTerm.trim().length > 0
     const { data: documentsData, isLoading: isDocsLoading } = useDocuments({
         subjectId: isSearching ? undefined : (notebook.subject_id || undefined),

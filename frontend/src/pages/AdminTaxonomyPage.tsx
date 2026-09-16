@@ -41,7 +41,7 @@ const entityTypeLabel: Record<EntityType, string> = {
 }
 
 /**
- * Trích xuất số lượng an toàn: hỗ trợ cả dạng mảng trực tiếp lẫn object phân trang ({ total } / { count })
+ * Safely extracts entity count: supports both direct arrays and paginated responses ({ total } / { count }).
  */
 function getSafeCount(data: unknown): number {
   if (!data) return 0

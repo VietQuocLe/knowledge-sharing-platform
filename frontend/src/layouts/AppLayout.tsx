@@ -94,10 +94,10 @@ export function AppLayout() {
     setIsMobileMenuOpen(false)
   }
 
-  // Xử lý click mở rộng khi nhấn vào vùng trống của sidebar
+  // Expand sidebar when clicking empty space
   const handleSidebarRailClick = (e: React.MouseEvent<HTMLElement>) => {
     if (!isCollapsed) return
-    // Nếu click trúng link hoặc button thì bỏ qua
+    // Ignore if click target is an interactive link or button
     if ((e.target as HTMLElement).closest('a, button')) {
       return
     }
@@ -120,7 +120,7 @@ export function AppLayout() {
             }`}
           onClick={(e) => {
             if (collapsed) {
-              // Click vào header khi collapsed sẽ mở rộng
+              // Expand sidebar when clicking header while collapsed
               if (!(e.target as HTMLElement).closest('a, button')) {
                 setIsCollapsed(false)
               }

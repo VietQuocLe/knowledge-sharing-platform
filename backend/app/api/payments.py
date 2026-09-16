@@ -21,8 +21,8 @@ def create_checkout(
     db: Session = Depends(get_db),
 ):
     """
-    Tạo đơn hàng nâng cấp Pro (49.000đ/tháng) và lấy URL thanh toán VNPay Sandbox.
-    Tự động dọn dẹp các đơn PENDING cũ của user.
+    Create a Pro upgrade order (49,000 VND/month) and generate a VNPay Sandbox payment URL.
+    Automatically expires stale PENDING orders for the user.
     """
     client_ip = payment_service.get_client_ip(request)
     return payment_service.create_payment_order(db, current_user, client_ip)
@@ -35,8 +35,8 @@ def vnpay_return(
     db: Session = Depends(get_db),
 ):
     """
-    Xử lý khi trình duyệt redirect về từ cổng thanh toán VNPay (Dual-Fulfill Engine cho Localhost).
-    Xác thực chữ ký HMAC-SHA512 và cập nhật trạng thái đơn hàng.
+    Handle browser redirect from VNPay payment gateway (dual-fulfillment engine).
+    Validates HMAC-SHA512 checksum signature and updates order status.
     """
     params = dict(request.query_params)
     return payment_service.process_vnpay_return(db, current_user, params)
@@ -48,8 +48,8 @@ def vnpay_ipn(
     db: Session = Depends(get_db),
 ):
     """
-    Webhook IPN từ Server VNPay (Server-to-Server).
-    Quy định khắt khe: LUÔN TRẢ VỀ HTTP 200 OK với body JSON chuẩn {"RspCode": "xx", "Message": "..."}.
+    Server-to-server IPN webhook from VNPay.
+    Strict gateway requirement: Always return HTTP 200 with standard payload {"RspCode": "xx", "Message": "..."}.
     """
     params = dict(request.query_params)
     return payment_service.process_vnpay_ipn(db, params)
@@ -62,7 +62,7 @@ def get_order_status(
     db: Session = Depends(get_db),
 ):
     """
-    Tra cứu trạng thái đơn hàng (Bảo mật IDOR/Enumeration: Trả 404 nếu không phải chính chủ đơn).
+    Query order status securely (anti-IDOR/enumeration: returns 404 if not order owner).
     """
     return payment_service.get_order_status_safe(db, order_code, current_user)
 

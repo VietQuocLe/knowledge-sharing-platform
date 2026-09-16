@@ -14,10 +14,10 @@ from app.services.startup_service import initialize_system
 async def lifespan(app: FastAPI):
     _ = app
 
-    # Khởi tạo schema database
+    # Ensure database schema exists
     Base.metadata.create_all(bind=engine)
 
-    # Seed dữ liệu mặc định hệ thống
+    # Initialize system defaults
     db = SessionLocal()
     try:
         initialize_system(db)
@@ -32,7 +32,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Cấu hình CORS middleware theo Enterprise Settings
+# Configure CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -41,5 +41,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Gắn routing toàn bộ hệ thống
+# Mount API router
 app.include_router(api_router)

@@ -117,7 +117,7 @@ def login_with_google(db: Session, credential: str) -> TokenResponse:
     ).scalar_one_or_none()
 
     if user is None:
-        # Tạo user mới
+        # Provision new user
         user = User(
             email=email,
             full_name=full_name,
@@ -128,7 +128,7 @@ def login_with_google(db: Session, credential: str) -> TokenResponse:
         )
         db.add(user)
     else:
-        # User đã tồn tại — cập nhật google_id nếu chưa có
+        # User already exists — link google_id if not linked
         if user.google_id is None:
             user.google_id = google_sub
 

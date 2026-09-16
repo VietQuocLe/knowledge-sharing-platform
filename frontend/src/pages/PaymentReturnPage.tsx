@@ -27,16 +27,16 @@ export function PaymentReturnPage() {
       }
 
       try {
-        // 1. Gọi API confirmVnpayReturn
+        // 1. Call confirmVnpayReturn API
         const result = await paymentsApi.confirmVnpayReturn(params)
         setOrderStatus(result)
 
-        // 2. Nếu thành công -> đồng bộ ngay thông tin user vào React Context
+        // 2. On success, immediately sync updated user tier to AuthContext
         if (result.status === 'SUCCESS') {
           await refreshUser()
         }
       } catch (err: any) {
-        // Fallback: nếu gọi return bị lỗi mạng, tra cứu trực tiếp trạng thái từ DB
+        // Fallback: query order status from DB if return API verification fails
         try {
           const fallbackStatus = await paymentsApi.getOrderStatus(orderCode)
           setOrderStatus(fallbackStatus)

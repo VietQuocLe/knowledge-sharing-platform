@@ -442,7 +442,7 @@ def seed_demo_workspace(db: Session, demo_user: User, subjects_map: dict[str, Su
         print(f" ⚠ Lỗi đọc file {demo_json_path}: {e}")
         return
 
-    # 1. Get Subject 'Cơ sở dữ liệu'
+    # 1. Get Subject 'Database Systems' (ITEC2502)
     csdl_subject = subjects_map.get("ITEC2502")
     if not csdl_subject:
         csdl_subject = db.execute(select(Subject).where(Subject.code == "ITEC2502")).scalar_one_or_none()

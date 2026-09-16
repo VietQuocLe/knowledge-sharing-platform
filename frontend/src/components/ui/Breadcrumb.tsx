@@ -13,7 +13,7 @@ interface BreadcrumbProps {
 export function Breadcrumb({ items, className = '' }: BreadcrumbProps) {
     if (!items || items.length === 0) return null
 
-    // Ensure 'Trang chủ' is at the root and not duplicated in the subitems
+    // Ensure root home link is not duplicated in subitems
     const filteredItems = items.filter(
         item => item.href !== '/' && item.label !== 'Trang chủ'
     )

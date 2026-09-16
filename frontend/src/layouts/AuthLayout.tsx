@@ -4,10 +4,10 @@ import { Spinner } from '../components/ui/Spinner'
 import { PageTransition } from '../components/PageTransition'
 
 /**
- * Layout cho các trang xác thực (/login, /register).
- * - Nếu đang kiểm tra auth (isLoading): hiển thị spinner.
- * - Nếu đã đăng nhập: redirect ngay về trang chủ.
- * - Nếu chưa đăng nhập: render trang auth toàn màn hình (không có sidebar).
+ * Layout for authentication pages (/login, /register).
+ * - Shows loading spinner while auth state is resolving.
+ * - Redirects to home page if already authenticated.
+ * - Renders standalone full-screen auth layout if unauthenticated.
  */
 export function AuthLayout() {
   const { user, isLoading } = useAuth()

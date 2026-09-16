@@ -13,6 +13,7 @@ from app.core.observability import observe_llm
 from app.models.asset import Asset
 from app.models.asset_embedding import AssetEmbedding
 from app.schemas.artifact import QuizContentPayload, QuizGenerateRequest
+from app.rag.prompts import render_prompt
 from fastapi import HTTPException, status
 
 logger = logging.getLogger(__name__)
@@ -107,29 +108,7 @@ def _call_gemini_with_retry(context_text: str, num_questions: int) -> QuizConten
     Handles API validations/API errors with tenacity retry.
     """
     client = genai.Client(api_key=settings.GOOGLE_API_KEY)
-
-    system_instruction = (
-        "Bạn là một chuyên gia khảo thí và thiết kế học liệu chuẩn quốc tế (Studocu & NotebookLM standard).\n"
-        f"Nhiệm vụ của bạn là sinh ra đúng chính xác {num_questions} câu hỏi trắc nghiệm khách quan 4 lựa chọn từ ngữ cảnh tài liệu được cung cấp.\n\n"
-        "YÊU CẦU THIẾT KẾ ĐỀ THI & PHÂN BỔ NỘI DUNG:\n"
-        "1. Phân bổ Bloom Taxonomy:\n"
-        "   - 30% câu hỏi ở mức Nhận biết / Thông hiểu (nhận diện định nghĩa, phân biệt khái niệm cốt lõi, so sánh trực tiếp).\n"
-        "   - 70% câu hỏi ở mức Vận dụng / Tình huống / Suy luận logic (áp dụng lý thuyết vào tình huống thực tế, biến đổi giải bài toán, suy luận từ dữ kiện ngầm định).\n"
-        "2. An toàn dữ liệu & Chống bịa đặt (Anti-Hallucination):\n"
-        "   - Tất cả câu hỏi, phương án lựa chọn và lời giải thích phải hoàn toàn dựa trên và suy luận chặt chẽ từ ngữ cảnh được cung cấp. Tuyệt đối không tự bịa đặt hay sử dụng tri thức ngoài ngữ cảnh.\n"
-        "   - Nếu ngữ cảnh ngắn hoặc hẹp, hãy triệt để khai thác đọc hiểu ngữ nghĩa và suy luận logic từ dữ kiện có sẵn thay vì báo lỗi.\n"
-        "3. Tiêu chuẩn Thiết kế Phương án (A, B, C, D):\n"
-        "   - Luôn cung cấp đúng 4 phương án lựa chọn có key lần lượt là A, B, C, D.\n"
-        "   - Cấm tuyệt đối các phương án lười biếng như: 'Tất cả các đáp án trên đều đúng', 'Cả A và B đều đúng', 'Không có đáp án nào đúng', hoặc các câu từ tương tự.\n"
-        "   - Các phương án phải có cấu trúc tương đương và độ dài tương đối đồng đều nhằm đảm bảo tính nhiễu sư phạm tốt.\n"
-        "4. Tiêu chuẩn Thiết kế Lời giải thích (Explanation Standard - Chuẩn Studocu / NotebookLM):\n"
-        "   - Lời giải thích phải là một bài giảng giải chi tiết, hoàn chỉnh và tự thân có nghĩa (self-contained reasoning), giúp người học hiểu thấu đáo bản chất bài toán mà không cần mở lại slide.\n"
-        "   - Cấu trúc lời giải thích gồm 3 phần rõ ràng:\n"
-        "     * Bản chất lý thuyết: Nêu ngắn gọn nguyên lý, định nghĩa hoặc công thức được áp dụng.\n"
-        "     * Suy luận / Giải bài toán từng bước (Step-by-step Derivation): Trình bày tường minh các bước biến đổi, thế số, suy luận logic dẫn tới kết quả đúng.\n"
-        "     * Phân tích loại trừ: Giải thích ngắn gọn vì sao các phương án gây nhiễu còn lại là sai hoặc chưa chính xác.\n"
-        "   - Cấm tuyệt đối cách giải thích lười biếng như: 'Theo tài liệu trang 15 có nói...', 'Đáp án A đúng vì câu hỏi hỏi về A...'.\n"
-    )
+    system_instruction = render_prompt("quiz_generation.md", num_questions=num_questions)
 
     prompt = (
         f"Ngữ cảnh tài liệu học tập:\n"

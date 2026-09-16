@@ -12,8 +12,8 @@ from app.schemas.auth import UserQuotas
 
 def get_effective_user_tier(db: Session, user: User) -> SubscriptionTier:
     """
-    Kiểm tra và thực hiện Lazy Downgrade nếu người dùng là PRO nhưng đã quá hạn.
-    Không cần background cron job.
+    Checks and executes lazy downgrade if user's PRO plan is expired.
+    Operates on-demand without requiring a background cron job.
     """
     if user.tier == SubscriptionTier.PRO:
         now_utc = datetime.now(timezone.utc)
@@ -25,7 +25,7 @@ def get_effective_user_tier(db: Session, user: User) -> SubscriptionTier:
                 expires_at = expires_at.astimezone(timezone.utc)
 
             if expires_at < now_utc:
-                # Đã hết hạn -> Lazy Downgrade về FREE
+                # Expired -> Lazy downgrade to FREE
                 user.tier = SubscriptionTier.FREE
                 db.add(user)
                 db.commit()
@@ -36,7 +36,7 @@ def get_effective_user_tier(db: Session, user: User) -> SubscriptionTier:
 
 def get_user_quotas(tier: SubscriptionTier) -> UserQuotas:
     """
-    Single Source of Truth: Trả về hạn mức nguồn và bài tập theo gói cước.
+    Single Source of Truth: returns source and artifact quotas by subscription tier.
     """
     if tier == SubscriptionTier.PRO:
         return UserQuotas(
@@ -51,8 +51,8 @@ def get_user_quotas(tier: SubscriptionTier) -> UserQuotas:
 
 def check_sources_quota(db: Session, user: User, notebook_id: int) -> None:
     """
-    Kiểm tra hạn mức nguồn khi thêm mới (Soft-cap Policy).
-    Tuyệt đối không xóa/ẩn tài liệu cũ. Chỉ chặn khi thêm mới mà current >= max_quota.
+    Check sources quota on new document addition (Soft-cap Policy).
+    Never deletes or hides existing documents. Only blocks addition if current >= max_quota.
     """
     from app.services.notebook_service import get_notebook_source_count
 
@@ -73,8 +73,8 @@ def check_sources_quota(db: Session, user: User, notebook_id: int) -> None:
 
 def check_artifacts_quota(db: Session, user: User, notebook_id: int) -> None:
     """
-    Kiểm tra hạn mức bài tập AI khi tạo mới (Soft-cap Policy).
-    Tuyệt đối không xóa/ẩn bài tập cũ. Chỉ chặn khi tạo mới mà current >= max_quota.
+    Check AI artifacts quota on new generation (Soft-cap Policy).
+    Never deletes or hides existing artifacts. Only blocks creation if current >= max_quota.
     """
     effective_tier = get_effective_user_tier(db, user)
     quotas = get_user_quotas(effective_tier)

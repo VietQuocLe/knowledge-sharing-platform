@@ -78,7 +78,7 @@ const router = createBrowserRouter([
       </AdminRoute>
     ),
     children: [
-      // Điều hướng mặc định về trang quản lý phân loại học liệu
+      // Default redirect to admin taxonomy management
       { path: '/admin', element: <Navigate to="/admin/taxonomy" replace /> },
       { path: '/admin/taxonomy', element: withSuspense(AdminTaxonomyPage) },
     ],

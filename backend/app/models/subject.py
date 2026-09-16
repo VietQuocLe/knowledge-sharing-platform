@@ -4,7 +4,7 @@ from sqlalchemy import Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
-from app.models.major import major_subject  # Nhập bảng trung gian
+from app.models.major import major_subject
 
 if TYPE_CHECKING:
     from app.models.document import Document
@@ -21,7 +21,7 @@ class Subject(Base):
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
 
-    # Nối với Major (Ngành) thông qua bảng trung gian
+    # Relationship with Majors via association table
     majors: Mapped[list["Major"]] = relationship(
         secondary=major_subject,
         back_populates="subjects",

@@ -97,10 +97,10 @@ export function PublicLayout() {
     setIsMobileMenuOpen(false)
   }
 
-  // Xử lý click mở rộng khi nhấn vào vùng trống của sidebar
+  // Expand sidebar when clicking empty space
   const handleSidebarRailClick = (e: React.MouseEvent<HTMLElement>) => {
     if (!isCollapsed) return
-    // Nếu click trúng link hoặc button thì bỏ qua
+    // Ignore if click target is an interactive link or button
     if ((e.target as HTMLElement).closest('a, button')) {
       return
     }

@@ -13,7 +13,7 @@ from app.schemas.artifact import QuizGenerateRequest, QuizQuestion, QuizContentP
 
 
 def generate_quiz(db: Session, notebook_id: int, user_id: int, payload: QuizGenerateRequest) -> NotebookArtifact:
-    # Bước 1 (Ownership Guard)
+    # Step 1: Ownership Guard
     notebook = db.execute(select(Notebook).where(Notebook.id == notebook_id)).scalar_one_or_none()
     if notebook is None:
         raise HTTPException(
@@ -26,7 +26,7 @@ def generate_quiz(db: Session, notebook_id: int, user_id: int, payload: QuizGene
             detail="You do not have permission to access/modify this notebook",
         )
 
-    # Bước 2 (Cooldown Guard)
+    # Step 2: Cooldown Guard
     stmt = (
         select(NotebookArtifact)
         .where(NotebookArtifact.user_id == user_id)
@@ -50,12 +50,12 @@ def generate_quiz(db: Session, notebook_id: int, user_id: int, payload: QuizGene
                 detail=f"Thao tác quá nhanh. Vui lòng thử lại sau {remaining} giây.",
             )
 
-    # Bước 3 (Quota Limit Guard via QuotaService - Soft-cap)
+    # Step 3: Quota Limit Guard (Soft-cap)
     from app.services import quota_service
     user = notebook.owner or db.execute(select(User).where(User.id == user_id)).scalar_one()
     quota_service.check_artifacts_quota(db, user, notebook_id)
 
-    # Bước 4 (All-or-Nothing Asset Check)
+    # Step 4: All-or-Nothing Asset Check
     asset_stmt = select(Asset).where(
         Asset.id.in_(payload.selected_asset_ids),
         or_(
@@ -69,21 +69,21 @@ def generate_quiz(db: Session, notebook_id: int, user_id: int, payload: QuizGene
     )
     assets = db.execute(asset_stmt).scalars().all()
 
-    # Phải tìm thấy tất cả ID được chọn
+    # Ensure all requested assets belong to notebook
     if len(assets) != len(set(payload.selected_asset_ids)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Một số tài liệu được chọn không hợp lệ hoặc không thuộc Notebook này",
         )
 
-    # Tất cả phải COMPLETED
+    # Ensure all selected assets are successfully ingested
     if not all(asset.ingestion_status == AssetIngestionStatus.COMPLETED for asset in assets):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Tất cả tài liệu được tuyển chọn phải được xử lý thành công để tạo bài tập",
         )
 
-    # Bước 5 (RAG Generator)
+    # Step 5: Generate quiz content
     from app.core.observability import update_trace_context
     from app.services.quiz_service import extract_context_from_assets, _call_gemini_with_retry
 
@@ -120,7 +120,7 @@ def generate_quiz(db: Session, notebook_id: int, user_id: int, payload: QuizGene
 
 
 def list_notebook_artifacts(db: Session, notebook_id: int, user_id: int) -> list[NotebookArtifact]:
-    # Kiểm tra quyền truy cập Notebook
+    # Verify notebook access permissions
     notebook = db.execute(select(Notebook).where(Notebook.id == notebook_id)).scalar_one_or_none()
     if notebook is None:
         raise HTTPException(
@@ -133,7 +133,7 @@ def list_notebook_artifacts(db: Session, notebook_id: int, user_id: int) -> list
             detail="You do not have permission to access/modify this notebook",
         )
 
-    # Query loại bỏ content JSONB để tối ưu I/O, sắp xếp created_at DESC
+    # Defer content JSONB for fast summary listing, ordered by created_at DESC
     stmt = (
         select(NotebookArtifact)
         .where(NotebookArtifact.notebook_id == notebook_id)
@@ -144,7 +144,7 @@ def list_notebook_artifacts(db: Session, notebook_id: int, user_id: int) -> list
 
 
 def get_notebook_artifact_detail(db: Session, notebook_id: int, artifact_id: int, user_id: int) -> NotebookArtifact:
-    # Kiểm tra quyền truy cập Notebook
+    # Verify notebook access permissions
     notebook = db.execute(select(Notebook).where(Notebook.id == notebook_id)).scalar_one_or_none()
     if notebook is None:
         raise HTTPException(
@@ -157,7 +157,7 @@ def get_notebook_artifact_detail(db: Session, notebook_id: int, artifact_id: int
             detail="You do not have permission to access/modify this notebook",
         )
 
-    # Query chi tiết artifact
+    # Fetch artifact detail
     stmt = select(NotebookArtifact).where(
         NotebookArtifact.id == artifact_id,
         NotebookArtifact.notebook_id == notebook_id
@@ -173,7 +173,7 @@ def get_notebook_artifact_detail(db: Session, notebook_id: int, artifact_id: int
 
 
 def delete_notebook_artifact(db: Session, notebook_id: int, artifact_id: int, user_id: int) -> None:
-    # Kiểm tra quyền truy cập Notebook
+    # Verify notebook access permissions
     notebook = db.execute(select(Notebook).where(Notebook.id == notebook_id)).scalar_one_or_none()
     if notebook is None:
         raise HTTPException(
@@ -186,7 +186,7 @@ def delete_notebook_artifact(db: Session, notebook_id: int, artifact_id: int, us
             detail="You do not have permission to access/modify this notebook",
         )
 
-    # Query artifact
+    # Fetch target artifact
     stmt = select(NotebookArtifact).where(
         NotebookArtifact.id == artifact_id,
         NotebookArtifact.notebook_id == notebook_id

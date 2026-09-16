@@ -92,7 +92,7 @@ def test_create_payment_order_and_auto_cancel_old():
     try:
         user = get_test_user(db, "order_cancel")
 
-        # Đơn 1
+        # Order 1
         res1 = payment_service.create_payment_order(db, user, "127.0.0.1")
         assert len(res1.order_code) == 16
         assert "vnp_SecureHash=" in res1.payment_url
@@ -100,12 +100,12 @@ def test_create_payment_order_and_auto_cancel_old():
         order1 = db.execute(select(PaymentOrder).where(PaymentOrder.order_code == res1.order_code)).scalar_one()
         assert order1.status == PaymentStatus.PENDING
 
-        # Đơn 2 cho cùng user
+        # Order 2 for the same user
         res2 = payment_service.create_payment_order(db, user, "127.0.0.1")
         db.refresh(order1)
         order2 = db.execute(select(PaymentOrder).where(PaymentOrder.order_code == res2.order_code)).scalar_one()
 
-        # Đơn 1 phải bị hủy, đơn 2 ở trạng thái PENDING
+        # Order 1 must be cancelled, order 2 should be PENDING
         assert order1.status == PaymentStatus.CANCELLED
         assert order2.status == PaymentStatus.PENDING
     finally:
@@ -125,7 +125,7 @@ def test_verify_vnpay_signature():
     tampered_params["vnp_Amount"] = "9999900"
     assert payment_service.verify_vnpay_signature(tampered_params) is False
 
-    # TMN Code sai
+    # Invalid TMN Code
     wrong_tmn = dict(valid_params)
     wrong_tmn["vnp_TmnCode"] = "WRONG_CODE"
     assert payment_service.verify_vnpay_signature(wrong_tmn) is False
@@ -142,7 +142,7 @@ def test_concurrency_race_condition():
         order_code = order_res.order_code
         vnp_data = build_signed_vnpay_params(order_code, 49000, "00")
 
-        # Giả lập 2 HTTP workers độc lập gọi fulfill_payment_order đồng thời với 2 session riêng
+        # Simulate 2 independent HTTP workers concurrently calling fulfill_payment_order with distinct sessions
         def worker():
             thread_db = SessionLocal()
             try:
@@ -154,7 +154,7 @@ def test_concurrency_race_condition():
             futures = [executor.submit(worker), executor.submit(worker)]
             concurrent.futures.wait(futures)
 
-        # Kiểm tra trạng thái đơn và user
+        # Verify order and user state
         db.refresh(user)
         final_order = db.execute(select(PaymentOrder).where(PaymentOrder.order_code == order_code)).scalar_one()
 
@@ -162,7 +162,7 @@ def test_concurrency_race_condition():
         assert user.tier == SubscriptionTier.PRO
         assert user.pro_expires_at is not None
 
-        # Pro expires at phải đúng khoảng 30 ngày (29 đến 31 ngày), tuyệt đối KHÔNG PHẢI 60 ngày
+        # Pro expires_at must be approximately 30 days (29 to 31 days), strictly NOT duplicated to 60 days
         now_utc = datetime.now(timezone.utc)
         remaining_days = (user.pro_expires_at - now_utc).days
         assert 29 <= remaining_days <= 30
@@ -181,13 +181,13 @@ def test_sequential_return_then_ipn():
         order_code = order_res.order_code
         vnp_data = build_signed_vnpay_params(order_code, 49000, "00")
 
-        # 1. Return URL redirect về trước -> fulfill
+        # 1. Return URL redirects first -> fulfill
         return_res = payment_service.process_vnpay_return(db, user, vnp_data)
         assert return_res.status == PaymentStatus.SUCCESS
         db.refresh(user)
         first_expiry = user.pro_expires_at
 
-        # 2. IPN Server-to-Server gọi sau -> nhận diện đã confirmed
+        # 2. Server-to-Server IPN arrives second -> identifies as already confirmed
         ipn_response = payment_service.process_vnpay_ipn(db, vnp_data)
         assert ipn_response.status_code == 200
         import json
@@ -195,7 +195,7 @@ def test_sequential_return_then_ipn():
         assert body["RspCode"] == "02"  # Order already confirmed
 
         db.refresh(user)
-        assert user.pro_expires_at == first_expiry  # Không bị cộng dồn
+        assert user.pro_expires_at == first_expiry  # No duplicate duration accumulation
     finally:
         db.close()
 
@@ -211,7 +211,7 @@ def test_sequential_ipn_then_return():
         order_code = order_res.order_code
         vnp_data = build_signed_vnpay_params(order_code, 49000, "00")
 
-        # 1. IPN đến trước -> fulfill
+        # 1. IPN arrives first -> fulfill
         ipn_response = payment_service.process_vnpay_ipn(db, vnp_data)
         assert ipn_response.status_code == 200
         import json
@@ -222,12 +222,12 @@ def test_sequential_ipn_then_return():
         first_expiry = user.pro_expires_at
         assert user.tier == SubscriptionTier.PRO
 
-        # 2. Return redirect về sau -> nhận diện đã SUCCESS, trả thông tin bình thường
+        # 2. Return redirect arrives second -> identifies as SUCCESS, returns standard status info
         return_res = payment_service.process_vnpay_return(db, user, vnp_data)
         assert return_res.status == PaymentStatus.SUCCESS
 
         db.refresh(user)
-        assert user.pro_expires_at == first_expiry  # Không bị cộng dồn
+        assert user.pro_expires_at == first_expiry  # No duplicate duration accumulation
     finally:
         db.close()
 
@@ -252,16 +252,16 @@ def test_idor_protection():
         order_res = payment_service.create_payment_order(db, user_a, "127.0.0.1")
         order_code = order_res.order_code
 
-        # User A xem đơn của chính mình -> OK
+        # User A views their own order -> OK
         status_a = payment_service.get_order_status_safe(db, order_code, user_a)
         assert status_a.order_code == order_code
 
-        # User B xem đơn của User A -> Phải ném 404 NOT FOUND (chống Enumeration)
+        # User B views User A's order -> Must throw 404 NOT FOUND (anti-enumeration)
         with pytest.raises(HTTPException) as exc_info:
             payment_service.get_order_status_safe(db, order_code, user_b)
         assert exc_info.value.status_code == 404
 
-        # Admin xem đơn của User A -> OK
+        # Admin views User A's order -> OK
         status_admin = payment_service.get_order_status_safe(db, order_code, admin)
         assert status_admin.order_code == order_code
     finally:
@@ -278,17 +278,17 @@ def test_ipn_error_codes_mapping_and_http_200():
         order_res = payment_service.create_payment_order(db, user, "127.0.0.1")
         order_code = order_res.order_code
 
-        # User bấm hủy giao dịch (vnp_ResponseCode = "24")
+        # User cancels transaction (vnp_ResponseCode = "24")
         params_cancelled = build_signed_vnpay_params(order_code, 49000, response_code="24", trans_status="02")
         ipn_resp = payment_service.process_vnpay_ipn(db, params_cancelled)
 
-        # Bắt buộc HTTP 200 OK
+        # Gateway requirement: Always HTTP 200 OK
         assert ipn_resp.status_code == 200
         import json
         body = json.loads(ipn_resp.body.decode("utf-8"))
         assert body["RspCode"] == "00"
 
-        # Đơn phải chuyển CANCELLED ngay
+        # Order must transition to CANCELLED
         order = db.execute(select(PaymentOrder).where(PaymentOrder.order_code == order_code)).scalar_one()
         assert order.status == PaymentStatus.CANCELLED
     finally:
@@ -296,37 +296,37 @@ def test_ipn_error_codes_mapping_and_http_200():
 
 
 # =====================================================================
-# 9. Test Soft-cap Quota Policy (Không xóa cũ, chỉ chặn thêm mới)
+# 9. Test Soft-cap Quota Policy (Keep existing items, block new additions)
 # =====================================================================
 def test_softcap_quota_policy():
     db = SessionLocal()
     try:
         user = get_test_user(db, "softcap")
-        # Giả lập user từng là Pro nhưng đã hết hạn hôm qua
+        # Simulate user who was Pro but expired yesterday
         user.tier = SubscriptionTier.PRO
         user.pro_expires_at = datetime.now(timezone.utc) - timedelta(days=1)
         db.commit()
 
-        # Tạo 1 notebook
+        # Create 1 notebook
         nb = Notebook(title="Softcap Test Notebook", owner_id=user.id)
         db.add(nb)
         db.commit()
         db.refresh(nb)
 
-        # 1. Lazy Downgrade ngầm khi gọi get_effective_user_tier
+        # 1. Silent lazy downgrade when calling get_effective_user_tier
         effective_tier = quota_service.get_effective_user_tier(db, user)
         assert effective_tier == SubscriptionTier.FREE
         assert user.tier == SubscriptionTier.FREE
 
-        # Quota Free là 8 sources, 10 quiz
+        # Free tier quotas: 8 sources, 10 quizzes
         quotas = quota_service.get_user_quotas(effective_tier)
         assert quotas.max_sources == 8
         assert quotas.max_artifacts == 10
 
-        # Giả lập notebook đang có 15 nguồn (tạo từ thời còn Pro)
-        # Hàm check_sources_quota phải ném 400 Bad Request kèm thông báo chi tiết
+        # Simulate notebook currently holding 15 sources (created during Pro tier)
+        # check_sources_quota must raise 400 Bad Request with descriptive message
         with pytest.raises(HTTPException) as exc_info:
-            # Mock get_notebook_source_count trả về 15
+            # Mock get_notebook_source_count returning 15
             with pytest.MonkeyPatch.context() as mp:
                 mp.setattr("app.services.notebook_service.get_notebook_source_count", lambda _db, _nb_id: 15)
                 quota_service.check_sources_quota(db, user, nb.id)
