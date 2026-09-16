@@ -48,8 +48,8 @@ class Settings(BaseSettings):
     FREE_MAX_ARTIFACTS: int = 10
     PRO_MAX_ARTIFACTS: int = 20
     PRO_PLAN_PRICE: int = 49000
-    MAX_SOURCES_PER_NOTEBOOK: int = 8  # Giữ tương thích ngược, mặc định gói Free
-    MAX_ARTIFACTS_PER_NOTEBOOK: int = 10  # Giữ tương thích ngược, mặc định gói Free
+    MAX_SOURCES_PER_NOTEBOOK: int = 8
+    MAX_ARTIFACTS_PER_NOTEBOOK: int = 10
     ARTIFACT_GENERATION_COOLDOWN_SECONDS: int = 15
 
     # JWT
@@ -62,13 +62,12 @@ class Settings(BaseSettings):
     ADMIN_PASSWORD: str
     ADMIN_FULL_NAME: str = "Quản trị viên Hệ thống"
 
-    # Gemini / Embedding
+    # AI & LLM Settings
     GOOGLE_API_KEY: str = ""
     GOOGLE_CLIENT_ID: str = ""
-    # General AI Settings
     EMBEDDING_DIMENSION: int = 768
     GEMINI_CHAT_MODEL: str = "gemini-3.1-flash-lite"
-    EMBEDDING_PROVIDER: str = "gemini"  # "gemini" | "jina"
+    EMBEDDING_PROVIDER: str = "jina"
 
     # ─── Embedding: Gemini Settings ───
     GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"
@@ -82,20 +81,20 @@ class Settings(BaseSettings):
     GEMINI_EMBEDDING_RETRY_MIN_WAIT: float = 5.0
     GEMINI_EMBEDDING_RETRY_MAX_WAIT: float = 60.0
 
-    # ─── Embedding: Jina Settings (Tối ưu cho Jina v3 Free Tier: 500 RPM, 50 chunks/batch) ───
+    # ─── Embedding: Jina Settings ───
     JINA_EMBEDDING_MODEL: str = "jina-embeddings-v3"
     JINA_EMBEDDING_TIMEOUT_SECONDS: float = 15.0
-    JINA_EMBEDDING_RPM_LIMIT: int = 120                 # Jina free tier hỗ trợ tới 500 RPM, 120 RPM giúp ingest nhanh
-    JINA_EMBEDDING_TPM_LIMIT: int = 100000              # Jina không bị bóp 30k TPM như Gemini, đặt 100k TPM
-    JINA_EMBEDDING_TPM_BUDGET_PER_BATCH: int = 25000    # ~25.000 tokens mỗi batch gửi sang Jina
-    JINA_EMBEDDING_MAX_CHUNKS_PER_BATCH: int = 50       # 50 chunks/batch gửi HTTP payload nhỏ gọn, tránh timeout
+    JINA_EMBEDDING_RPM_LIMIT: int = 120
+    JINA_EMBEDDING_TPM_LIMIT: int = 100000
+    JINA_EMBEDDING_TPM_BUDGET_PER_BATCH: int = 25000
+    JINA_EMBEDDING_MAX_CHUNKS_PER_BATCH: int = 50
     JINA_EMBEDDING_WINDOW_SECONDS: float = 60.0
-    JINA_EMBEDDING_RETRY_ATTEMPTS: int = 5              # Tự động thử lại 5 lần khi gặp 429 hoặc timeout
+    JINA_EMBEDDING_RETRY_ATTEMPTS: int = 5
     JINA_EMBEDDING_RETRY_MULTIPLIER: float = 2.0
     JINA_EMBEDDING_RETRY_MIN_WAIT: float = 2.0
     JINA_EMBEDDING_RETRY_MAX_WAIT: float = 30.0
 
-    # Document Ingestion & Chunking (Dùng chung)
+    # Document Ingestion & Chunking
     INGESTION_CHUNK_SIZE_WORDS: int = 600
     INGESTION_CHUNK_OVERLAP_WORDS: int = 100
     INGESTION_MIN_PDF_CHAR_THRESHOLD: int = 100
@@ -151,7 +150,7 @@ class Settings(BaseSettings):
     VNPAY_IPN_URL: str = "http://localhost:8000/payments/vnpay-ipn"
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", "backend/.env"),
         extra="ignore",
     )
 
