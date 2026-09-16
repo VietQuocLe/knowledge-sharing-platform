@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Search, FileText, Loader2, UploadCloud, Paperclip, Sparkles, Crown } from 'lucide-react'
+import { X, Search, FileText, Loader2, UploadCloud, Paperclip, Crown } from 'lucide-react'
 import { Modal } from '../../../components/ui/Modal'
 import { useDocuments } from '../../documents/hooks/useDocuments'
 import { useSaveDocumentToNotebook } from '../hooks/useSaveDocumentToNotebook'

@@ -11,7 +11,6 @@ import {
   PanelLeftClose,
   ArrowLeft,
   Crown,
-  Sparkles,
 } from 'lucide-react'
 import { useAuth } from '../features/auth/context/AuthContext'
 import { type AuthUser } from '../features/auth/api'

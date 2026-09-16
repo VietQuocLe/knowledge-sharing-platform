@@ -1,12 +1,13 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { authApi, type AuthUser } from '../api'
+import { getStoredToken, setStoredToken, clearStoredToken } from '../tokenStorage'
 
 type AuthContextValue = {
   user: AuthUser | null
   token: string | null
   isLoading: boolean
-  login: (email: string, password: string) => Promise<void>
-  loginWithGoogle: (credential: string) => Promise<void>
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>
+  loginWithGoogle: (credential: string, rememberMe?: boolean) => Promise<void>
   register: (email: string, full_name: string, password: string) => Promise<void>
   refreshUser: () => Promise<void>
   logout: () => void
@@ -16,12 +17,12 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
-  const [token, setToken] = useState<string | null>(localStorage.getItem('access_token'))
+  const [token, setToken] = useState<string | null>(getStoredToken())
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const loadUser = async () => {
-      const storedToken = localStorage.getItem('access_token')
+      const storedToken = getStoredToken()
       if (!storedToken) {
         setIsLoading(false)
         return
@@ -32,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(currentUser)
         setToken(storedToken)
       } catch {
-        localStorage.removeItem('access_token')
+        clearStoredToken()
         setToken(null)
         setUser(null)
       } finally {
@@ -43,23 +44,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void loadUser()
   }, [])
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, rememberMe: boolean = false) => {
     const response = await authApi.login({ email, password })
-    localStorage.setItem('access_token', response.access_token)
+    setStoredToken(response.access_token, rememberMe)
     setToken(response.access_token)
     setUser(response.user)
   }
 
-  const loginWithGoogle = async (credential: string) => {
+  const loginWithGoogle = async (credential: string, rememberMe: boolean = false) => {
     const response = await authApi.googleLogin({ credential })
-    localStorage.setItem('access_token', response.access_token)
+    setStoredToken(response.access_token, rememberMe)
     setToken(response.access_token)
     setUser(response.user)
   }
 
   const register = async (email: string, full_name: string, password: string) => {
     const response = await authApi.register({ email, full_name, password })
-    localStorage.setItem('access_token', response.access_token)
+    setStoredToken(response.access_token, true)
     setToken(response.access_token)
     setUser(response.user)
   }
@@ -74,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
-    localStorage.removeItem('access_token')
+    clearStoredToken()
     setToken(null)
     setUser(null)
   }

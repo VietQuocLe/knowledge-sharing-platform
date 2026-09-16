@@ -190,7 +190,7 @@ FE Foundation
 
 ## Completed
 
-- Setup thủ công frontend Vite + React + TypeScript + Tailwind (giảm rủi ro lỗi cho agent/AI trong quá trình phát triển).
+- Setup thủ công frontend Vite + React + TypeScript + Tailwind nhằm chuẩn hóa kiến trúc và kiểm soát cấu hình tối ưu.
 - Cấu trúc feature-based ở frontend: `api/`, `features/{auth,resources,taxonomy}/`, `layouts/`, `pages/`, `components/ui/`.
 - Tạo Axios-based `apiClient` tập trung với JSON/form-urlencoded/multipart support, interceptor Bearer token và xử lý 401 redirect về `/login`.
 - Triển khai `AuthContext` thật với state `user/token`, lưu token vào `localStorage`, gọi `GET /auth/me` khi có token, hỗ trợ `login/register/logout`.

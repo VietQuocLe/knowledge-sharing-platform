@@ -70,7 +70,7 @@ MinIO (Storage)
 - Route hiện có:
   - Public: `/`, `/login`, `/register`, `/departments`, `/departments/:id`, `/majors/:id`, `/subjects/:id`, `/documents/:id`
   - Protected: (các tính năng Workspace / tài liệu cá nhân tạm ẩn chuẩn bị cho Sprint 10+)
-  - Admin: `/admin/taxonomy` (link `/admin/moderation` tạm ẩn chờ kích hoạt lại)
+  - Admin: `/admin/taxonomy` (có redirect tạm thời từ `/admin` sang `/admin/taxonomy`)
 - User `ADMIN` thấy link Phân loại trên `PublicLayout` và sidebar `AppLayout`
 
 ### State & Forms

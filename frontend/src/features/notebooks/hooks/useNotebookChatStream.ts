@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { fetchEventSource } from '@microsoft/fetch-event-source'
+import { getStoredToken } from '../../auth/tokenStorage'
 
 export interface Citation {
     index: number
@@ -56,7 +57,7 @@ export function useNotebookChatStream(notebookId: number): UseNotebookChatStream
         const abortController = new AbortController()
         abortControllerRef.current = abortController
 
-        const token = localStorage.getItem('access_token')
+        const token = getStoredToken()
         const headers: Record<string, string> = {
             'Content-Type': 'application/json',
         }

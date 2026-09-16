@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, Crown, Loader2, Sparkles, X, Zap } from 'lucide-react'
+import { Check, Crown, Loader2, Sparkles, X } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { paymentsApi } from '../api'
 
@@ -132,18 +132,6 @@ export function PricingModal({
                     </div>
                     <span>Tối đa <strong>20 bài tập AI</strong> / Notebook (gấp đôi)</span>
                   </li>
-                  <li className="flex items-center gap-2">
-                    <div className="h-4 w-4 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
-                      <Crown className="h-3 w-3 text-amber-700 stroke-[3]" />
-                    </div>
-                    <span>Huy hiệu <strong>PRO Ánh Kim</strong> độc quyền cạnh hồ sơ</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="h-4 w-4 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
-                      <Zap className="h-3 w-3 text-amber-700 stroke-[3]" />
-                    </div>
-                    <span>Ưu tiên băng thông sinh bài tập AI tức thì</span>
-                  </li>
                 </ul>
               </div>
 
@@ -161,22 +149,12 @@ export function PricingModal({
                     </>
                   ) : (
                     <>
-                      <span>Nâng cấp ngay với VNPay (49K)</span>
+                      <span>Nâng cấp ngay</span>
                     </>
                   )}
                 </button>
               </div>
             </div>
-          </div>
-
-          {/* Guarantee Note */}
-          <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-200/60 flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-teal-600/10 flex items-center justify-center shrink-0 text-teal-700 font-bold text-xs">
-              NCB
-            </div>
-            <p className="text-[11px] text-slate-500 leading-relaxed">
-              Kiểm thử an toàn qua <strong>Cổng VNPay Sandbox</strong> (Hỗ trợ thẻ ATM NCB Test miễn phí 100%, OTP: <code>123456</code>). Giao dịch được kích hoạt tự động tức thì.
-            </p>
           </div>
         </div>
       </div>

@@ -78,7 +78,7 @@ const router = createBrowserRouter([
       </AdminRoute>
     ),
     children: [
-      // TEMP: redirect to taxonomy until Admin Dashboard is built (see Admin Revamp Plan)
+      // Điều hướng mặc định về trang quản lý phân loại học liệu
       { path: '/admin', element: <Navigate to="/admin/taxonomy" replace /> },
       { path: '/admin/taxonomy', element: withSuspense(AdminTaxonomyPage) },
     ],

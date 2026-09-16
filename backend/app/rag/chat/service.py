@@ -173,12 +173,6 @@ def create_chat_message(
     """
     Inserts a new message in a session. Bumps updated_at on the session.
     Triggers auto-titling if it's the very first message.
-
-    TODO (Phase 4): This service method accepts arbitrary roles/citations from the client.
-    Keep it open ONLY for Phase 1 testing/scaffolding. In Phase 4, we must either:
-    1. Restrict client message input strictly to raw user content and only allow "user" role, OR
-    2. De-couple direct message creations by clients and only allow SSE integration pipeline
-       to insert assistant messages and reference citations.
     """
     session = validate_notebook_and_session(db, notebook_id, user.id, session_id)
     assert session is not None

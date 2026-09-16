@@ -12,13 +12,14 @@ export function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     try {
-      await login(email, password)
+      await login(email, password, rememberMe)
       navigate("/", { replace: true })
     } catch {
       toast.error("Email hoặc mật khẩu không chính xác.")
@@ -31,7 +32,7 @@ export function LoginPage() {
     if (!credentialResponse.credential) return
     setIsLoading(true)
     try {
-      await loginWithGoogle(credentialResponse.credential)
+      await loginWithGoogle(credentialResponse.credential, rememberMe)
       navigate("/", { replace: true })
     } catch {
       toast.error("Đăng nhập Google thất bại. Vui lòng thử lại.")
@@ -125,7 +126,12 @@ export function LoginPage() {
               {/* Remember me + Forgot */}
               <div className="flex items-center justify-between pt-0.5">
                 <label className="flex items-center gap-2 text-sm text-slate-500 cursor-pointer select-none">
-                  <input type="checkbox" className="rounded-md border-slate-300 text-sky-600 focus:ring-sky-400 cursor-pointer" />
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="rounded-md border-slate-300 text-sky-600 focus:ring-sky-400 cursor-pointer"
+                  />
                   Ghi nhớ đăng nhập
                 </label>
                 {/* <span className="text-xs text-slate-400 cursor-not-allowed select-none">Quên mật khẩu?</span> */}

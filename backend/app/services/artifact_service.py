@@ -7,11 +7,12 @@ from app.core.config import settings
 from app.models.artifact import NotebookArtifact
 from app.models.notebook import Notebook, NotebookSavedDocument
 from app.models.asset import Asset
+from app.models.user import User
 from app.models.enums import AssetIngestionStatus, ArtifactType
 from app.schemas.artifact import QuizGenerateRequest, QuizQuestion, QuizContentPayload
 
 
-def generate_quiz_mock(db: Session, notebook_id: int, user_id: int, payload: QuizGenerateRequest) -> NotebookArtifact:
+def generate_quiz(db: Session, notebook_id: int, user_id: int, payload: QuizGenerateRequest) -> NotebookArtifact:
     # Bước 1 (Ownership Guard)
     notebook = db.execute(select(Notebook).where(Notebook.id == notebook_id)).scalar_one_or_none()
     if notebook is None:

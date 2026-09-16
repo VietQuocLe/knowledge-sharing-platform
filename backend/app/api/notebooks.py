@@ -314,7 +314,7 @@ def generate_quiz(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return artifact_service.generate_quiz_mock(db, notebook_id, current_user.id, payload)
+    return artifact_service.generate_quiz(db, notebook_id, current_user.id, payload)
 
 
 @router.get("/{notebook_id}/artifacts", response_model=list[ArtifactSummaryResponse])

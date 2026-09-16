@@ -1,4 +1,5 @@
 import axios, { AxiosHeaders, type AxiosRequestConfig } from 'axios'
+import { getStoredToken, clearStoredToken } from '../features/auth/tokenStorage'
 
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000',
@@ -6,7 +7,7 @@ const apiClient = axios.create({
 })
 
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token')
+  const token = getStoredToken()
   const headers = new AxiosHeaders(config.headers)
 
   if (token) {
@@ -21,7 +22,7 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('access_token')
+      clearStoredToken()
       window.location.assign('/login')
     }
 
