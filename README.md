@@ -91,9 +91,9 @@ pip install -r requirements.txt
 
 # Cấu hình biến môi trường
 cp .env.example .env
-# Chỉnh sửa file .env: điền khóa GOOGLE_API_KEY
+# Chỉnh sửa file .env
 
-# Khởi tạo dữ liệu mẫu (Khoa, Ngành, Môn học, Tài liệu mẫu)
+# Khởi tạo dữ liệu mẫu
 python scripts/seed_data.py
 
 # Khởi chạy server FastAPI
