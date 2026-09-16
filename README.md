@@ -1,56 +1,60 @@
-# Knowledge Sharing Platform
+# Knowledge Sharing Platform - Nền tảng Chia sẻ Học liệu và Trợ lý AI
 
-> **Đồ án tốt nghiệp ngành Công nghệ Thông tin**  
-> Nền tảng chia sẻ học liệu đại học kết hợp trợ lý AI học tập thông minh (lấy cảm hứng từ Studocu & NotebookLM).
+<!-- [![Deploy Status](https://img.shields.io/badge/Deploy-Live%20Demo-success)](https://knowledge-sharing-platform-six.vercel.app)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT) -->
+
 
 ---
 
 ## 1. Giới thiệu tổng quan (Overview)
 
-**Knowledge Sharing Platform** là hệ thống quản trị và chia sẻ tài liệu học tập đại học kết hợp không gian làm việc AI cá nhân hóa. Dự án giải quyết trọn vẹn bài toán từ việc tổ chức phân cấp học liệu chính quy đến hỗ trợ sinh viên tự học sâu:
+Knowledge Sharing Platform là hệ thống quản trị, chia sẻ tài liệu học tập đại học và hỗ trợ tự học chuyên sâu thông qua mô hình trợ lý AI cá nhân hóa (được phát triển dựa trên cảm hứng kết hợp giữa Studocu và NotebookLM).
 
-* **Public Resource Hub (Thư viện công cộng):** Học liệu được tổ chức theo cây đào tạo 3 cấp: **Khoa → Ngành → Môn học → Tài liệu**. Hỗ trợ tìm kiếm môn học tức thì không dấu, phân loại tài liệu (`SLIDE`, `EXAM`, `DOCUMENT`, `LECTURE`), xem trước trực tuyến (PDF/DOCX) và tải tài liệu an toàn qua Presigned URL MinIO.
-* **AI Notebook Workspace (Sổ tay cá nhân):** Không gian làm việc riêng tư cho phép sinh viên liên kết tài liệu từ thư viện hoặc tải lên tài liệu cá nhân để nghiên cứu.
-* **Trợ lý hỏi đáp RAG thông minh:** Động cơ Two-Stage Retrieval (Dense Vector HNSW + Full-text Search GIN hợp nhất qua RRF, kết hợp Cross-Encoder Reranker) cho phép hỏi đáp ngữ cảnh chuyên sâu, truyền dữ liệu thời gian thực qua SSE stream và dẫn nguồn chính xác theo từng trang (`#page=X`).
-* **Xưởng bài tập trắc nghiệm (Quiz Studio):** Thuật toán Multi-Asset Linspace Sampling tự động sinh bộ câu hỏi trắc nghiệm kiểm tra kiến thức từ nhiều tài liệu cùng lúc kèm giải thích chi tiết.
-* **Cổng thanh toán VNPay:** Tích hợp VNPay Sandbox 2.1.0 ký HMAC-SHA512, cơ chế khóa bi quan (Pessimistic Lock) chống trùng lặp giao dịch để nâng cấp gói tài khoản Pro mở rộng hạn mức.
+Dự án giải quyết bài toán tiếp cận học liệu chính thống tại các trường đại học, đồng thời cung cấp công cụ tự học thông minh giúp sinh viên tra cứu tài liệu nhanh chóng, tự động tạo bài kiểm tra ôn tập và kiểm chứng độ chính xác của câu trả lời thông qua trích dẫn trang tài liệu.
 
----
-
-## 2. 📚 Hồ sơ Tài liệu Kỹ thuật (Documentation)
-
-Bộ tài liệu kỹ thuật chi tiết của đồ án được tổ chức tại thư mục [`docs/`](./docs/):
-
-* 📋 **[Software Requirements Specification (SRS)](./docs/SRS.md):** Đặc tả toàn diện yêu cầu nghiệp vụ, yêu cầu chức năng 6 phân hệ, yêu cầu phi chức năng và ma trận phân quyền.
-* 🏛️ **[System Architecture & Technical Design](./docs/Architecture.md):** Thiết kế kiến trúc tổng thể, sơ đồ Dual-Zone, chi tiết Ingestion Pipeline, Động cơ Two-Stage Retrieval và thiết kế CSDL.
-* 🧪 **[Test Plan & Test Report](./docs/Test_Plan.md):** Kế hoạch kiểm thử, ma trận kịch bản test và báo cáo kết quả chi tiết của 12 Test Suites tự động Backend (100% Passed).
-* 📁 **[Project Reports & Slides](./docs/report/):** Thư mục lưu trữ bản mềm báo cáo tốt nghiệp chính thức và slide bảo vệ.
+### Điểm nhấn kỹ thuật nổi bật (Technical Highlights)
+* **Kiến trúc hai phân vùng (Dual-Zone Architecture):** Tách biệt ranh giới giữa Public Resource Hub (thư viện học liệu phân cấp 3 tầng) và Personal AI Workspace (không gian sổ tay cá nhân). Hỗ trợ cơ chế liên kết nguồn tài liệu kép không trùng lặp dữ liệu vật lý.
+* **Động cơ truy xuất hai tầng (Two-Stage Retrieval Engine):** Kết hợp Dense Vector Search (HNSW Cosine 768d) và Sparse Full-text Search (GIN index) qua công thức Reciprocal Rank Fusion (RRF, k=60) ở tầng 1, kết hợp mô hình Cross-Encoder Jina Reranker v2 ở tầng 2 để tái chấm điểm và chọn lọc Top-5 đoạn ngữ cảnh sát nhất với câu hỏi.
+* **Trích dẫn nguồn chính xác theo từng trang (Page-level Grounded Citations):** AI stream câu trả lời qua giao thức Server-Sent Events (SSE) kèm nhãn trích dẫn; nhấp vào trích dẫn sẽ chuyển ngay đến trang PDF nguồn tương ứng (`#page=X`).
+* **Ingestion Pipeline tiết kiệm tài nguyên:** Bóc tách văn bản streaming qua generator với `pypdfium2` kiểm soát RAM luôn dưới 30MB; chia đoạn theo ranh giới câu tiếng Việt; khử trùng lặp nội dung bằng mã băm SHA-256 để tiết kiệm 100% chi phí embedding khi tải lên tài liệu trùng lặp.
+* **Xưởng bài tập trắc nghiệm (Quiz Studio):** Thuật toán Multi-Asset Linspace Sampling lấy mẫu đều các tài liệu trong sổ tay và gọi Gemini Structured JSON Output để sinh đề trắc nghiệm kèm giải thích.
+* **Cổng thanh toán VNPay:** Tích hợp VNPay Sandbox 2.1.0 (ký HMAC-SHA512), áp dụng khóa bi quan (Pessimistic Lock `SELECT ... FOR UPDATE`) chống xử lý trùng đơn và quản lý nâng cấp gói cước Pro 30 ngày.
 
 ---
 
-## 3. Công nghệ sử dụng (Technology Stack)
+## 2. Liên kết hệ thống (Key Links)
+
+* **Bản chạy thử nghiệm (Live Demo):** [https://knowledge-sharing-platform-six.vercel.app](https://knowledge-sharing-platform-six.vercel.app)
+* **Tài liệu đặc tả yêu cầu (SRS):** [docs/SRS.md](./docs/SRS.md)
+* **Thiết kế kiến trúc hệ thống:** [docs/Architecture.md](./docs/Architecture.md)
+* **Kế hoạch & Kịch bản kiểm thử:** [docs/Test_Plan.md](./docs/Test_Plan.md)
+* **Báo cáo đồ án (PDF):** [docs/report/](./docs/report/)
+
+---
+
+## 3. Công nghệ sử dụng (Tech Stack)
 
 ### Frontend
-* **Core:** React 19, TypeScript, Vite
-* **Styling & UI:** Tailwind CSS, Lucide React, KaTeX (render công thức toán học)
-* **State & Data Fetching:** TanStack Query v5 (React Query), Axios
-* **Routing:** React Router v7 (Nested Layouts, Protected & Admin Guards)
+* React 19, TypeScript, Vite
+* Tailwind CSS, Lucide React, KaTeX
+* TanStack Query v5, Axios, React Router v7
 
 ### Backend
-* **Core Framework:** FastAPI (Python 3.12), Pydantic v2
-* **Database & ORM:** PostgreSQL 16, pgvector (HNSW index Cosine 768d), SQLAlchemy 2.0, Alembic
-* **Object Storage:** MinIO (S3-compatible Object Storage), Presigned URL Service
-* **Security & Auth:** Argon2id (`pwdlib`), JWT (HS256), Google OAuth 2.0
+* FastAPI (Python 3.12), Pydantic v2
+* SQLAlchemy 2.0, Alembic, PostgreSQL 16
+* pgvector (HNSW Index), MinIO Object Storage
+* Argon2id (`pwdlib`), JWT (HS256), Google OAuth 2.0
 
-### AI & RAG Engine
-* **Large Language Model:** Google Gemini 3.1 Flash Lite (Chat streaming & Intent Routing)
-* **Embedding Model:** `gemini-embedding-001` / `jina-embeddings-v3` (768d MRL)
-* **Cross-Encoder Reranker:** `jina-reranker-v2-base-multilingual`
-* **Text Processing & Chunking:** `pypdfium2` (generator streaming RAM < 30MB), `underthesea`, `llama-index-core`
-* **Observability:** Langfuse Cloud SDK v4
+### AI & Xử lý ngôn ngữ tự nhiên
+* Google Gemini 3.1 Flash Lite (Chat streaming, Intent Routing)
+* Gemini Embedding 001 / Jina Embeddings v3 (768d MRL)
+* Jina Reranker v2 (`jina-reranker-v2-base-multilingual`)
+* `pypdfium2`, `underthesea`, `llama-index-core` (SentenceSplitter)
+* Langfuse Cloud SDK v4 (Tracing & Token monitoring)
 
-### Tích hợp thanh toán
-* **Cổng thanh toán:** VNPay Sandbox chuẩn 2.1.0, mã hóa chữ ký số HMAC-SHA512, Pessimistic Locking (`SELECT FOR UPDATE`).
+### Thanh toán & Hạ tầng
+* VNPay Sandbox 2.1.0 HMAC-SHA512
+* Docker & Docker Compose
 
 ---
 
@@ -58,101 +62,92 @@ Bộ tài liệu kỹ thuật chi tiết của đồ án được tổ chức t�
 
 ### 4.1. Yêu cầu môi trường (Prerequisites)
 * Docker & Docker Compose
-* Python 3.12+
-* Node.js 20+ & npm
+* Python 3.12 trở lên
+* Node.js 20 trở lên và npm
+* Git
 
----
-
-### 4.2. Khởi động Hạ tầng Docker (Database & Storage)
-
+### 4.2. Khởi động cơ sở hạ tầng (Database & Object Storage)
 Tại thư mục gốc của dự án:
-
 ```bash
-# Khởi động PostgreSQL (kèm pgvector) và MinIO Object Storage
 docker compose up -d
 ```
+Hệ thống khởi chạy 2 container:
+* PostgreSQL 16 (hỗ trợ pgvector) lắng nghe tại cổng `5433` (tránh xung đột với cổng 5432 mặc định của máy).
+* MinIO Object Storage lắng nghe tại cổng `9000` (API) và `9001` (Web Console).
 
-* **PostgreSQL:** `localhost:5433` (DB: `knowledge_sharing_platform`, User: `postgres`, Password: `postgres`)
-* **MinIO Console:** `http://localhost:9001` (User: `minioadmin`, Password: `minioadmin`)
-
----
-
-### 4.3. Cài đặt & Khởi chạy Backend
-
+### 4.3. Cài đặt và chạy Backend
 ```bash
-# 1. Di chuyển vào thư mục backend
 cd backend
 
-# 2. Khởi tạo môi trường ảo Python
+# Khởi tạo và kích hoạt môi trường ảo Python
 python -m venv .venv
-
-# Kích hoạt môi trường ảo:
-# Trên Windows (PowerShell):
+# Trên Windows:
 .\.venv\Scripts\activate
 # Trên Linux/macOS:
 source .venv/bin/activate
 
-# 3. Cài đặt các thư viện phụ thuộc
+# Cài đặt thư viện phụ thuộc
 pip install -r requirements.txt
 
-# 4. Thiết lập file cấu hình môi trường
-# Copy từ .env.example sang .env
+# Cấu hình biến môi trường
 cp .env.example .env
-# Mở file .env và điền GOOGLE_API_KEY của bạn
+# Chỉnh sửa file .env: điền khóa GOOGLE_API_KEY
 
-# 5. Nạp dữ liệu mẫu ban đầu (Khoa, Ngành, Môn học, Tài liệu học tập)
+# Khởi tạo dữ liệu mẫu (Khoa, Ngành, Môn học, Tài liệu mẫu)
 python scripts/seed_data.py
 
-# 6. Khởi chạy server FastAPI
+# Khởi chạy server FastAPI
 uvicorn app.main:app --reload --port 8000
 ```
+Backend API sẵn sàng tại: `http://localhost:8000`  
+Swagger API Docs tại: `http://localhost:8000/docs`
 
-* Backend API: `http://localhost:8000`
-* Swagger API Documentation: `http://localhost:8000/docs`
-
----
-
-### 4.4. Cài đặt & Khởi chạy Frontend
-
-Mở một cửa sổ terminal mới:
-
+### 4.4. Cài đặt và chạy Frontend
+Mở một cửa sổ dòng lệnh mới:
 ```bash
-# 1. Di chuyển vào thư mục frontend
 cd frontend
 
-# 2. Cài đặt dependencies
+# Cài đặt dependencies
 npm install
 
-# 3. Thiết lập file cấu hình môi trường
+# Cấu hình biến môi trường
 cp .env.example .env
 
-# 4. Khởi chạy ứng dụng với Vite
+# Chạy ứng dụng
 npm run dev
 ```
-
-* Giao diện người dùng: `http://localhost:5173`
+Giao diện người dùng truy cập tại: `http://localhost:5173`
 
 ---
 
-## 5. Tài khoản Thử nghiệm Mặc định (Demo Accounts)
+## 5. Tài khoản thử nghiệm (Demo Accounts)
 
-Sau khi chạy lệnh `python scripts/seed_data.py`, hệ thống tự động cung cấp 2 tài khoản sẵn sàng để hội đồng nghiệm thu và kiểm thử:
+Sau khi chạy script `seed_data.py`, hệ thống khởi tạo sẵn các tài khoản sau để phục vụ nghiệm thu:
 
-| Tài khoản | Email đăng nhập | Mật khẩu | Quyền hạn / Gói cước |
+| Vai trò | Email đăng nhập | Mật khẩu | Quyền hạn & Chức năng kiểm thử |
 | :--- | :--- | :--- | :--- |
-| **Quản trị viên (Admin)** | `admin@ou.edu.vn` | `Admin@123456` | Toàn quyền CRUD Khoa, Ngành, Môn học |
-| **Người học mẫu (User Demo)** | `user@ou.edu.vn` | `User@123456` | Người học thông thường, có thể nâng cấp Pro qua VNPay |
+| **Quản trị viên (Admin)** | `admin@ou.edu.vn` | `Admin@123456` | Toàn quyền quản lý danh mục Khoa, Ngành, Môn học tại `/admin/taxonomy` |
+| **Người dùng mẫu (User)** | `user@ou.edu.vn` | `User@123456` | Sử dụng thư viện, Sổ tay cá nhân, hỏi đáp RAG và test nâng cấp Pro qua VNPay |
 
 ---
 
-## 6. Kiểm thử Tự động (Automated Testing)
+## 6. Kiểm thử hệ thống (Testing)
 
-Dự án đi kèm bộ kiểm thử tự động toàn diện với 12 test suites phủ kín các phân hệ:
-
+Backend được tích hợp sẵn 12 bộ kiểm thử tự động (Unit / Integration Tests) với 39 kịch bản kiểm tra độc lập:
 ```bash
 cd backend
-# Kích hoạt .venv nếu chưa kích hoạt
 pytest -v
 ```
+Chi tiết kịch bản, dữ liệu đầu vào và kết quả kiểm thử được trình bày trong [docs/Test_Plan.md](./docs/Test_Plan.md).
 
-Chi tiết kịch bản từng ca kiểm thử xem tại [`docs/Test_Plan.md`](./docs/Test_Plan.md).
+---
+
+## 7. Tài liệu kỹ thuật đi kèm (Documentation)
+
+Bộ tài liệu kỹ thuật được lưu trữ tại thư mục `docs/`:
+* [Software Requirements Specification (SRS)](./docs/SRS.md): Đặc tả yêu cầu phần mềm và luồng nghiệp vụ.
+* [System Architecture](./docs/Architecture.md): Kiến trúc hệ thống, Ingestion pipeline và Two-Stage Retrieval.
+* [Test Plan & Test Report](./docs/Test_Plan.md): Kế hoạch và kết quả kiểm thử 12 test suites.
+* [Báo cáo đồ án & Slide](./docs/report/): Thư mục lưu trữ bản mềm báo cáo tốt nghiệp PDF.
+
+---
