@@ -144,6 +144,11 @@ pytest -v
 ### 6.2. Frontend End-to-End Tests (Playwright Browser Automation)
 ```bash
 cd frontend
+
+# Cài đặt browser Chromium cho Playwright (chỉ cần chạy lần đầu tiên)
+npx playwright install chromium
+
+# Thực thi kiểm thử E2E
 npm run test:e2e
 ```
 *Chạy chế độ giao diện trực quan (UI mode):* `npm run test:e2e:ui`
