@@ -60,6 +60,8 @@ build/
 .parcel-cache/
 .cache/
 *.tsbuildinfo
+playwright-report/
+test-results/
 
 # Logs
 *.log

@@ -133,11 +133,21 @@ Sau khi chạy script `seed_data.py`, hệ thống khởi tạo sẵn các tài 
 
 ## 6. Kiểm thử hệ thống (Testing)
 
-Backend được tích hợp sẵn 12 bộ kiểm thử tự động (Unit / Integration Tests) với 39 kịch bản kiểm tra độc lập:
+Hệ thống được tích hợp kiểm thử tự động toàn diện trên cả hai tầng:
+
+### 6.1. Backend Unit & Integration Tests (39 kịch bản pytest)
 ```bash
 cd backend
 pytest -v
 ```
+
+### 6.2. Frontend End-to-End Tests (Playwright Browser Automation)
+```bash
+cd frontend
+npm run test:e2e
+```
+*Chạy chế độ giao diện trực quan (UI mode):* `npm run test:e2e:ui`
+
 Chi tiết kịch bản, dữ liệu đầu vào và kết quả kiểm thử được trình bày trong [docs/Test_Plan.md](./docs/Test_Plan.md).
 
 ---
