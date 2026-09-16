@@ -1,29 +1,4 @@
 services:
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: ksp_backend
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./backend:/app
-    env_file:
-      - ./backend/.env
-    environment:
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - MINIO_HOST=minio
-      - MINIO_PORT=9000
-      - MINIO_API_PORT=9000
-      - MINIO_ENDPOINT=minio:9000
-    depends_on:
-      postgres:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-
   postgres:
     image: pgvector/pgvector:pg16
     container_name: ksp_postgres
