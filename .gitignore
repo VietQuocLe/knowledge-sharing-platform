@@ -86,3 +86,19 @@ derived/
 # Binary Seed Assets (Uploaded directly to Cloudflare R2)
 backend/app/seed_assets/
 seed_assets/
+
+# Internal dev documentation & scratch tools (Kept on local disk, ignored on git)
+docs/00_Dashboard.md
+docs/01_Roadmap.md
+docs/02_Dev_Log.md
+docs/03_Architecture.md
+docs/10_System_Design.md
+docs/ALL_MODELS.md
+docs/Git rollback workflow.md
+docs/PROJECT_CONTEXT.md
+docs/UPDATE_GUIDE.md
+docs/*.png
+docs/*.svg
+docs/*.puml
+docs/architecture_diagram*.py
+docs/icons_cache/
