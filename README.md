@@ -1,7 +1,7 @@
 # Knowledge Sharing Platform - Nền tảng Chia sẻ Học liệu và Trợ lý AI
 
-<!-- [![Deploy Status](https://img.shields.io/badge/Deploy-Live%20Demo-success)](https://knowledge-sharing-platform-six.vercel.app)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT) -->
+[![Deploy Status](https://img.shields.io/badge/Deploy-Live%20Demo-success)](https://knowledge-sharing-platform-six.vercel.app)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
 
 ---
@@ -151,3 +151,7 @@ Bộ tài liệu kỹ thuật được lưu trữ tại thư mục `docs/`:
 * [Báo cáo đồ án & Slide](./docs/report/): Thư mục lưu trữ bản mềm báo cáo tốt nghiệp PDF.
 
 ---
+
+## 8. Bản quyền & Giấy phép (License)
+
+Dự án được phân phối dưới giấy phép mã nguồn mở [MIT License](./LICENSE). Mọi tài liệu và thư viện mở tích hợp trong hệ thống đều tuân thủ giấy phép sử dụng tương ứng.
