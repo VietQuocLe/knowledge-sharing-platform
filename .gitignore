@@ -86,8 +86,8 @@ docker-compose.override.yml
 derived/
 
 # Binary Seed Assets (Uploaded directly to Cloudflare R2)
-backend/app/seed_assets/
-seed_assets/
+#backend/app/seed_assets/
+#seed_assets/
 
 # Internal dev documentation & scratch tools (Kept on local disk, ignored on git)
 docs/00_Dashboard.md
@@ -103,4 +103,4 @@ docs/*.png
 docs/*.svg
 docs/*.puml
 docs/architecture_diagram*.py
-docs/icons_cache/
+docs/icons_cache/
