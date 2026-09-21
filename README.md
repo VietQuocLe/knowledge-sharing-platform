@@ -75,6 +75,8 @@ Hệ thống khởi chạy 2 container:
 * PostgreSQL 16 (hỗ trợ pgvector) lắng nghe tại cổng `5433` (tránh xung đột với cổng 5432 mặc định của máy).
 * MinIO Object Storage lắng nghe tại cổng `9000` (API) và `9001` (Web Console).
 
+> **Ghi chú:** Docker Compose trong dự án chỉ phục vụ khởi chạy hạ tầng (Database & Object Storage) với cấu hình mặc định sẵn sàng ngay mà không cần tạo trước file `.env`. Backend và Frontend được chạy trực tiếp trên máy cục bộ để tối ưu cho việc phát triển và gỡ lỗi (debug).
+
 ### 4.3. Cài đặt và chạy Backend
 ```bash
 cd backend
