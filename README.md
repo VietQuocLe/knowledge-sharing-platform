@@ -136,6 +136,14 @@ Sau khi chạy script `seed_data.py`, hệ thống khởi tạo sẵn các tài 
 | **Quản trị viên (Admin)** | `admin@ou.edu.vn` | `Admin@123456` | Toàn quyền truy cập Bảng điều khiển Quản trị (`/admin`) và quản lý danh mục Khoa, Ngành, Môn học (`/admin/taxonomy`) |
 | **Người dùng mẫu (User)** | `user@ou.edu.vn` | `User@123456` | Sử dụng thư viện, Sổ tay cá nhân, hỏi đáp RAG và test nâng cấp Pro qua VNPay |
 
+#### Thẻ thử nghiệm Cổng thanh toán VNPay Sandbox (Nâng cấp gói PRO):
+Để kiểm thử tính năng nâng cấp gói cước PRO trên giao diện, sử dụng thông tin thẻ test chính thức từ VNPay Sandbox:
+* **Ngân hàng chấp nhận:** `NCB` (Ngân hàng Quốc Dân)
+* **Số thẻ (Card Number):** `9704198526191432198`
+* **Tên chủ thẻ (Cardholder Name):** `NGUYEN VAN A`
+* **Ngày phát hành (Issue Date):** `07/15`
+* **Mã xác thực OTP:** `123456`
+
 ---
 
 ## 6. Kiểm thử hệ thống (Testing)
