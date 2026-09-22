@@ -43,6 +43,7 @@ backup_data.dump
 # Un-ignore all .env.example files across root, backend, frontend
 !.env.example
 !backend/.env.example
+!backend/.env.production.example
 !frontend/.env.example
 
 # Node / Frontend builds
@@ -98,6 +99,7 @@ docs/10_System_Design.md
 docs/ALL_MODELS.md
 docs/Git rollback workflow.md
 docs/PROJECT_CONTEXT.md
+docs/DEPLOYMENT_GUIDE.md
 docs/UPDATE_GUIDE.md
 docs/*.png
 docs/*.svg
