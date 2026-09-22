@@ -1,8 +1,14 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from fastapi import BackgroundTasks, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 import logging
+
+if TYPE_CHECKING:
+    from arq.connections import ArqRedis
 
 from app.models.asset import Asset
 from app.models.document import Document
@@ -363,13 +369,14 @@ def validate_file_content(file_bytes: bytes, file_name: str) -> str:
     )
 
 
-def upload_notebook_asset(
+async def upload_notebook_asset(
     db: Session,
     user: User,
     notebook_id: int,
     file_name: str,
     file_bytes: bytes,
     background_tasks: BackgroundTasks,
+    arq_pool: ArqRedis | None = None,
 ) -> Asset:
     # 1. Notebook ownership & existence checks
     notebook = db.execute(select(Notebook).where(Notebook.id == notebook_id)).scalar_one_or_none()
@@ -424,12 +431,48 @@ def upload_notebook_asset(
     db.commit()
     db.refresh(asset)
 
-    if is_docx:
-        from app.services.conversion_service import convert_docx_to_pdf_task
-        background_tasks.add_task(convert_docx_to_pdf_task, asset.id)
-    else:
-        from app.services.ingestion_service import ingest_asset_background_task
-        background_tasks.add_task(ingest_asset_background_task, asset.id)
+    # 6. Dispatch background task via ARQ (Redis Queue) with graceful fallback
+    task_name = "convert_docx_task" if is_docx else "ingest_asset_task"
+    enqueued = False
+
+    if arq_pool is None:
+        try:
+            from app.core.redis import get_arq_redis_pool
+            arq_pool = await get_arq_redis_pool()
+        except Exception as pool_err:
+            logger.debug("Could not obtain ARQ pool: %s", pool_err)
+
+    if arq_pool is not None:
+        try:
+            job = await arq_pool.enqueue_job(task_name, asset.id)
+            if job:
+                logger.info(
+                    "Successfully enqueued ARQ job '%s' for asset %s (job_id=%s).",
+                    task_name,
+                    asset.id,
+                    job.job_id,
+                )
+                enqueued = True
+        except Exception as exc:
+            logger.warning(
+                "Failed to enqueue ARQ job '%s' for asset %s: %s. Falling back to in-process BackgroundTasks.",
+                task_name,
+                asset.id,
+                exc,
+            )
+
+    if not enqueued:
+        if is_docx:
+            from app.services.conversion_service import convert_docx_to_pdf_task
+            background_tasks.add_task(convert_docx_to_pdf_task, asset.id)
+        else:
+            from app.services.ingestion_service import ingest_asset_background_task
+            background_tasks.add_task(ingest_asset_background_task, asset.id)
+        logger.info(
+            "Dispatched in-process BackgroundTasks for asset %s (is_docx=%s).",
+            asset.id,
+            is_docx,
+        )
 
     return asset
 

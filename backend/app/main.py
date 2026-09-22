@@ -24,7 +24,14 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
 
+    # Initialize ARQ Redis connection pool
+    from app.core.redis import get_arq_redis_pool, close_arq_redis_pool
+    app.state.arq_pool = await get_arq_redis_pool()
+
     yield
+
+    # Cleanup ARQ Redis connection pool
+    await close_arq_redis_pool()
 
 
 app = FastAPI(

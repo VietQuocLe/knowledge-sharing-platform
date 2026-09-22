@@ -39,3 +39,7 @@ langchain-google-genai
 # Automated Testing
 pytest>=8.0.0
 pytest-asyncio>=0.23.0
+
+# Background Task Queue
+arq>=0.26.0
+redis>=5.0.0

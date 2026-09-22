@@ -42,6 +42,7 @@ Dự án giải quyết bài toán tiếp cận học liệu chính thống tạ
 ### Backend
 * FastAPI (Python 3.12), Pydantic v2
 * SQLAlchemy 2.0, Alembic, PostgreSQL 16
+* ARQ (Async Redis Queue) & Redis 7 (Background Task Processing)
 * pgvector (HNSW Index), MinIO Object Storage
 * Argon2id (`pwdlib`), JWT (HS256), Google OAuth 2.0
 
@@ -100,6 +101,9 @@ python scripts/seed_data.py
 
 # Khởi chạy server FastAPI
 uvicorn app.main:app --reload --port 8000
+
+# Khởi chạy ARQ Background Worker (mở terminal riêng trong backend/):
+python -m app.workers.worker
 ```
 Backend API sẵn sàng tại: `http://localhost:8000`  
 Swagger API Docs tại: `http://localhost:8000/docs`

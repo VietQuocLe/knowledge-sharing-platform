@@ -21,9 +21,6 @@ Hệ thống được thiết kế theo mô hình **Client-Server phân tầng h
 │  │  (Argon2id, JWT)      │   (Taxonomy & Library)   │  (Notebook Engine) │  │
 │  ├───────────────────────┴──────────────────────────┴────────────────────┤  │
 │  │                     RAG PIPELINE CORE ENGINE                          │  │
-│  │  • Streaming Ingestion Generator (<30MB RAM)                          │  │
-│  │  • Sentence-Aware Chunking (Underthesea + LlamaIndex)                 │  │
-│  │  • SHA-256 Content-addressable Deduplication                          │  │
 │  │  • Two-Stage Retrieval (Dense HNSW + Sparse GIN via RRF k=60)         │  │
 │  │  • Cross-Encoder Reranker (Jina Reranker v2)                          │  │
 │  │  • Quiz Studio Generator (Multi-Asset Linspace Sampling)              │  │
@@ -32,16 +29,24 @@ Hệ thống được thiết kế theo mô hình **Client-Server phân tầng h
 │  │  • VNPay Sandbox 2.1.0 (HMAC-SHA512, Pessimistic Lock Idempotency)    │  │
 │  │  • Object Storage Service (MinIO Presigned URL Engine)                │  │
 │  │  • Observability & Tracing (Langfuse Cloud SDK v4)                    │  │
+│  │  • ARQ Task Dispatcher (Redis Queue Enqueue & Graceful Fallback)      │  │
 │  └───────────────────────────────────────────────────────────────────────┘  │
-└───────────────────────┬───────────────────────────────┬─────────────────────┘
-                        │                               │
-┌───────────────────────▼──────────────┐ ┌──────────────▼─────────────────────┐
-│       DATABASE & VECTOR ENGINE       │ │       OBJECT STORAGE (S3/MinIO)    │
-│  PostgreSQL 16 + pgvector HNSW       │ │  MinIO / Cloudflare R2             │
-│  • Relational Data (Users, Quotas)   │ │  • Original PDF & DOCX Assets      │
-│  • Asset Embeddings (768d Cosine)    │ │  • Derived Preview PDFs            │
-│  • Full-text Search Index (GIN)      │ │  • Presigned URL Streaming         │
-└──────────────────────────────────────┘ └────────────────────────────────────┘
+└──────────────┬─────────────────────────┬───────────────────────┬────────────┘
+               │                         │                       │
+┌──────────────▼──────────────┐ ┌────────▼──────────────┐ ┌──────▼────────────┐
+│  DATABASE & VECTOR ENGINE   │ │  OBJECT STORAGE (S3)  │ │ ASYNC TASK QUEUE  │
+│  PostgreSQL 16 + pgvector   │ │  MinIO / Cloudflare   │ │ Redis 7           │
+│  • Relational Data          │ │  • Original PDF/DOCX  │ │ • ARQ Queue       │
+│  • Asset Embeddings (768d)  │ │  • Derived PDFs       │ │ • Ingestion Job   │
+│  • Full-text Search (GIN)   │ │  • Presigned URL      │ │ • Conversion Job  │
+└─────────────────────────────┘ └───────────────────────┘ └──────┬────────────┘
+                                                                 │
+                                                ┌────────────────▼────────────┐
+                                                │     ARQ BACKGROUND WORKER   │
+                                                │  • PDF Ingestion & Chunking │
+                                                │  • Gemini / Jina Embedding  │
+                                                │  • Isolated DB Sessions     │
+                                                └─────────────────────────────┘
 ```
 
 ---
@@ -94,6 +99,9 @@ Quy trình nạp và bóc tách tài liệu diễn ra theo 5 bước tuần tự
         ▼
 [PostgreSQL pgvector] ──────────> Lưu bảng `AssetEmbedding` (Vector 768d + HNSW index)
 ```
+
+> **Cơ chế Xử lý Bất đồng bộ (Async Queue Processing):**  
+> Khi người học tải lên tài liệu trong Sổ tay, API Server chỉ lưu bản ghi `Asset (PENDING)` vào database và đẩy ngay `asset_id` vào hàng đợi Redis qua **ARQ (`enqueue_job`)** rồi phản hồi ngay lập tức cho client. Toàn bộ 5 bước trên (từ chuyển đổi DOCX đến tính toán vector embedding) được thực thi độc lập bên trong tiến trình **ARQ Background Worker** với kết nối cơ sở dữ liệu cô lập (`with SessionLocal() as db:`), giúp API Server luôn phản hồi dưới 100ms và không bao giờ bị nghẽn CPU/RAM. Nếu Redis gặp sự cố, hệ thống tự động fallback về `FastAPI BackgroundTasks`.
 
 ---
 

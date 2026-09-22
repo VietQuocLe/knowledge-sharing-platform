@@ -149,6 +149,15 @@ class Settings(BaseSettings):
     VNPAY_RETURN_URL: str = "http://localhost:5173/payment/vnpay-return"
     VNPAY_IPN_URL: str = "http://localhost:8000/payments/vnpay-ipn"
 
+    # Redis & ARQ Worker Configuration
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_PASSWORD: str | None = None
+    REDIS_DATABASE: int = 0
+    REDIS_URL: str | None = None
+    ARQ_MAX_JOBS: int = 10
+    ARQ_JOB_TIMEOUT_SECONDS: int = 300
+
     model_config = SettingsConfigDict(
         env_file=(".env", "backend/.env"),
         extra="ignore",
@@ -204,6 +213,22 @@ class Settings(BaseSettings):
     @property
     def ACTIVE_EMBEDDING_RETRY_MAX_WAIT(self) -> float:
         return self.JINA_EMBEDDING_RETRY_MAX_WAIT if self.EMBEDDING_PROVIDER.lower() == "jina" else self.GEMINI_EMBEDDING_RETRY_MAX_WAIT
+
+    def get_redis_settings(self):
+        """
+        Builds and returns an arq RedisSettings instance.
+        Supports both REDIS_URL (DSN) and individual host/port/password parameters.
+        """
+        from arq.connections import RedisSettings
+
+        if self.REDIS_URL:
+            return RedisSettings.from_dsn(self.REDIS_URL)
+        return RedisSettings(
+            host=self.REDIS_HOST,
+            port=self.REDIS_PORT,
+            password=self.REDIS_PASSWORD if self.REDIS_PASSWORD else None,
+            database=self.REDIS_DATABASE,
+        )
 
 
 settings = Settings()

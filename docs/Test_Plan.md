@@ -35,7 +35,8 @@ Toàn bộ 12 test suites được thiết kế độc lập, có cơ chế mock
 | **TS-10** | `tests/test_notebook_chat.py` | Quản lý phiên chat (Session), Phân quyền sở hữu sổ tay, Ràng buộc dữ liệu tin nhắn | 3 | ✅ PASS |
 | **TS-11** | `tests/test_quiz_generation.py` | Thuật toán Multi-Asset Linspace Sampling, Sinh câu hỏi trắc nghiệm qua Gemini Structured Output | 3 | ✅ PASS |
 | **TS-12** | `tests/test_notebook_artifact.py` | CRUD Artifacts, Kiểm soát Cooldown 10s chống spam, Kiểm soát hạn mức Soft-cap Free/Pro | 3 | ✅ PASS |
-| **TỔNG** | **12 Test Suites** | **Toàn bộ dịch vụ cốt lõi Backend** | **39 Tests** | **100% PASS** |
+| **TS-13** | `tests/test_arq_worker.py` | ARQ Background Worker, Đăng ký tác vụ, Session DB cô lập, Enqueue job vào Redis và Graceful Fallback | 8 | ✅ PASS |
+| **TỔNG** | **13 Test Suites** | **Toàn bộ dịch vụ cốt lõi Backend & Background Worker** | **47 Tests** | **100% PASS** |
 
 ---
 
@@ -55,6 +56,8 @@ Toàn bộ 12 test suites được thiết kế độc lập, có cơ chế mock
 | **TC-QUIZ-01**| Sinh câu hỏi trắc nghiệm | 2 tài liệu trong sổ tay, yêu cầu 5 câu | Linspace sampling lấy mẫu đều 2 tài liệu; JSON sinh ra có đúng 5 câu hỏi và 4 lựa chọn | ✅ Đạt |
 | **TC-QUOTA-01**| Chặn tạo bài tập khi hết hạn mức Free | User Free đã có 10 bài tập | Ném ngoại lệ HTTP 403 Forbidden: "Đã đạt giới hạn tối đa 10 bài tập" | ✅ Đạt |
 | **TC-QUOTA-02**| Cooldown chống spam | Gọi sinh bài tập 2 lần liên tiếp < 10s | Ném ngoại lệ HTTP 429 Too Many Requests kèm số giây còn lại | ✅ Đạt |
+| **TC-ARQ-01**  | Enqueue tác vụ bóc tách vào Redis Queue | Tải file PDF vào Sổ tay | API phản hồi < 100ms, job `ingest_asset_task` được push thành công vào Redis | ✅ Đạt |
+| **TC-ARQ-02**  | Graceful Fallback khi Redis mất kết nối | Tải file khi Redis dừng hoạt động | Tự động fallback về `FastAPI BackgroundTasks` in-process, không báo lỗi 500 | ✅ Đạt |
 
 ---
 
@@ -72,9 +75,9 @@ cd backend
 # Linux/macOS:
 source .venv/bin/activate
 
-# 3. Chạy toàn bộ 12 test suites với pytest
+# 3. Chạy toàn bộ 13 test suites với pytest
 pytest -v
 
-# 4. (Tùy chọn) Chạy riêng một phân hệ cụ thể (ví dụ Payment):
-pytest tests/test_payments.py -v
+# 4. (Tùy chọn) Chạy riêng một phân hệ cụ thể (ví dụ ARQ Worker):
+pytest tests/test_arq_worker.py -v
 ```

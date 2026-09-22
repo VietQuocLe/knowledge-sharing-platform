@@ -104,18 +104,21 @@ def remove_saved_document(
 async def upload_asset(
     notebook_id: int,
     background_tasks: BackgroundTasks,
+    request: Request,
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     file_bytes = await file.read()
-    return notebook_service.upload_notebook_asset(
+    arq_pool = getattr(request.app.state, "arq_pool", None)
+    return await notebook_service.upload_notebook_asset(
         db,
         current_user,
         notebook_id,
         file.filename or "unnamed_file",
         file_bytes,
         background_tasks,
+        arq_pool=arq_pool,
     )
 
 
