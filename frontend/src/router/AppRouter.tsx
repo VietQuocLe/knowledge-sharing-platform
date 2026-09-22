@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ComponentType } from 'react'
-import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { AdminRoute } from '../components/AdminRoute'
 import { ProtectedRoute } from '../components/ProtectedRoute'
 import { AppLayout } from '../layouts/AppLayout'
@@ -18,6 +18,7 @@ const MyResourcesPage = lazy(() => import('../pages/MyResourcesPage').then(m => 
 const MyNotebooksPage = lazy(() => import('../pages/MyNotebooksPage').then(m => ({ default: m.MyNotebooksPage })))
 const NotebookDetailPage = lazy(() => import('../pages/NotebookDetailPage').then(m => ({ default: m.NotebookDetailPage })))
 const AdminTaxonomyPage = lazy(() => import('../pages/AdminTaxonomyPage').then(m => ({ default: m.AdminTaxonomyPage })))
+const AdminDashboardPage = lazy(() => import('../pages/AdminDashboardPage').then(m => ({ default: m.AdminDashboardPage })))
 const PaymentReturnPage = lazy(() => import('../pages/PaymentReturnPage').then(m => ({ default: m.PaymentReturnPage })))
 
 function PageFallback() {
@@ -78,8 +79,7 @@ const router = createBrowserRouter([
       </AdminRoute>
     ),
     children: [
-      // Default redirect to admin taxonomy management
-      { path: '/admin', element: <Navigate to="/admin/taxonomy" replace /> },
+      { path: '/admin', element: withSuspense(AdminDashboardPage) },
       { path: '/admin/taxonomy', element: withSuspense(AdminTaxonomyPage) },
     ],
   },
@@ -88,4 +88,3 @@ const router = createBrowserRouter([
 export function AppRouter() {
   return <RouterProvider router={router} />
 }
-

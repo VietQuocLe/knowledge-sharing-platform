@@ -17,9 +17,9 @@
 
 ---
 
-## 2. Bảng Tổng hợp 12 Bộ Kiểm thử Tự động (12 Test Suites Summary)
+## 2. Bảng Tổng hợp 14 Bộ Kiểm thử Tự động (14 Test Suites Summary)
 
-Toàn bộ 12 test suites được thiết kế độc lập, có cơ chế mock các dịch vụ bên ngoài (Google Gemini API, Jina AI, VNPay Gateway) để kiểm tra chính xác logic nội bộ của ứng dụng mà không phát sinh chi phí token API:
+Toàn bộ 14 test suites được thiết kế độc lập, có cơ chế mock các dịch vụ bên ngoài (Google Gemini API, Jina AI, VNPay Gateway) để kiểm tra chính xác logic nội bộ của ứng dụng mà không phát sinh chi phí token API:
 
 | Mã Suite | File Kiểm thử | Phân hệ / Tính năng kiểm tra | Số ca test | Trạng thái |
 | :---: | :--- | :--- | :---: | :---: |
@@ -36,7 +36,8 @@ Toàn bộ 12 test suites được thiết kế độc lập, có cơ chế mock
 | **TS-11** | `tests/test_quiz_generation.py` | Thuật toán Multi-Asset Linspace Sampling, Sinh câu hỏi trắc nghiệm qua Gemini Structured Output | 3 | ✅ PASS |
 | **TS-12** | `tests/test_notebook_artifact.py` | CRUD Artifacts, Kiểm soát Cooldown 10s chống spam, Kiểm soát hạn mức Soft-cap Free/Pro | 3 | ✅ PASS |
 | **TS-13** | `tests/test_arq_worker.py` | ARQ Background Worker, Đăng ký tác vụ, Session DB cô lập, Enqueue job vào Redis và Graceful Fallback | 8 | ✅ PASS |
-| **TỔNG** | **13 Test Suites** | **Toàn bộ dịch vụ cốt lõi Backend & Background Worker** | **47 Tests** | **100% PASS** |
+| **TS-14** | `tests/test_admin_api.py` | Admin Dashboard API: Phân quyền `require_admin` (403 cho User thường), Schema số liệu stats/activities, Toàn vẹn chuỗi 30 ngày trends | 8 | ✅ PASS |
+| **TỔNG** | **14 Test Suites** | **Toàn bộ dịch vụ cốt lõi Backend, Background Worker & Admin System** | **55 Tests** | **100% PASS** |
 
 ---
 
@@ -58,6 +59,8 @@ Toàn bộ 12 test suites được thiết kế độc lập, có cơ chế mock
 | **TC-QUOTA-02**| Cooldown chống spam | Gọi sinh bài tập 2 lần liên tiếp < 10s | Ném ngoại lệ HTTP 429 Too Many Requests kèm số giây còn lại | ✅ Đạt |
 | **TC-ARQ-01**  | Enqueue tác vụ bóc tách vào Redis Queue | Tải file PDF vào Sổ tay | API phản hồi < 100ms, job `ingest_asset_task` được push thành công vào Redis | ✅ Đạt |
 | **TC-ARQ-02**  | Graceful Fallback khi Redis mất kết nối | Tải file khi Redis dừng hoạt động | Tự động fallback về `FastAPI BackgroundTasks` in-process, không báo lỗi 500 | ✅ Đạt |
+| **TC-ADM-01**  | Chặn truy cập API Admin đối với User thường | Request từ User có role `USER` | Ném ngoại lệ HTTP 403 Forbidden trên cả 3 endpoints stats, activities, trends | ✅ Đạt |
+| **TC-ADM-02**  | Toàn vẹn chuỗi thời gian 30 ngày của Trends | Admin gọi `GET /admin/trends` | Trả về đủ 30 phần tử liên tục, ngày không có dữ liệu được điền mặc định 0 | ✅ Đạt |
 
 ---
 

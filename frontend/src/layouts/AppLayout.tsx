@@ -11,6 +11,7 @@ import {
   PanelLeftClose,
   ArrowLeft,
   Crown,
+  LayoutDashboard,
 } from 'lucide-react'
 import { useAuth } from '../features/auth/context/AuthContext'
 import { type AuthUser } from '../features/auth/api'
@@ -72,7 +73,8 @@ function AuthControls({
 export function AppLayout() {
   const { user, logout } = useAuth()
   const location = useLocation()
-  const hideSearch = location.pathname.startsWith('/me/workspace')
+  const isAdminRoute = location.pathname.startsWith('/admin')
+  const hideSearch = location.pathname.startsWith('/me/workspace') || isAdminRoute
   const isWorkspaceEditor = location.pathname.startsWith('/me/workspace/') && location.pathname !== '/me/workspace'
   const isViewingQuiz = new URLSearchParams(location.search).has('artifact')
   const isAdmin = user?.role === 'ADMIN'
@@ -194,6 +196,16 @@ export function AppLayout() {
               )}
               {collapsed && <div className="my-3 mx-3 border-t border-white/10" />}
               <NavLink
+                to="/admin"
+                end
+                onClick={(e) => e.stopPropagation()}
+                className={({ isActive }) => linkClass(isActive)}
+                title={collapsed ? 'Tổng quan' : undefined}
+              >
+                <LayoutDashboard className="h-4 w-4 shrink-0 pointer-events-none" />
+                {!collapsed && <span>Tổng quan</span>}
+              </NavLink>
+              <NavLink
                 to="/admin/taxonomy"
                 onClick={(e) => e.stopPropagation()}
                 className={({ isActive }) => linkClass(isActive)}
@@ -304,6 +316,8 @@ export function AppLayout() {
         <main className={
           isWorkspaceEditor
             ? "flex-1 overflow-hidden w-full h-full p-0 flex flex-col min-h-0"
+            : isAdminRoute
+            ? "flex-1 overflow-y-auto px-6 pb-8 md:px-8 md:pb-10 w-full"
             : "flex-1 overflow-y-auto px-6 pb-8 md:px-8 md:pb-10 max-w-7xl w-full mx-auto"
         }>
           <PageTransition>

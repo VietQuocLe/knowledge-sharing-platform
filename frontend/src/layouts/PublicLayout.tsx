@@ -12,6 +12,7 @@ import {
   X,
   PanelLeftClose,
   Crown,
+  LayoutDashboard,
 } from 'lucide-react'
 import { useAuth } from '../features/auth/context/AuthContext'
 import { type AuthUser } from '../features/auth/api'
@@ -195,6 +196,16 @@ export function PublicLayout() {
                 </p>
               )}
               {collapsed && <div className="my-3 mx-3 border-t border-white/10" />}
+              <NavLink
+                to="/admin"
+                end
+                onClick={(e) => e.stopPropagation()}
+                className={({ isActive }) => linkClass(isActive)}
+                title={collapsed ? 'Tổng quan' : undefined}
+              >
+                <LayoutDashboard className="h-4 w-4 shrink-0 pointer-events-none" />
+                {!collapsed && <span>Tổng quan</span>}
+              </NavLink>
               <NavLink
                 to="/admin/taxonomy"
                 onClick={(e) => e.stopPropagation()}

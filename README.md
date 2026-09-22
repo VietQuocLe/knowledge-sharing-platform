@@ -19,6 +19,7 @@ Dự án giải quyết bài toán tiếp cận học liệu chính thống tạ
 * **Ingestion Pipeline tiết kiệm tài nguyên:** Bóc tách văn bản streaming qua generator với `pypdfium2` kiểm soát RAM luôn dưới 30MB; chia đoạn theo ranh giới câu tiếng Việt; khử trùng lặp nội dung bằng mã băm SHA-256 để tiết kiệm 100% chi phí embedding khi tải lên tài liệu trùng lặp.
 * **Xưởng bài tập trắc nghiệm (Quiz Studio):** Thuật toán Multi-Asset Linspace Sampling lấy mẫu đều các tài liệu trong sổ tay và gọi Gemini Structured JSON Output để sinh đề trắc nghiệm kèm giải thích.
 * **Cổng thanh toán VNPay:** Tích hợp VNPay Sandbox 2.1.0 (ký HMAC-SHA512), áp dụng khóa bi quan (Pessimistic Lock `SELECT ... FOR UPDATE`) chống xử lý trùng đơn và quản lý nâng cấp gói cước Pro 30 ngày.
+* **Bảng điều khiển Quản trị (Admin Dashboard):** Giám sát toàn diện chỉ số nền tảng (người dùng, học liệu, notebooks, doanh thu VNPay), trực quan hóa dữ liệu tăng trưởng 30 ngày và phân bổ gói cước với Recharts.
 
 ---
 
@@ -36,7 +37,7 @@ Dự án giải quyết bài toán tiếp cận học liệu chính thống tạ
 
 ### Frontend
 * React 19, TypeScript, Vite
-* Tailwind CSS, Lucide React, KaTeX
+* Tailwind CSS, Lucide React, Recharts, KaTeX
 * TanStack Query v5, Axios, React Router v7
 
 ### Backend
@@ -132,7 +133,7 @@ Sau khi chạy script `seed_data.py`, hệ thống khởi tạo sẵn các tài 
 
 | Vai trò | Email đăng nhập | Mật khẩu | Quyền hạn & Chức năng kiểm thử |
 | :--- | :--- | :--- | :--- |
-| **Quản trị viên (Admin)** | `admin@ou.edu.vn` | `Admin@123456` | Toàn quyền quản lý danh mục Khoa, Ngành, Môn học tại `/admin/taxonomy` |
+| **Quản trị viên (Admin)** | `admin@ou.edu.vn` | `Admin@123456` | Toàn quyền truy cập Bảng điều khiển Quản trị (`/admin`) và quản lý danh mục Khoa, Ngành, Môn học (`/admin/taxonomy`) |
 | **Người dùng mẫu (User)** | `user@ou.edu.vn` | `User@123456` | Sử dụng thư viện, Sổ tay cá nhân, hỏi đáp RAG và test nâng cấp Pro qua VNPay |
 
 ---
@@ -141,7 +142,7 @@ Sau khi chạy script `seed_data.py`, hệ thống khởi tạo sẵn các tài 
 
 Hệ thống được tích hợp kiểm thử tự động toàn diện trên cả hai tầng:
 
-### 6.1. Backend Unit & Integration Tests (39 kịch bản pytest)
+### 6.1. Backend Unit & Integration Tests (55 kịch bản pytest)
 ```bash
 cd backend
 pytest -v

@@ -11,14 +11,14 @@ Hệ thống được thiết kế theo mô hình **Client-Server phân tầng h
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                             CLIENT TIER                                     │
-│   React 19 + TypeScript + Vite + Tailwind CSS + TanStack Query v5 + KaTeX  │
+│  React 19 + TypeScript + Vite + Tailwind CSS + TanStack Query + Recharts    │
 └──────────────────────────────────────┬──────────────────────────────────────┘
                                        │ RESTful API / Server-Sent Events (SSE)
 ┌──────────────────────────────────────▼──────────────────────────────────────┐
 │                           APPLICATION SERVER (FastAPI)                      │
 │  ┌───────────────────────┬──────────────────────────┬────────────────────┐  │
-│  │   Auth & RBAC         │   Public Resource Hub    │   AI Workspace     │  │
-│  │  (Argon2id, JWT)      │   (Taxonomy & Library)   │  (Notebook Engine) │  │
+│  │   Auth & RBAC / Admin │   Public Resource Hub    │   AI Workspace     │  │
+│  │  (Argon2id, Dashboard)│   (Taxonomy & Library)   │  (Notebook Engine) │  │
 │  ├───────────────────────┴──────────────────────────┴────────────────────┤  │
 │  │                     RAG PIPELINE CORE ENGINE                          │  │
 │  │  • Two-Stage Retrieval (Dense HNSW + Sparse GIN via RRF k=60)         │  │

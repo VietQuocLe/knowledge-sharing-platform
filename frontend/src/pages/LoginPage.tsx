@@ -1,13 +1,15 @@
-import { useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { useEffect, useState } from "react"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import { GraduationCap, Eye, EyeOff, Loader2 } from "lucide-react"
 import { GoogleLogin } from "@react-oauth/google"
 import toast from "react-hot-toast"
 import { useAuth } from "../features/auth/context/AuthContext"
+import type { AuthUser } from "../features/auth/api"
 
 export function LoginPage() {
   const navigate = useNavigate()
-  const { login, loginWithGoogle } = useAuth()
+  const location = useLocation()
+  const { user, isLoading: isAuthLoading, login, loginWithGoogle } = useAuth()
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -15,12 +17,33 @@ export function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
+  const fromLocation = (location.state as { from?: { pathname: string; search?: string } })?.from
+  const targetDestination = fromLocation
+    ? `${fromLocation.pathname}${fromLocation.search || ""}`
+    : null
+
+  const handleRedirect = (authenticatedUser: AuthUser) => {
+    if (targetDestination) {
+      navigate(targetDestination, { replace: true })
+    } else if (authenticatedUser.role === "ADMIN") {
+      navigate("/admin", { replace: true })
+    } else {
+      navigate("/", { replace: true })
+    }
+  }
+
+  useEffect(() => {
+    if (!isAuthLoading && user) {
+      handleRedirect(user)
+    }
+  }, [isAuthLoading, user])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     try {
-      await login(email, password, rememberMe)
-      navigate("/", { replace: true })
+      const authenticatedUser = await login(email, password, rememberMe)
+      handleRedirect(authenticatedUser)
     } catch {
       toast.error("Email hoặc mật khẩu không chính xác.")
     } finally {
@@ -32,8 +55,8 @@ export function LoginPage() {
     if (!credentialResponse.credential) return
     setIsLoading(true)
     try {
-      await loginWithGoogle(credentialResponse.credential, rememberMe)
-      navigate("/", { replace: true })
+      const authenticatedUser = await loginWithGoogle(credentialResponse.credential, rememberMe)
+      handleRedirect(authenticatedUser)
     } catch {
       toast.error("Đăng nhập Google thất bại. Vui lòng thử lại.")
     } finally {
